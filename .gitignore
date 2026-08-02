@@ -1,0 +1,10 @@
+# 작업 기록 — 로컬 전용, 공개 설계 문서 아님
+plans/
+
+# OS / 편집기
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~
