@@ -101,10 +101,10 @@
 |---|---|---|---|---|
 | **성립** | `authorize(approvalNumber, at)` | 상태 = 요청됨, 취소 예약 없음 | 상태 = 성립, `holdingFunds = true` | `Authorized` |
 | **거절** | `decline(reason)` | 상태 = 요청됨 | 상태 = 거절됨, 사유 기록 (BR-36) | `Declined` |
-| **망취소** | `reverse()` | 상태 = 성립 (멱등 — 이미 무효면 무시) | 상태 = 무효, `holdingFunds = false` | `Reversed` |
-| **승인취소** | `void(amount)` | 상태 = 성립, **미매입**, INV-1 | 부분이면 `cancelledAmount` 증가, 전액이면 무효 | `Voided` |
+| **망취소** | `reverse()` | 상태 ∈ {성립, **만료**} (멱등 — 이미 무효면 무시) | 상태 = 무효. `holdingFunds`가 참일 때만 홀딩·한도 복원 (BR-49) | `Reversed` |
+| **승인취소** | `void(amount)` | 상태 ∈ {성립, **만료**}, **미매입**, INV-1 | 부분이면 `cancelledAmount` 증가, 전액이면 무효. 복원 조건은 `reverse()`와 동일 | `Voided` |
 | **만료** | `expire(at)` | 상태 = 성립, **`frozen = false`** (BR-28) | 상태 = 만료, `holdingFunds = false` | `Expired` |
-| **매입** | `capture(amount, at)` | INV-2·INV-3 (`amount ≤ 승인액 − 누적취소액`), 상태 ∈ {성립, 만료} | 상태 = 매입됨, `holdingFunds = false` | `Captured` |
+| **매입** | `capture(amount, at)` | INV-2·INV-3 (`amount ≤ 승인액 − 누적취소액`), 상태 ∈ {성립, 만료}, **`frozen = false`** (BR-50) | 상태 = 매입됨, `holdingFunds = false` | `Captured` |
 | **환불** | `refund(amount)` | 상태 = 매입됨, INV-1 | 전액이면 환불됨 | `Refunded` |
 | **보류** | `freeze()` | 종료 상태 아님 | `frozen = true` | `Frozen` |
 | **보류 해제** | `unfreeze()` | `frozen = true` | `frozen = false` | `Unfrozen` |
@@ -118,6 +118,8 @@ EXPIRED    → CAPTURED    지연 매입 (BR-19) — 만료는 채무 소멸이 
 ```
 
 **둘 다 `holdingFunds`를 false로 만든다.** 만료 시 이미 false이므로 멱등하다.
+
+> ⚠️ **단, 만료 후 취소가 먼저 도착했다면 상태가 `VOIDED`이므로 매입은 격리된다** (BR-49 · 충돌 C9). 만료된 승인의 결말은 **먼저 도착한 쪽이 정한다.**
 
 ### 조작 상세 — `void()` 와 `refund()` 의 분기 (BR-26)
 
@@ -166,6 +168,8 @@ EXPIRED    → CAPTURED    지연 매입 (BR-19) — 만료는 채무 소멸이 
 | **망취소 선도착** | 취소 예약(tombstone)이 `authorize()`의 사전조건을 막는다 (BR-22) |
 | **취소와 매입 동시 도착** | **매입 선행 확정**, 취소를 매입취소로 강등 (BR-26 · 충돌 C5) |
 | 만료 배치와 매입의 경합 | 둘 다 `holdingFunds = false`로 수렴 — 순서 무관 |
+| **만료 후 취소와 매입의 경합** | **먼저 도착한 쪽이 결말을 정한다** (BR-49 · 충돌 C9) |
+| **보류 전환과 매입의 경합** | 보류 전환이 이 애그리게이트의 락을 잡는다 — 둘 중 하나만 성공 (BR-50) |
 
 ---
 
@@ -176,7 +180,11 @@ EXPIRED    → CAPTURED    지연 매입 (BR-19) — 만료는 채무 소멸이 
 | ~~AU1~~ | 부분 취소 후 매입 가능액 | **`승인액 − 누적취소액`이다** → INV-3 수정, BR-16 ③ 수정 |
 | ~~AU2~~ | 정산 완료 후 환불 | **원거래를 되돌리지 않는다.** 별도 배치로 접수해 **다음 영업일 정산의 차감분**으로 처리 → BR-43 |
 
-**(현재 미해결 없음)**
+| ~~AU3~~ | 만료 상태의 취소 | **무효화 + 채무 소멸** → BR-49 |
+| ~~AU4~~ | 보류 중 매입 도착 | **격리 후 해제 시 재처리** → BR-50 |
+| ~~AU5~~ | 무효 승인 매입의 불일치 유형 | **M8 신설** → BR-51 |
+
+> 세 결정의 선택지·기각 이유는 `domain/state-machines/authorization.md` §8.
 
 ---
 
@@ -184,5 +192,6 @@ EXPIRED    → CAPTURED    지연 매입 (BR-19) — 만료는 채무 소멸이 
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v1.2 | 2026-08-03 | 상태 머신(Phase 2-5) 결과 반영 — `reverse()`·`void()` 사전조건에 만료 추가(BR-49), `capture()`에 `frozen = false` 추가(BR-50), 동시성 2행 추가 |
 | v1.1 | 2026-08-03 | AU1·AU2 확정 반영 — INV-3을 `승인액 − 누적취소액`으로 수정, 정산 완료 후 환불은 별도 차감 거래(BR-43) |
 | v1.0 | 2026-08-03 | 최초 작성 — 불변식 6종, 상태 8종, 조작 10종, 이벤트 9종. 만료가 종료 상태가 아니라는 점(EXPIRED → CAPTURED 허용)과 그 근거 명시 |
