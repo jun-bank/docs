@@ -46,6 +46,7 @@ stateDiagram-v2
 | B4 | `PROCESSING` | `markProcessed` | 상태 불변 | **두 집합 어디에도 없음** (INV-2) | 레코드 반영 + 처리 집합 추가. **레코드 단위 커밋** | BR-16·23 |
 | B5 | `PROCESSING` | `isolate` | 상태 불변 | **두 집합 어디에도 없음** (INV-2) | 격리 목록에 추가 + **`Discrepancy.recordOrTouch()` 호출**(보류 격리는 제외 — BR-50) | BR-27·32·50·51 |
 | B6 | `PROCESSING` | `interrupt` | `INTERRUPTED` | — | **진행분 보존** | — |
+| B8 | `COMPLETED` | **`promoteIsolated`** | 상태 불변 | 격리 목록에 있음 | 격리 → 처리 **원자 이동**. 합계 불변이므로 INV-3 유지 | BR-50 |
 | B7 | `PROCESSING` | `complete` | `COMPLETED` | **`\|처리\| + \|격리\| = totalRecords`** (INV-3) | — | — |
 
 > **B7의 조건이 이 문서에서 가장 중요하다.** 건수로 판정하지 않으면 **조용한 절단**을 못 잡는다. 파일 파서가 뒤쪽 1000건을 조용히 버려도 "에러 없이 돌았다"가 되고, 대사에서 M1(미매입) 1000건으로 뒤늦게 나타난다.
@@ -57,7 +58,7 @@ stateDiagram-v2
 | # | 현재 | 시도 | 왜 금지인가 | 위반 시 | 처리 |
 |---|---|---|---|---|---|
 | **BF1** | `PROCESSING` | `complete` (**건수 불일치**) | INV-3 위반 | **부분 실패를 완료로 위장.** 최악의 실패 모드 — 아무도 모른다 | `BATCH_INCOMPLETE` + 중단 처리 |
-| **BF2** | `COMPLETED` | `markProcessed` · `isolate` | 완료 후 레코드 추가 (INV-4) | 건수가 어긋나 완료 판정이 무효화 | `BATCH_COMPLETED` |
+| **BF2** | `COMPLETED` | `markProcessed` · `isolate` | 완료 후 레코드 **추가** (INV-4). **승격(B8)은 이동이라 해당 없다** | 건수가 어긋나 완료 판정이 무효화 | `BATCH_COMPLETED` |
 | **BF3** | `COMPLETED` | `start` | 다 끝난 파일을 다시 연다 | **전 레코드 재처리 시도** — 멱등이 막아 주지만 무의미한 부하 | `BATCH_COMPLETED` |
 | **BF4** | `COMPLETED` | `interrupt` | 끝난 것을 중단할 수 없다 | 완료가 취소되어 재처리 대상이 됨 | `BATCH_COMPLETED` |
 | **BF5** | `RECEIVED` | `markProcessed` · `isolate` | 시작하지 않은 배치 | **상태 없이 자금이 움직인다** — 중단 시 어디까지 했는지 모른다 | `BATCH_NOT_STARTED` |
@@ -66,6 +67,7 @@ stateDiagram-v2
 | **BF8** | `PROCESSING` | `markProcessed`·`isolate` (**이미 처리 또는 격리된 레코드**) | INV-2 위반 | **이중 출금**, 그리고 격리 중복이 **건수를 부풀려 INV-3을 무력화** | 오류가 아니라 **건너뛴다** (◎) — 재개 시 정상 경로다 |
 | **BF9** | `INTERRUPTED` | `markProcessed` · `isolate` | 재개(`start`)를 거치지 않았다 | 상태가 `PROCESSING`이 아닌데 자금이 움직여 **중단 시점 추적이 깨진다** | `BATCH_NOT_PROCESSING` |
 | **BF10** | `RECEIVED`·`INTERRUPTED`·`COMPLETED` | `interrupt` | 처리 중이 아니다 | 중단 이력이 근거 없이 생긴다 | `BATCH_NOT_PROCESSING` |
+| **BF11** | `RECEIVED`·`PROCESSING`·`INTERRUPTED` | `promoteIsolated` | 완료되지 않은 배치에서는 격리 자체가 아직 확정이 아니다 | 진행 중 배치의 건수가 흔들려 INV-3 판정이 불안정 | `BATCH_NOT_COMPLETED` |
 
 > ★ **격리 쪽 중복 방지가 INV-3의 전제다.** 처리 집합만 막고 격리를 열어 두면 같은 레코드를 여러 번 격리해 **`|처리| + |격리|`를 인위적으로 채울 수 있고**, 그러면 파일 뒤쪽을 통째로 못 읽어도 완료 판정이 통과한다 — BF1이 막으려던 실패가 **다른 문으로 그대로 들어온다.**
 
@@ -78,14 +80,14 @@ stateDiagram-v2
 
 ## 5. 전이 매트릭스
 
-| 현재 \ 조작 | `receive` | `start` | `markProcessed` | `isolate` | `interrupt` | `complete` |
-|---|---|---|---|---|---|---|
-| **`RECEIVED`** | X (BF7) | **O** (B2) | X (BF5) | X (BF5) | X (BF10) | X (BF6) |
-| **`PROCESSING`** | X (BF7) | ◎ | **O/◎** (B4 / BF8) | **O/◎** (B5 / BF8) | **O** (B6) | **O/X** (B7 / BF1) |
-| **`INTERRUPTED`** | X (BF7) | **O** (B3) | X (BF9) | X (BF9) | X (BF10) | X (BF6) |
-| **`COMPLETED`** | X (BF7) | X (BF3) | X (BF2) | X (BF2) | X (BF10) | ◎ |
+| 현재 \ 조작 | `receive` | `start` | `markProcessed` | `isolate` | `interrupt` | `complete` | `promoteIsolated` |
+|---|---|---|---|---|---|---|---|
+| **`RECEIVED`** | X (BF7) | **O** (B2) | X (BF5) | X (BF5) | X (BF10) | X (BF6) | X (BF11) |
+| **`PROCESSING`** | X (BF7) | ◎ | **O/◎** (B4 / BF8) | **O/◎** (B5 / BF8) | **O** (B6) | **O/X** (B7 / BF1) | X (BF11) |
+| **`INTERRUPTED`** | X (BF7) | **O** (B3) | X (BF9) | X (BF9) | X (BF10) | X (BF6) | X (BF11) |
+| **`COMPLETED`** | X (BF7) | X (BF3) | X (BF2) | X (BF2) | X (BF10) | ◎ | **O** (B8) |
 
-**O 3 · O/◎ 2 · O/X 1 · X 16 · ◎ 2 = 24칸**
+**O 4 · O/◎ 2 · O/X 1 · X 19 · ◎ 2 = 28칸**
 
 > **조건부 칸 3개가 이 배치의 안전장치 전부다.**
 > `markProcessed`·`isolate`는 **이미 다룬 레코드면 조용히 건너뛴다**(재개의 정상 경로) — 시끄럽게 막으면 재개가 불가능해진다.
@@ -97,13 +99,17 @@ stateDiagram-v2
 **원 배치를 다시 열지 않는다.** `COMPLETED → PROCESSING` 재개방을 만들면 INV-4("완료 후 레코드 추가 없음")가 깨지고, **이미 마감·정산된 영업일의 배치가 다시 열릴 수 있다.**
 
 ```
-원 배치     : COMPLETED 유지 (불변)
-                ↓ 보류 해제
-재처리 배치 : 입력  = 보류 해제된 격리 레코드
-              멱등키 = 원 (fileId, recordId) 를 그대로 승계
+재처리 배치가 레코드 하나를 처리할 때
+  ① 원 배치의 isolatedRecords 에 있는가?   없으면 이미 반영됨 → 건너뛴다
+  ② 반영 (출금·기표)
+  ③ promoteIsolated(recordId)             격리 → 처리 로 원자 이동  ← B8
 ```
 
-> ★ **멱등 키 승계가 이 설계의 전부다.** 새 키를 발급하면 운영자가 두 번 지시하거나 매입사가 같은 파일을 재전송했을 때 BR-23의 멱등이 적용되지 않아 **이중 출금**이 된다. 재처리 배치는 별개의 실행이지만 **멱등 공간은 원 파일과 같아야 한다.**
+> ★ **승격이 곧 멱등이다.** "같은 집합을 공유한다"고만 정하면 **모순이 생긴다** — 그 레코드는 이미 `isolatedRecords`에 있어 재개 규칙에 따라 재처리 배치도 건너뛰게 된다. 반대로 별도 집합을 쓰면 재처리 배치 둘 사이의 중복을 못 막는다.
+>
+> **격리에 있다 = 미반영 · 처리에 있다 = 반영됨.** ③이 그 경계를 원자적으로 넘기므로 두 번 지시해도, 매입사가 파일을 재전송해도 ①에서 걸러진다. 합계가 안 바뀌어 INV-3도 그대로다.
+>
+> **B8이 `COMPLETED`에서 허용되는 유일한 조작이다.** 레코드 **추가**가 아니라 **이동**이므로 INV-4를 깨지 않는다.
 
 ---
 
@@ -155,5 +161,6 @@ stateDiagram-v2
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v0.3 | 2026-08-04 | post-fix 반영 — ★ **B8 `promoteIsolated` 신설**(격리 → 처리 원자 승격). "멱등 집합 공유"만으로는 재처리 배치가 자기 대상을 건너뛰는 모순이 있었다 · BF11 신설 · `COMPLETED`에서 유일하게 허용되는 조작임과 INV-4를 깨지 않는 근거 명시 |
 | v0.2 | 2026-08-04 | 듀얼 리뷰 반영 — ★ **격리 중복 방지 추가**(INV-2를 두 집합 상호배타로. 없으면 격리 중복이 건수를 채워 INV-3이 무력화된다) · `isolate()`가 **불일치 적재를 호출**하는 지점 명시 · **BF9·BF10 신설**(미등재 X 보완) · 조건부 칸 `O/◎`·`O/X` 기호 도입 · **보류 격리 재처리를 멱등 승계 별도 배치로 확정**(§8) · 집계 정정 |
 | v0.1 | 2026-08-04 | 최초 작성 — 상태 4종, 전이 7종, 금지 8종. `FAILED`를 두지 않는 근거, 중복 레코드(조용히 건너뜀)와 건수 불일치(시끄럽게 차단)의 처리 분리, `PROCESSING` 갇힘을 막는 감시 전이 명시 |

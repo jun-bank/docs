@@ -46,7 +46,8 @@
 | `status` | `AuthorizationStatus` | 상태 (§4) |
 | `holdingFunds` | `boolean` | **이 승인이 홀딩을 잡고 있는가** |
 | `capturedAmount` | `Money?` | 매입된 금액 (null = 미매입) |
-| `receivableAmount` | `Money` | **이 승인에서 발생한 미수액** (BR-20). 환불 상한 산정에 필요 (BR-43 ①) |
+| `withdrawnAmount` | `Money` | **매입 시 실제로 출금된 금액** — 매입 시점에 확정되고 **이후 절대 바뀌지 않는다**. 환불 상한의 기준 (BR-43 ①) |
+| `receivableAmount` | `Money` | 이 승인에서 발생한 미수액 (BR-20). **매입 시점 확정값** — `capturedAmount = withdrawnAmount + receivableAmount` |
 | `cancelledAmount` | `Money` | 누적 취소액 |
 | `frozen` | `boolean` | 보류 여부 (BR-28) |
 | `authorizedAt` | `Instant` | 승인 성립 시각 |
@@ -67,7 +68,8 @@
 | # | 불변식 | 근거 | 위반 시 | 검증 위치 |
 |---|---|---|---|---|
 | **INV-1** | `cancelledAmount ≤ amount` | BR-11 | 원결제보다 많이 환불 | 취소 조작 후 |
-| **INV-7** | **누적 환불액 ≤ `capturedAmount − receivableAmount`** (= 실제 출금액) | BR-43 ① | **받지 않은 미수분까지 반환** — 잔액이 부풀고 미수는 남아 이후 입금을 또 상계한다 | `refund()` |
+| **INV-7** | **누적 환불액 ≤ `withdrawnAmount`** | BR-43 ① | **받지 않은 미수분까지 반환** — 잔액이 부풀고 미수는 남아 이후 입금을 또 상계한다 | `refund()` |
+| **INV-8** | `withdrawnAmount`와 `receivableAmount`는 **매입 시 확정 후 불변**이며 `capturedAmount = withdrawnAmount + receivableAmount` | BR-43 ① | ★ **환불이 상한을 키운다** — 나눠 환불하면 실제 출금액을 초과한다 | `capture()` 후 · `refund()` 후 |
 | **INV-2** | **매입은 1회만** — `capturedAmount`가 한 번 설정되면 다시 바뀌지 않는다 | BR-16 ② | 이중 출금 | `capture()` |
 | **INV-3** | `capturedAmount ≤ amount − cancelledAmount` | BR-16 ③ | **부분 취소된 만큼을 다시 매입** — 이중 청구 | `capture()` |
 | **INV-4** | **매입 후에는 `holdingFunds = false`** | BR-18 | 가용잔액 이중 차감 | `capture()` 후 |
@@ -108,7 +110,7 @@
 | **승인취소** | `void(amount)` | 상태 ∈ {성립, **만료**}, **미매입**, INV-1 | 부분이면 `cancelledAmount` 증가, 전액이면 무효. 복원 조건은 `reverse()`와 동일 | `Voided` |
 | **만료** | `expire(at)` | 상태 = 성립, **`frozen = false`** (BR-28) | 상태 = 만료, `holdingFunds = false` | `Expired` |
 | **매입** | `capture(amount, at)` | INV-2·INV-3 (`amount ≤ 승인액 − 누적취소액`), 상태 ∈ {성립, 만료}, **`frozen = false`** (BR-50) | 상태 = 매입됨, `holdingFunds = false` | `Captured` |
-| **환불** | `refund(amount)` | 상태 = 매입됨, INV-1, **INV-7** | 전액이면 환불됨. **대응 미수 소멸** (`receivableAmount` 차감 — BR-43 ①) | `Refunded` |
+| **환불** | `refund(amount)` | 상태 = 매입됨, INV-1, **INV-7** | 전액이면(`누적환불액 = withdrawnAmount`) 환불됨 + **계좌의 대응 미수 소멸**. `withdrawnAmount`·`receivableAmount`는 **건드리지 않는다** (INV-8) | `Refunded` |
 | **보류** | `freeze()` | 종료 상태 아님 | `frozen = true` | `Frozen` |
 | **보류 해제** | `unfreeze()` | `frozen = true`. **종료 상태에서도 허용** — 보류 목록에서 내릴 유일한 경로다 | `frozen = false` | `Unfrozen` |
 | **정산 확정** | `markSettled()` | 상태 = 매입됨. **`frozen` 여부와 무관** (BR-28에 정산 제외가 없다) | 상태 = 정산완료 | `Settled` |
@@ -123,6 +125,21 @@ EXPIRED    → CAPTURED    지연 매입 (BR-19) — 만료는 채무 소멸이 
 **둘 다 `holdingFunds`를 false로 만든다.** 만료 시 이미 false이므로 멱등하다.
 
 > ⚠️ **단, 만료 후 취소가 먼저 도착했다면 상태가 `VOIDED`이므로 매입은 격리된다** (BR-49 · 충돌 C9). 만료된 승인의 결말은 **먼저 도착한 쪽이 정한다.**
+
+### 조작 상세 — 환불 상한은 **불변값**을 기준으로 한다 (BR-43 ①)
+
+```
+매입: 승인액 10만 · 잔액 7만
+  → capturedAmount = 10만
+     withdrawnAmount = 7만   ← 이후 불변
+     receivableAmount = 3만  ← 이후 불변
+
+환불 상한 = withdrawnAmount = 7만 (고정)
+```
+
+> ⚠️ **상한을 `capturedAmount − receivableAmount`로 계산하면 안 된다.** 환불 시 미수를 차감하면 **우변이 함께 커진다** — 2만 환불 후 미수가 1만이 되면 상한이 9만으로 늘고, 나눠 환불해 **실제 출금액 7만을 초과**할 수 있다. 상한은 **환불로 변하지 않는 값**이어야 한다.
+>
+> **미수 소멸은 계좌 쪽 효과이고 상한 산정과 무관하다.** 전액 환불이 성립한 시점(`누적환불액 = withdrawnAmount`)에 계좌의 대응 미수가 소멸하며, 승인의 두 금액 필드는 그대로 남아 감사 근거가 된다.
 
 ### 조작 상세 — `void()` 와 `refund()` 의 분기 (BR-26)
 
@@ -186,6 +203,7 @@ EXPIRED    → CAPTURED    지연 매입 (BR-19) — 만료는 채무 소멸이 
 | ~~AU3~~ | 만료 상태의 취소 | **무효화 + 채무 소멸** → BR-49 |
 | ~~AU4~~ | 보류 중 매입 도착 | **격리 후 해제 시 재처리** → BR-50 |
 | ~~AU5~~ | 무효 승인 매입의 불일치 유형 | **M8 신설** → BR-51 |
+| **AU9** | **부분 환불 시 미수는 어떻게 되는가.** 전액 환불이면 소멸이 명확한데(BR-43 ①), 부분 환불은 비례 소멸인지 유지인지 정해지지 않았다 |
 
 > 세 결정의 선택지·기각 이유는 `domain/state-machines/authorization.md` §8.
 
@@ -195,6 +213,7 @@ EXPIRED    → CAPTURED    지연 매입 (BR-19) — 만료는 채무 소멸이 
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v1.4 | 2026-08-04 | post-fix 반영 — ★ **INV-7의 기준을 불변값 `withdrawnAmount`로 교체**. `capturedAmount − receivableAmount`로 두면 환불 시 미수 차감이 상한을 키워 **나눠 환불하면 실제 출금액을 초과**한다. INV-8(두 금액 필드 불변) 신설, 부분 환불 미수 처리를 AU9로 등재 |
 | v1.3 | 2026-08-04 | 듀얼 리뷰 반영 — **INV-6에서 만료 제외·거절 추가**(만료를 종료로 두면 BR-19·49가 런타임에서 차단된다) · **INV-7 환불 상한** 신설 + `receivableAmount` 필드(BR-43 ①) · `createVoidedByTombstone()` 분리(`authorize()`가 상반된 사후 상태 둘을 갖던 계약 모호성 해소) · `markSettled()`는 보류와 무관 · `unfreeze()`는 종료 상태에서도 허용 |
 | v1.2 | 2026-08-03 | 상태 머신(Phase 2-5) 결과 반영 — `reverse()`·`void()` 사전조건에 만료 추가(BR-49), `capture()`에 `frozen = false` 추가(BR-50), 동시성 2행 추가 |
 | v1.1 | 2026-08-03 | AU1·AU2 확정 반영 — INV-3을 `승인액 − 누적취소액`으로 수정, 정산 완료 후 환불은 별도 차감 거래(BR-43) |
