@@ -67,7 +67,7 @@
 |---|---|---|---|---|
 | **INV-1** | `cancelledAmount ≤ amount` | BR-11 | 원결제보다 많이 환불 | 취소 조작 후 |
 | **INV-2** | **매입은 1회만** — `capturedAmount`가 한 번 설정되면 다시 바뀌지 않는다 | BR-16 ② | 이중 출금 | `capture()` |
-| **INV-3** | `capturedAmount ≤ amount` | BR-16 ③ | 승인보다 많이 매입 | `capture()` |
+| **INV-3** | `capturedAmount ≤ amount − cancelledAmount` | BR-16 ③ | **부분 취소된 만큼을 다시 매입** — 이중 청구 | `capture()` |
 | **INV-4** | **매입 후에는 `holdingFunds = false`** | BR-18 | 가용잔액 이중 차감 | `capture()` 후 |
 | **INV-5** | `status = 성립` 이면 `approvalNumber ≠ null` | BR-17 | 승인번호 없는 성립 승인 | 상태 전이 후 |
 | **INV-6** | 종료 상태(무효·만료·전액취소·정산완료)에서는 상태 전이가 일어나지 않는다 | — | 죽은 거래의 부활 | 모든 전이 |
@@ -87,8 +87,10 @@
 | **만료** | `EXPIRED` | 기한 내 미매입 (BR-03). **채무는 남는다** | ✕ ⚠️ |
 | **매입됨** | `CAPTURED` | 확정 거래로 전환 | ✕ |
 | 환불됨 | `REFUNDED` | 매입 후 전액 취소 | **✓** |
-| 정산완료 | `SETTLED` | 순액 지급 확정 | **✓** |
+| 정산완료 | `SETTLED` | 순액 지급 확정 | **✓** ⚠️ |
 
+> ⚠️ **`SETTLED` 이후 환불이 와도 이 승인은 바뀌지 않는다.** 환불은 **별도 차감 거래**로 다음 영업일 정산에 반영된다(BR-43). 종료 상태가 맞다.
+>
 > ⚠️ **만료는 종료 상태가 아니다.** BR-19에 따라 만료 후에도 매입이 도착할 수 있다(지연 매입). `EXPIRED → CAPTURED` 전이가 허용된다. **이것이 이 상태 머신에서 가장 반직관적인 부분이다.**
 
 ---
@@ -102,7 +104,7 @@
 | **망취소** | `reverse()` | 상태 = 성립 (멱등 — 이미 무효면 무시) | 상태 = 무효, `holdingFunds = false` | `Reversed` |
 | **승인취소** | `void(amount)` | 상태 = 성립, **미매입**, INV-1 | 부분이면 `cancelledAmount` 증가, 전액이면 무효 | `Voided` |
 | **만료** | `expire(at)` | 상태 = 성립, **`frozen = false`** (BR-28) | 상태 = 만료, `holdingFunds = false` | `Expired` |
-| **매입** | `capture(amount, at)` | INV-2·INV-3, 상태 ∈ {성립, 만료} | 상태 = 매입됨, `holdingFunds = false` | `Captured` |
+| **매입** | `capture(amount, at)` | INV-2·INV-3 (`amount ≤ 승인액 − 누적취소액`), 상태 ∈ {성립, 만료} | 상태 = 매입됨, `holdingFunds = false` | `Captured` |
 | **환불** | `refund(amount)` | 상태 = 매입됨, INV-1 | 전액이면 환불됨 | `Refunded` |
 | **보류** | `freeze()` | 종료 상태 아님 | `frozen = true` | `Frozen` |
 | **보류 해제** | `unfreeze()` | `frozen = true` | `frozen = false` | `Unfrozen` |
@@ -171,8 +173,10 @@ EXPIRED    → CAPTURED    지연 매입 (BR-19) — 만료는 채무 소멸이 
 
 | # | 의문 | 영향 |
 |---|---|---|
-| **AU1** | **부분 승인취소 후 매입**이 가능한가? `cancelledAmount > 0` 인 상태에서 `capture()`가 오면 매입 가능액은 `amount − cancelledAmount` 인가? BR-16 ③은 "매입액 ≤ 승인액"이라고만 한다 | INV-3 정확성 |
-| **AU2** | `SETTLED` 이후 환불이 오면? BR-26은 매입 후 환불을 허용하는데, 정산까지 끝난 건은 순액이 이미 지급됐다 | 종료 상태 정의 |
+| ~~AU1~~ | 부분 취소 후 매입 가능액 | **`승인액 − 누적취소액`이다** → INV-3 수정, BR-16 ③ 수정 |
+| ~~AU2~~ | 정산 완료 후 환불 | **원거래를 되돌리지 않는다.** 별도 배치로 접수해 **다음 영업일 정산의 차감분**으로 처리 → BR-43 |
+
+**(현재 미해결 없음)**
 
 ---
 
@@ -180,4 +184,5 @@ EXPIRED    → CAPTURED    지연 매입 (BR-19) — 만료는 채무 소멸이 
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v1.1 | 2026-08-03 | AU1·AU2 확정 반영 — INV-3을 `승인액 − 누적취소액`으로 수정, 정산 완료 후 환불은 별도 차감 거래(BR-43) |
 | v1.0 | 2026-08-03 | 최초 작성 — 불변식 6종, 상태 8종, 조작 10종, 이벤트 9종. 만료가 종료 상태가 아니라는 점(EXPIRED → CAPTURED 허용)과 그 근거 명시 |

@@ -42,6 +42,9 @@
 | `balance` | `Money` | **계좌잔액** — 확정된 자금 |
 | `holdTotal` | `Money` | **홀딩 합계** — 승인으로 점유된 금액의 총합 |
 | `receivable` | `Money` | **미수** — 회수하지 못한 금액 (BR-20) |
+| `receivableBlockLifted` | `boolean` | 운영자가 미수 차단을 해제했는가 (BR-45) |
+| `dailyLimit` | `Money` | **계좌 1일 한도** — 이 계좌의 모든 카드 사용액 합계에 적용 (BR-44) |
+| `dailyUsage` | `LimitUsage` | 계좌 단위 달력일 누적 사용액 (BR-44) |
 
 > **홀딩을 목록이 아니라 합계로 든다.** 목록을 들면 계좌 애그리게이트가 승인 수만큼 커진다. 개별 홀딩의 존재는 승인(C3)이 소유한다 — 이중 해제는 승인 상태가 막는다.
 
@@ -60,13 +63,18 @@
 | **INV-1** | `balance ≥ 0` | BR-20 | 없는 돈이 나간 상태 | 모든 조작 후 |
 | **INV-2** | `holdTotal ≥ 0` | — | 음수 점유는 무의미 | 모든 조작 후 |
 | **INV-3** | `receivable ≥ 0` | BR-20 | 음수 미수는 무의미 | 모든 조작 후 |
-| **INV-4** | **`balance > 0` 이면 `receivable = 0`** | BR-34 | 미수가 있는데 잔액이 남아 있음 = 상계가 안 됨 | 입금·환불 후 |
+| **INV-4** | **`balance > 0` 이면 `receivable = 0`** | BR-34 | 미수가 있는데 잔액이 남아 있음 = 상계가 안 됨 | 자금 유입 후 |
+| **INV-5** | `receivable = 0` 이면 `receivableBlockLifted = false` | BR-45 | 미수가 없는데 차단 해제 플래그가 남음 | 상계 후 |
+| **INV-6** | `dailyUsage.amount ≤ dailyLimit` | BR-44 | 계좌 한도 초과 | `useAccountLimit()` 후 |
 
 ### 불변식이 **아닌** 것 — 사전조건이다
 
 | # | 조건 | 왜 불변식이 아닌가 |
 |---|---|---|
 | **PRE-1** | `hold()` 호출 시 `요청액 ≤ 가용잔액` | 가용잔액(= `balance − holdTotal`)이 **일시적으로 음수가 될 수 있다.** 입금 역분개(BR-38)로 잔액이 줄었는데 홀딩이 남아 있는 경우다. 이때 **신규 승인만 막으면 되고**, 기존 홀딩을 강제 해제할 이유는 없다 |
+
+| **PRE-2** | `hold()` 호출 시 `receivable = 0` **또는** `receivableBlockLifted = true` (BR-45) |
+| **PRE-3** | `useAccountLimit()` 시 `dailyUsage + 요청액 ≤ dailyLimit` (BR-44) |
 
 > ⚠️ **"가용잔액 ≥ 0"을 불변식으로 두면 BR-38(입금 역분개)이 불가능해진다.** 잔액을 되돌리려는데 애그리게이트가 거부하기 때문이다. **불변식과 사전조건을 구분하지 않으면 정상 경로가 막힌다.**
 
@@ -90,7 +98,10 @@
 | **홀딩 해제** | `releaseHold(amount)` | `amount ≤ holdTotal` | `holdTotal` 감소 | `HoldReleased` |
 | **매입 출금** | `capture(captureAmount, heldAmount)` | `heldAmount ≤ holdTotal` | `holdTotal` **전액 해제**, `balance` 감소. 부족하면 `receivable` 증가 | `Withdrawn` 또는 `ReceivableIncurred` |
 | **입금** | `deposit(amount)` | `amount > 0` | 미수 우선 상계 후 잔여분만 `balance` 증가 | `Deposited` · `ReceivableOffset` |
-| **환불 입금** | `refund(amount)` | `amount > 0` | `balance` 증가 (미수 상계 포함) | `Refunded` |
+| **환불 입금** | `refund(amount)` | `amount > 0` | **입금과 동일하게 미수 우선 상계** (BR-34) | `Refunded` · `ReceivableOffset` |
+| **계좌 한도 사용** | `useAccountLimit(amount, at)` | PRE-3 | `dailyUsage` 증가 (기준일 리셋 포함) | `AccountLimitUsed` |
+| **계좌 한도 복원** | `restoreAccountLimit(amount, at)` | 같은 기준일 | `dailyUsage` 감소 | `AccountLimitRestored` |
+| **미수 차단 해제** | `liftReceivableBlock(operator)` | `receivable > 0` | `receivableBlockLifted = true` | `ReceivableBlockLifted` |
 | **입금 정정** | `reverseDeposit(amount)` | — | `balance` 감소. 부족분은 `receivable` | `DepositReversed` |
 
 ### 조작 상세 — `capture()` (BR-18 + BR-20)
@@ -119,6 +130,8 @@
 ```
 
 > 입금액이 미수보다 적으면 **잔액은 늘지 않고 미수만 감소**한다 (INV-4).
+> **`refund()`도 같은 절차를 쓴다** (BR-34) — 계좌로 들어오는 돈은 출처와 무관하게 채권 회수의 재원이다. 다만 상계 사실이 **조회에 표시**되어야 한다(BR-31 확장 대상).
+> **미수가 전액 상계되면 `receivableBlockLifted`를 false로 되돌린다** (INV-5) — 차단이 자동 해제된다.
 
 ---
 
@@ -166,8 +179,10 @@
 
 | # | 의문 | 영향 |
 |---|---|---|
-| **AC1** | 미수가 있는 계좌에서 **신규 승인을 허용하는가?** 잔액이 있으면 INV-4에 따라 미수는 0이므로 논리적으로는 발생하지 않으나, 명시가 없다 | 승인 판단 |
-| **AC2** | 환불 입금(`refund`)도 미수를 상계하는가? BR-34는 "입금"만 말한다 | 상계 범위 |
+| ~~AC1~~ | 미수 계좌의 신규 승인 | **거절한다. 운영자가 계좌 단위로 차단 해제 가능. 전액 상계 시 자동 해제** → BR-45, PRE-2, INV-5 |
+| ~~AC2~~ | 환불 입금의 미수 상계 | **상계한다.** 계좌로 들어오는 돈은 출처와 무관 → BR-34 확장 |
+
+**(현재 미해결 없음)**
 
 ---
 
@@ -175,4 +190,5 @@
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v1.1 | 2026-08-03 | AC1·AC2 확정 반영 — 미수 차단(BR-45)·계좌 한도(BR-44)·환불 상계(BR-34 확장). 불변식 6종, 사전조건 3종, 조작 9종 |
 | v1.0 | 2026-08-03 | 최초 작성 — 불변식 4종, 사전조건 1종(가용잔액을 불변식이 아닌 사전조건으로 구분), 조작 6종, 이벤트 8종 |
