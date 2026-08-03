@@ -37,6 +37,8 @@
 | **INV-3** | **`netAmount`는 음수일 수 있다** | BR-43 | — (이것은 정상이다) |
 | **INV-4** | `status = 완료` 이면 `netAmount`가 바뀌지 않는다 | BR-21 | 확정 후 금액 변동 |
 
+> **`escalate()`가 상태를 바꾸지 않으므로 `실패`는 종료가 아니다.** 자동 재시도는 임계까지만이고, 그 이후에는 **운영자 강제 재개**만이 유일한 탈출구다. 이 조작이 없으면 임계 초과 `실패`가 사실상 종료 상태가 되어 **그날 순액이 영영 확정되지 않는다.**
+
 > ⚠️ **INV-3이 반직관적이다.** 환불이 그날 매입보다 많으면 순액이 음수가 되고, 이는 **매입사가 우리에게 지급**하는 방향이다. 정상이며 막으면 안 된다.
 
 > **INV-4를 지키는 장치가 BR-47이다.** 완료된 영업일의 순액이 사후에 움직이지 않으려면, 역분개가 **정정 시점의 영업일**에 귀속되어야 한다 (`journal-entry.md` INV-6).
@@ -48,10 +50,11 @@
 | 조작 | 코드명 | 사전조건 | 사후조건 | 이벤트 |
 |---|---|---|---|---|
 | **영업일 마감** | `close(businessDate)` | 마감 시각 도래 (BR-06) | 상태 = 산출중 | `BusinessDateClosed` |
-| **순액 산출** | `calculate(captureTotal, refundTotal)` | 상태 = 산출중 | `netAmount` 확정, 상태 = 완료 | `SettlementCompleted` |
+| **순액 산출** | `calculate(captureTotal, refundTotal)` | 상태 = 산출중 | `netAmount` 확정, 상태 = 완료. **부수 효과는 이벤트 발행까지다** — 전표 기표와 승인 `markSettled`는 **별도 논리 단위**(BR-40) | `SettlementCompleted` |
 | **산출 실패** | `fail(reason)` | 상태 = 산출중 | 상태 = 실패, `retryCount` 증가 | `SettlementFailed` |
-| **재시도** | `retry()` | `retryCount < 임계` (BR-37) | 상태 = 산출중 | `SettlementRetried` |
-| **운영자 통지** | `escalate()` | `retryCount ≥ 임계` | 운영자 목록에 오름 | `SettlementEscalated` |
+| **재시도** | `retry()` | **상태 = 실패** AND `retryCount < 임계` (BR-37) | 상태 = 산출중 | `SettlementRetried` |
+| **운영자 통지** | `escalate()` | 상태 = 실패 AND `retryCount ≥ 임계` | 운영자 목록에 오름 | `SettlementEscalated` |
+| **운영자 강제 재개** | `resumeByOperator(operator, reason)` | 상태 = 실패 | `retryCount = 0`, 상태 = 산출중. **사유 기록 필수** | `SettlementResumedByOperator` |
 
 ### 멱등한 재산출 (BR-37)
 
@@ -62,6 +65,8 @@ calculate() 를 N회 실행 → netAmount 동일   ← 멱등
 ```
 
 > 이것이 **자동 재시도를 허용할 수 있는 근거**다. 매입(BR-23)이 파일·레코드 멱등을 따로 두어야 했던 것과 대비된다.
+
+> ⚠️ **멱등한 것은 산출뿐이다.** 전표 기표와 승인 `markSettled`는 재실행하면 중복된다. 그래서 `calculate()`의 사후조건을 **`netAmount` 확정 + 이벤트 발행**으로 끊고, 그 이벤트를 받는 쪽에 **각자의 멱등**을 둔다(BR-40이 이미 요구한 분리다). 한 조작에 묶으면 재시도가 곧 이중 기표가 된다.
 
 ---
 
@@ -82,6 +87,7 @@ calculate() 를 N회 실행 → netAmount 동일   ← 멱등
 |---|---|
 | **ST1** | 재시도 횟수·간격, 미결 허용 시간 — 미확정 수치 표 (BR-37) |
 | **ST2** | `captureTotal`을 정산이 직접 집계하는가, 결제(C3)가 계산해 보내는가? 전자면 정산이 매입 데이터를 읽어야 한다 |
+| **ST3** | 앞선 영업일이 `실패`인 채로 다음 영업일 정산을 시작할 수 있는가 — 미결 누적을 허용하는가 |
 
 ---
 
@@ -89,5 +95,6 @@ calculate() 를 N회 실행 → netAmount 동일   ← 멱등
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v1.2 | 2026-08-04 | 듀얼 리뷰 반영 — `calculate()` 사후조건을 **이벤트 발행까지로 축소**(전표·`markSettled`를 묶으면 재시도가 이중 기표 — BR-40 위반) · `retry()`·`escalate()`에 **상태 = 실패** 사전조건 추가 · **`resumeByOperator()` 신설**(임계 초과 후 탈출 경로 부재 해소) |
 | v1.1 | 2026-08-03 | INV-4와 BR-47(역분개 귀속 영업일)의 연결 명시 |
 | v1.0 | 2026-08-03 | 최초 작성 — 순액 음수 허용(INV-3), 멱등 재산출 근거 명시 |

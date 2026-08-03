@@ -48,14 +48,18 @@ stateDiagram-v2
 
 | # | 현재 | 전이 | 다음 | 조건 | 부수 효과 | 근거 |
 |---|---|---|---|---|---|---|
-| C1 | `NORMAL` | `suspend` | `SUSPENDED` | — | 신규 승인 차단. **한도 사용액은 그대로** | BR-15 |
-| C2 | `SUSPENDED` | `resume` | `NORMAL` | — | — | BR-15 |
+| C1 | `NORMAL` | `suspend` | `SUSPENDED` | — | 신규 승인 차단(**효과의 근거 = BR-15**). 한도 사용액은 그대로 | 애그리게이트 §5 |
+| C2 | `SUSPENDED` | `resume` | `NORMAL` | — | — | 애그리게이트 §5 |
 | C3 | `NORMAL`·`SUSPENDED` | `terminate` | `TERMINATED` | — | **되돌릴 수 없다** (INV-4) | — |
 | C4 | `NORMAL`·`SUSPENDED` | `changeLimit` | 상태 불변 | `1회 ≤ 1일` (INV-3) | 기존 승인은 **무효화되지 않는다** | BR-46 |
-| C5 | `NORMAL` | `useLimit` | 상태 불변 | PRE-1·PRE-2 | `usage` 증가 (기준일 리셋 포함) | BR-05 |
-| C6 | 모든 상태 | `restoreLimit` | 상태 불변 | **같은 기준일** | `usage` 감소 | BR-24 |
+| C5 | `NORMAL` | `useLimit` | 상태 불변 | PRE-1·PRE-2 **AND 유효기간 미경과** | `usage` 증가 (기준일 리셋 포함) | BR-05·15 |
+| C6 | 모든 상태 | `restoreLimit` | 상태 불변 | **같은 기준일** AND **`amount ≤ usage.amount`** | `usage` 감소 | BR-24 |
 
 > **C6이 모든 상태에서 허용된다.** 정지·해지된 카드의 승인이 취소될 수 있고, 그 복원을 막을 이유가 없다. 다만 **기준일이 다르면 복원하지 않는다** — 어제 한도는 이미 지나갔다.
+>
+> ⚠️ **상한(`amount ≤ usage.amount`)이 빠지면 `usage`가 음수가 된다.** 그러면 그날 한도가 실제보다 커져 **한도 초과 승인**이 난다. 애그리게이트 `restoreLimit()`은 이 조건을 갖고 있는데 전이 표에서 누락돼 있었다.
+>
+> ⚠️ **이 표는 카드 한도만 다룬다.** 계좌 한도(BR-44)는 계좌 애그리게이트의 `useAccountLimit()`·`restoreAccountLimit()`이 별도로 관리하며, **승인은 두 층을 모두 만족해야 성립한다.** 한 층만 복원하면 다른 층이 남아 정상 결제가 거절된다.
 
 ---
 
@@ -69,6 +73,8 @@ stateDiagram-v2
 | **CF4** | `SUSPENDED` | `useLimit` | 정지 카드로 승인할 수 없다 (BR-15) | 분실 신고한 카드에서 결제 | `CARD_SUSPENDED` |
 | **CF5** | `TERMINATED` | `changeLimit` | 쓰이지 않을 한도를 바꾼다 | — (무해하나 무의미) | `CARD_TERMINATED` |
 | **CF6** | 모든 상태 | `useLimit` (**유효기간 경과**) | 만료된 카드 (BR-15) | 만료 카드에서 결제 | `CARD_EXPIRED` |
+| **CF7** | 모든 상태 | `restoreLimit` (**`amount > usage.amount`**) | 복원할 사용액이 없다 | **`usage`가 음수** → 그날 한도가 부풀어 한도 초과 승인 | `LIMIT_RESTORE_EXCEEDS_USAGE` |
+| **CF8** | `TERMINATED` | `terminate` | 이미 해지 | — | **오류가 아니라 무시**(◎) |
 
 > ⚠️ **CF3·CF4는 카드가 막는 것이 아니라 승인 경로가 `assertUsable()`을 호출해서 막힌다.**
 > **매입 경로는 `assertUsable()`을 호출하지 않는다** — 해지·정지 카드의 매입도 반영된다(BR-35). 이미 승인한 거래의 매입을 카드 상태를 이유로 거절할 수 없기 때문이다.
@@ -78,15 +84,19 @@ stateDiagram-v2
 
 ## 5. 전이 매트릭스
 
+> **`assertUsable()`은 이 표에 없다.** 조회 조작이라 상태를 바꾸지 않으며, `useLimit`의 사전조건으로 승인 경로가 먼저 호출한다. 아래 `useLimit` 칸의 조건부 표기가 그 판정 결과다.
+
 | 현재 \ 조작 | `suspend` | `resume` | `terminate` | `changeLimit` | `useLimit` | `restoreLimit` |
 |---|---|---|---|---|---|---|
-| **`NORMAL`** | **O** (C1) | ◎ | **O** (C3) | **O** (C4) | **O** (C5) | **O** (C6) |
-| **`SUSPENDED`** | ◎ | **O** (C2) | **O** (C3) | **O** (C4) | X (CF4) | **O** (C6) |
-| **`TERMINATED`** | X (CF2) | X (CF1) | ◎ | X (CF5) | X (CF3) | **O** (C6) |
+| **`NORMAL`** | **O** (C1) | ◎ | **O** (C3) | **O** (C4) | **O/X** (C5 / CF6) | **O/X** (C6 / CF7) |
+| **`SUSPENDED`** | ◎ | **O** (C2) | **O** (C3) | **O** (C4) | X (CF4) | **O/X** (C6 / CF7) |
+| **`TERMINATED`** | X (CF2) | X (CF1) | ◎ (CF8) | X (CF5) | X (CF3) | **O/X** (C6 / CF7) |
 
-**O 9 · X 5 · ◎ 4 = 18칸**
+**O 6 · O/X 4 · X 5 · ◎ 3 = 18칸**
 
-> `TERMINATED` 행에 `O`가 하나 있는 것이 이 표의 요점이다 — **해지는 카드의 끝이지 그 카드로 한 거래의 끝이 아니다.**
+> **`useLimit`·`restoreLimit`이 조건부인 이유가 다르다.** `useLimit`은 **시간**(유효기간)이 금지를 만들고, `restoreLimit`은 **금액**(`usage` 상한)이 만든다. 상태만으로는 둘 다 판정할 수 없다.
+
+> `TERMINATED` 행에서 `restoreLimit`만 허용되는 것이 이 표의 요점이다 — **해지는 카드의 끝이지 그 카드로 한 거래의 끝이 아니다.**
 
 ---
 
@@ -128,4 +138,5 @@ stateDiagram-v2
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v0.2 | 2026-08-04 | 듀얼 리뷰 반영 — `restoreLimit` **상한 조건 추가**(누락 시 `usage` 음수 → 한도 초과 승인) + CF7 신설 · `useLimit`을 **유효기간 조건부(`O/X`)** 로 표기 · `assertUsable()`이 표에 없는 이유 명시 · **계좌 한도는 이 표 밖**임을 경고(BR-44) · C1·C2의 근거를 BR-15에서 애그리게이트 조작 표로 정정 · CF8 신설 · 집계 정정(O 6·O/X 4·X 5·◎ 3) |
 | v0.1 | 2026-08-04 | 최초 작성 — 상태 3종, 전이 6종, 금지 6종. 유효기간을 상태가 아닌 파생 판정으로 확정. `restoreLimit`이 해지 후에도 허용되는 근거 명시 |

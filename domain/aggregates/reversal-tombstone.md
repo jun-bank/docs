@@ -44,7 +44,7 @@
 |---|---|---|---|---|
 | **예약 기록** | `record(correlationId, at, ttl)` | 같은 `correlationId`의 예약이 없음 | 예약 생성 | `ReversalTombstoneRecorded` |
 | **소비** | `consume()` | `consumed = false`, 미만료 | `consumed = true` | `ReversalTombstoneConsumed` |
-| **만료 정리** | `expire(now)` | `now ≥ expiresAt` | 삭제 대상 | `ReversalTombstoneExpired` |
+| **만료 정리** | `expire(now)` | `now ≥ expiresAt` | **레코드 삭제** — 이후 같은 상관 식별자는 "예약 없음"과 동치가 된다 | `ReversalTombstoneExpired` |
 
 ### 중복 망취소 처리 (BR-13 + BR-22)
 
@@ -72,6 +72,7 @@
 |---|---|
 | **RT1** | 보관 기간(TTL) 값 — 미확정 수치 표 (BR-22) |
 | **RT2** | 소비된 예약을 즉시 삭제하는가, 만료까지 남기는가? 남기면 **같은 상관 식별자의 재요청을 계속 막을 수 있다** |
+| **RT3** | **TTL 경계 경합** — 만료 배치가 근소하게 이기면 취소되었어야 할 승인이 홀딩까지 잡고 성립한다. 사후에 잡을 방법은 대사의 M1(미매입)뿐이다 |
 
 ---
 
@@ -79,4 +80,5 @@
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v1.1 | 2026-08-04 | 듀얼 리뷰 반영 — `expire()`의 사후조건을 **레코드 삭제**로 명확화(만료 후 상태가 "존재하며 무시"인지 "부재"인지 문서마다 갈리던 모호성 해소) · TTL 경계 경합을 RT3로 등재 |
 | v1.0 | 2026-08-03 | 최초 작성 |

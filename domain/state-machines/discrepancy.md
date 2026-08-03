@@ -39,7 +39,6 @@ stateDiagram-v2
     OPEN --> INVESTIGATING: investigate
     OPEN --> RESOLVED: resolve
     INVESTIGATING --> RESOLVED: resolve
-    INVESTIGATING --> OPEN: release (조사 포기)
     RESOLVED --> OPEN: 재발견 (BR-48)
     INVESTIGATING --> INVESTIGATING: 재발견 (횟수만 증가)
 ```
@@ -50,14 +49,13 @@ stateDiagram-v2
 
 | # | 현재 | 전이 | 다음 | 조건 | 부수 효과 | 근거 |
 |---|---|---|---|---|---|---|
-| D1 | — | `recordOrTouch` (최초) | `OPEN` | 같은 `(유형, 범위, 대상)` 없음 | `firstDetectedOn` 설정 · `detectionCount = 1` | BR-09·48 |
+| D1 | — | `recordOrTouch` (최초) | `OPEN` | 같은 `(유형, 범위, 대상)` 없음. **호출 주체 = 대사 배치 탐지 또는 매입 배치 격리** | `firstDetectedOn` 설정 · `detectionCount = 1` | BR-09·48·51 |
 | D2 | `OPEN` | `investigate` | `INVESTIGATING` | 운영자 지정 | 담당자 기록 | BR-09 |
 | D3 | `OPEN`·`INVESTIGATING` | `resolve` | `RESOLVED` | **`resolution ≠ null`** (INV-3) | 처리 결과 기록 | BR-09 |
-| D4 | `INVESTIGATING` | `release` | `OPEN` | 운영자 조작 | 담당자 해제 | — |
-| D5 | **`RESOLVED`** | `recordOrTouch` (재발견) | **`OPEN`** | — | `lastDetectedOn` 갱신 · `detectionCount` 증가 · **`resolution` 보존** | **BR-48** |
-| D6 | `OPEN`·`INVESTIGATING` | `recordOrTouch` (재발견) | 상태 불변 | — | `lastDetectedOn` 갱신 · `detectionCount` 증가 | BR-48 |
+| D4 | **`RESOLVED`** | `recordOrTouch` (재발견) | **`OPEN`** | — | `lastDetectedOn` 갱신 · `detectionCount` 증가 · **`resolution` 보존** | **BR-48** |
+| D5 | `OPEN`·`INVESTIGATING` | `recordOrTouch` (재발견) | 상태 불변 | — | `lastDetectedOn` 갱신 · `detectionCount` 증가. **상태만 그대로일 뿐 no-op이 아니다** | BR-48 |
 
-> **D5에서 `resolution`을 지우지 않는다.** *"지난번엔 이렇게 처리했는데 또 나왔다"* 가 다음 조사의 가장 중요한 단서다. 지우면 운영자가 같은 오판을 반복한다.
+> **D4에서 `resolution`을 지우지 않는다.** *"지난번엔 이렇게 처리했는데 또 나왔다"* 가 다음 조사의 가장 중요한 단서다. 지우면 운영자가 같은 오판을 반복한다.
 
 > **D3이 `OPEN`에서도 허용된다.** 조사를 거치지 않고 바로 처리해도 된다 — 원인이 명백한 불일치까지 조사 단계를 강제하면 운영자가 형식적으로 두 번 클릭하게 될 뿐이다. **막아야 할 것은 근거 없는 처리(INV-3)이지 빠른 처리가 아니다.**
 
@@ -70,9 +68,10 @@ stateDiagram-v2
 | **DF1** | 모든 상태 | `resolve` (**`resolution` 없음**) | INV-3 위반 | **처리했는데 근거가 없다** — 나중에 아무도 판단을 재구성할 수 없다 | `RESOLUTION_REQUIRED` |
 | **DF2** | 모든 상태 | **상류 데이터 변경** | INV-1 — 이 애그리게이트에 그런 조작이 아예 없다 | **틀린 값으로 덮어쓴다.** 원인이 우리 쪽인지 상대 쪽인지 모르는데 자동 정정하면 맞는 쪽을 망가뜨린다 | 조작 부재로 강제 (컴파일 단계) |
 | **DF3** | `RESOLVED` | `investigate` | 처리된 건을 다시 조사하려면 **재발견을 통해 `OPEN`으로 돌아와야** 한다 | 재발견 없이 상태만 되돌려 `detectionCount`가 실제와 어긋난다 | `DISCREPANCY_RESOLVED` |
-| **DF4** | `INVESTIGATING` | `investigate` (**다른 운영자**) | 두 사람이 같은 건을 조사하면 조치가 충돌한다 | 한쪽이 고치는 동안 다른 쪽이 다르게 고친다 | `ALREADY_INVESTIGATING` |
-| **DF5** | 모든 상태 | `recordOrTouch` (**새 건 생성**) | INV-2 — 같은 `(유형, 범위, 대상)`은 하나뿐 | 미해결 1건이 30일이면 30건. **목록이 신호를 잃는다** | 오류가 아니라 **갱신으로 흡수** (◎) |
+| **DF4** | `INVESTIGATING` | `investigate` | 두 사람이 같은 건을 조사하면 조치가 충돌한다. **같은 운영자의 재호출도 막는다** — 담당자가 이미 그 사람이므로 바꿀 것이 없다 | 한쪽이 고치는 동안 다른 쪽이 다르게 고친다 | `ALREADY_INVESTIGATING` |
+| **DF5** | 모든 상태 | `recordOrTouch` (**새 건 생성**) | INV-2 — 같은 `(유형, 범위, 대상)`은 하나뿐 | 미해결 1건이 30일이면 30건. **목록이 신호를 잃는다** | 오류가 아니라 **기존 건 갱신으로 흡수** (D4·D5) |
 | **DF6** | 모든 상태 | 삭제 | 불일치는 지워지지 않는다 | **은폐.** 대사 이력이 사라진다 | 조작 부재로 강제 |
+| **DF7** | `RESOLVED` | `resolve` (**다른 `resolution`**) | 처리 결과를 덮어쓰면 **왜 그렇게 판단했는지가 사라진다** | 오판의 흔적이 지워져 재발견 시 같은 오판을 반복 | `DISCREPANCY_RESOLVED` — 재발견으로 `OPEN` 복귀 후 다시 처리 |
 
 > **DF2와 DF6은 조작 목록의 부재로 강제된다.** 응답 코드가 아니라 **호출할 메서드가 없다.** 규칙을 문서에만 적으면 언젠가 누가 추가하지만, 조작이 없으면 추가하려는 순간 리뷰에 걸린다.
 
@@ -80,15 +79,17 @@ stateDiagram-v2
 
 ## 5. 전이 매트릭스
 
-| 현재 \ 조작 | `investigate` | `resolve` | `release` | `recordOrTouch` |
-|---|---|---|---|---|
-| **`OPEN`** | **O** (D2) | **O** (D3) | - | ◎ (D6) |
-| **`INVESTIGATING`** | X (DF4) | **O** (D3) | **O** (D4) | ◎ (D6) |
-| **`RESOLVED`** | X (DF3) | ◎ | - | **O → `OPEN`** (D5) |
+| 현재 \ 조작 | `investigate` | `resolve` | `recordOrTouch` |
+|---|---|---|---|
+| **`OPEN`** | **O** (D2) | **O** (D3) | **O**(상태 불변) (D5) |
+| **`INVESTIGATING`** | X (DF4) | **O** (D3) | **O**(상태 불변) (D5) |
+| **`RESOLVED`** | X (DF3) | X (DF7) | **O → `OPEN`** (D4) |
 
-**O 5 · X 2 · ◎ 3 · - 2 = 12칸**
+**O 6 · X 3 = 9칸**
 
-> **`X`가 2개뿐인 것이 이 표의 특징이다.** 다른 애그리게이트와 달리 이 상태 머신의 방어선은 **금지 전이가 아니라 조작의 부재**(DF2·DF6)에 있다. 고칠 방법이 없으므로 막을 것도 적다.
+> ⚠️ **`recordOrTouch` 칸에 `◎`를 쓰면 안 된다.** `◎`는 "no-op, 최초 결과 반환"인데 이 조작은 **`lastDetectedOn`과 `detectionCount`를 반드시 바꾼다**(BR-48). 상태가 안 변하는 것과 아무 일도 안 일어나는 것은 다르며, `◎`로 적으면 구현자가 그대로 무시해 재발견 추적이 통째로 사라진다.
+
+> **`X`가 3개뿐인 것이 이 표의 특징이다.** 다른 애그리게이트와 달리 이 상태 머신의 방어선은 **금지 전이가 아니라 조작의 부재**(DF2·DF6)에 있다. 고칠 방법이 없으므로 막을 것도 적다.
 
 ---
 
@@ -126,8 +127,8 @@ stateDiagram-v2
 
 | # | 의문 | 영향 |
 |---|---|---|
-| **DCS1** | `INVESTIGATING`에서 **오래 방치**되면? 담당자가 붙잡아 놓고 잊으면 `OPEN`보다 더 안 보인다 — 자동 `release` 타임아웃이 필요한가 | 운영 정책 |
-| **DCS2** | **`detectionCount`를 무엇 단위로 세는가.** 대사 실행 1회당 1인가, 탐지 건마다 1인가. 후자면 배치 재실행이 횟수를 부풀려 **"며칠째"가 아니라 "몇 번 돌렸나"** 가 된다 | BR-48 의미 · 재실행 안전성 |
+| **DCS1** | `INVESTIGATING`에서 **오래 방치**되면? 담당자가 붙잡아 놓고 잊으면 `OPEN`보다 더 안 보인다. **현재 `INVESTIGATING → OPEN` 경로가 아예 없다** — 조사 포기·담당자 변경 조작을 명세에 추가할 것인가 | 애그리게이트 조작 표 · 운영 정책 |
+| **DCS2** | **`detectionCount`를 무엇 단위로 세는가.** 매입 배치 격리가 즉시 적재하고 대사가 같은 건을 또 탐지하므로 **한 건이 하루에 2회 이상 증가**할 수 있다. 대사 실행 1회당 1인가, 탐지 건마다 1인가. 후자면 배치 재실행이 횟수를 부풀려 **"며칠째"가 아니라 "몇 번 돌렸나"** 가 된다 | BR-48 의미 · 재실행 안전성 |
 | **DCS3** | 내부 대사(BR-41) 불일치의 `subject` 단위 — 계정과목인가 계좌인가 (애그리게이트 DC2) | INV-2 유일성 키 |
 
 ---
@@ -136,4 +137,5 @@ stateDiagram-v2
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v0.2 | 2026-08-04 | 듀얼 리뷰 반영 — **명세에 없던 `release()` 제거**(DCS1으로 이관) · **`recordOrTouch`의 `◎`를 `O`로 정정**(no-op이 아니라 발견 횟수를 바꾼다 — `◎`로 두면 BR-48 추적이 사라진다) · **DF7 신설**(`RESOLVED`에서 다른 내용으로 재처리하면 오판 흔적이 지워진다) · D1에 **호출 주체 명시** · 집계 정정(9칸) |
 | v0.1 | 2026-08-04 | 최초 작성 — 상태 3종(**종료 상태 없음**), 전이 6종, 금지 6종. `RESOLVED → OPEN` 재발견 복귀(BR-48)와 `resolution` 보존, 방어선이 금지가 아닌 조작 부재에 있다는 점 명시. `detectionCount` 계수 단위를 열린 의문으로 식별 |

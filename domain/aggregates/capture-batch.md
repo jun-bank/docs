@@ -35,7 +35,7 @@
 | # | 불변식 | 근거 | 위반 시 |
 |---|---|---|---|
 | **INV-1** | `fileId`는 유일하다 | BR-23 | 같은 파일이 두 번 처리 |
-| **INV-2** | `processedRecords`에 같은 ID가 두 번 들어가지 않는다 | BR-23 | **이중 출금** |
+| **INV-2** | `processedRecords`와 `isolatedRecords`는 **상호배타**이며, 두 집합을 합쳐 같은 레코드 ID가 두 번 나타나지 않는다 | BR-23 | **이중 출금**, 그리고 건수 판정(INV-3)이 실제 전체를 다루기 전에 성립해 **배치가 조용히 완료된다** |
 | **INV-3** | `status = 완료됨` 이면 `\|processedRecords\| + \|isolatedRecords\| = totalRecords` | — | **부분 실패를 완료로 위장** |
 | **INV-4** | `status = 완료됨` 이후 레코드가 추가되지 않는다 | — | 완료 후 변경 |
 
@@ -49,8 +49,8 @@
 |---|---|---|---|---|
 | **수신** | `receive(fileId, totalRecords, businessDate)` | INV-1 | 상태 = 수신됨 | `CaptureFileReceived` |
 | **처리 시작** | `start()` | 상태 ∈ {수신됨, 중단됨} | 상태 = 처리중 | `CaptureBatchStarted` |
-| **레코드 처리** | `markProcessed(recordId)` | 집합에 없음 (INV-2) | 집합에 추가 | — |
-| **레코드 격리** | `isolate(recordId, reason)` | 집합에 없음 | 격리 목록에 추가 | `CaptureRecordIsolated` |
+| **레코드 처리** | `markProcessed(recordId)` | **두 집합 어디에도 없음** (INV-2) | 집합에 추가 | — |
+| **레코드 격리** | `isolate(recordId, reason)` | **두 집합 어디에도 없음** (INV-2) | 격리 목록에 추가. **보류 격리(BR-50)를 제외**하고 `Discrepancy.recordOrTouch()` 호출 | `CaptureRecordIsolated` |
 | **중단** | `interrupt(reason)` | 상태 = 처리중 | 상태 = 중단됨 | `CaptureBatchInterrupted` |
 | **완료** | `complete()` | INV-3 | 상태 = 완료됨 | `CaptureBatchCompleted` |
 
@@ -58,11 +58,13 @@
 
 ```
 중단 → start() → 각 레코드에 대해
-  if recordId ∈ processedRecords: 건너뛴다
-  else: 처리 후 markProcessed()
+  if recordId ∈ (processedRecords ∪ isolatedRecords): 건너뛴다   ← 두 집합 모두 확인
+  else: 처리 후 markProcessed() 또는 isolate()
 
 완료 판정: |processed| + |isolated| = totalRecords    ← 건수로 검증 (INV-3)
 ```
+
+> ⚠️ **격리 쪽에도 중복 방지가 있어야 INV-3이 의미를 갖는다.** 처리 집합만 막으면 같은 레코드를 여러 번 격리해 **건수를 부풀릴 수 있고**, 그러면 파일 뒤쪽을 통째로 못 읽어도 완료 판정이 통과한다 — INV-3이 막으려던 바로 그 실패다.
 
 ### 취소 레코드 (BR-33)
 
@@ -79,6 +81,18 @@
 | 이미 매입된 승인 | BR-32 | M7 후속 매입 |
 | 금액 초과 | BR-16 ③ | M4 금액 초과 매입 |
 | **원승인이 보류 중** (`frozen = true`) | **BR-50** | **없음 — 불일치가 아니다** |
+
+### 보류 격리의 재처리 (BR-50)
+
+원 배치는 `완료됨`으로 두고 **다시 열지 않는다.** 보류가 해제되면 **별도 재처리 배치**가 원 `(fileId, recordId)`를 **승계**해 반영한다.
+
+```
+원 배치     : COMPLETED (불변) — INV-4 유지
+재처리 배치 : 입력 = 보류 해제된 격리 레코드
+              멱등 키 = 원 (fileId, recordId) 그대로
+```
+
+> **승계가 핵심이다.** 새 키를 발급하면 운영자가 두 번 지시하거나 매입사가 같은 파일을 재전송했을 때 BR-23 멱등이 적용되지 않아 **이중 출금**이 된다.
 
 > **마지막 행만 불일치를 만들지 않는다.** 보류는 **우리가 의도한 지연**이므로 운영자가 자기 보류를 자기가 조사하게 만들 이유가 없다. 대신 이 건은 대사에서 **M1(미매입)으로도 잡지 않는다** — 안 그러면 보류가 매일 새 불일치를 만든다.
 >
@@ -110,5 +124,6 @@
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v1.2 | 2026-08-04 | 듀얼 리뷰 반영 — **INV-2를 두 집합 상호배타로 확장**(격리 중복이 건수를 부풀려 INV-3을 무력화하던 구멍) · `isolate()`가 불일치 적재를 호출하는 지점 명시 · 보류 격리의 재처리를 **멱등 집합 승계 별도 배치**로 확정(BR-50) |
 | v1.1 | 2026-08-03 | 격리 사유 2종 추가 — 무효 승인(BR-51 · M8) · 보류 중(BR-50 · 불일치 아님). 보류 격리도 INV-3 계상 대상임을 명시 |
 | v1.0 | 2026-08-03 | 최초 작성 — 완료 판정을 건수로 강제(INV-3), 레코드 단위 커밋 |

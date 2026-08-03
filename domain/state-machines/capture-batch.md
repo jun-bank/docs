@@ -43,8 +43,8 @@ stateDiagram-v2
 | B1 | — | `receive` | `RECEIVED` | `fileId` 유일 (INV-1) | `totalRecords` 확정 | BR-23 |
 | B2 | `RECEIVED` | `start` | `PROCESSING` | — | — | — |
 | B3 | `INTERRUPTED` | `start` | `PROCESSING` | — | **처리된 레코드는 건너뛴다** | BR-23 |
-| B4 | `PROCESSING` | `markProcessed` | 상태 불변 | 집합에 없음 (INV-2) | 레코드 반영 + 집합 추가. **레코드 단위 커밋** | BR-16·23 |
-| B5 | `PROCESSING` | `isolate` | 상태 불변 | 집합에 없음 | 격리 목록에 추가 | BR-27·32·50·51 |
+| B4 | `PROCESSING` | `markProcessed` | 상태 불변 | **두 집합 어디에도 없음** (INV-2) | 레코드 반영 + 처리 집합 추가. **레코드 단위 커밋** | BR-16·23 |
+| B5 | `PROCESSING` | `isolate` | 상태 불변 | **두 집합 어디에도 없음** (INV-2) | 격리 목록에 추가 + **`Discrepancy.recordOrTouch()` 호출**(보류 격리는 제외 — BR-50) | BR-27·32·50·51 |
 | B6 | `PROCESSING` | `interrupt` | `INTERRUPTED` | — | **진행분 보존** | — |
 | B7 | `PROCESSING` | `complete` | `COMPLETED` | **`\|처리\| + \|격리\| = totalRecords`** (INV-3) | — | — |
 
@@ -63,7 +63,11 @@ stateDiagram-v2
 | **BF5** | `RECEIVED` | `markProcessed` · `isolate` | 시작하지 않은 배치 | **상태 없이 자금이 움직인다** — 중단 시 어디까지 했는지 모른다 | `BATCH_NOT_STARTED` |
 | **BF6** | `RECEIVED`·`INTERRUPTED` | `complete` | 처리 중이 아닌데 완료 선언 | 미처리 레코드를 남긴 채 완료 | `BATCH_NOT_PROCESSING` |
 | **BF7** | 모든 상태 | `receive` (**같은 `fileId`**) | INV-1 위반 | **파일 전체 이중 처리** | `BATCH_DUPLICATE_FILE` — 최초 배치를 반환 |
-| **BF8** | `PROCESSING` | `markProcessed` (**이미 처리된 레코드**) | INV-2 위반 | **이중 출금** | 오류가 아니라 **건너뛴다** (◎) — 재개 시 정상 경로다 |
+| **BF8** | `PROCESSING` | `markProcessed`·`isolate` (**이미 처리 또는 격리된 레코드**) | INV-2 위반 | **이중 출금**, 그리고 격리 중복이 **건수를 부풀려 INV-3을 무력화** | 오류가 아니라 **건너뛴다** (◎) — 재개 시 정상 경로다 |
+| **BF9** | `INTERRUPTED` | `markProcessed` · `isolate` | 재개(`start`)를 거치지 않았다 | 상태가 `PROCESSING`이 아닌데 자금이 움직여 **중단 시점 추적이 깨진다** | `BATCH_NOT_PROCESSING` |
+| **BF10** | `RECEIVED`·`INTERRUPTED`·`COMPLETED` | `interrupt` | 처리 중이 아니다 | 중단 이력이 근거 없이 생긴다 | `BATCH_NOT_PROCESSING` |
+
+> ★ **격리 쪽 중복 방지가 INV-3의 전제다.** 처리 집합만 막고 격리를 열어 두면 같은 레코드를 여러 번 격리해 **`|처리| + |격리|`를 인위적으로 채울 수 있고**, 그러면 파일 뒤쪽을 통째로 못 읽어도 완료 판정이 통과한다 — BF1이 막으려던 실패가 **다른 문으로 그대로 들어온다.**
 
 > **BF1과 BF8의 처리가 정반대인 이유.**
 > BF8(중복 레코드)은 **재개할 때마다 반드시 일어나는 정상 경로**이므로 조용히 건너뛴다.
@@ -76,14 +80,30 @@ stateDiagram-v2
 
 | 현재 \ 조작 | `receive` | `start` | `markProcessed` | `isolate` | `interrupt` | `complete` |
 |---|---|---|---|---|---|---|
-| **`RECEIVED`** | X (BF7) | **O** (B2) | X (BF5) | X (BF5) | - | X (BF6) |
-| **`PROCESSING`** | X (BF7) | ◎ | **O** (B4) / ◎ (BF8) | **O** (B5) | **O** (B6) | **O** (B7) / X (BF1) |
-| **`INTERRUPTED`** | X (BF7) | **O** (B3) | X (BF5) | X (BF5) | ◎ | X (BF6) |
-| **`COMPLETED`** | X (BF7) | X (BF3) | X (BF2) | X (BF2) | X (BF4) | ◎ |
+| **`RECEIVED`** | X (BF7) | **O** (B2) | X (BF5) | X (BF5) | X (BF10) | X (BF6) |
+| **`PROCESSING`** | X (BF7) | ◎ | **O/◎** (B4 / BF8) | **O/◎** (B5 / BF8) | **O** (B6) | **O/X** (B7 / BF1) |
+| **`INTERRUPTED`** | X (BF7) | **O** (B3) | X (BF9) | X (BF9) | X (BF10) | X (BF6) |
+| **`COMPLETED`** | X (BF7) | X (BF3) | X (BF2) | X (BF2) | X (BF10) | ◎ |
 
-**O 6 · X 14 · ◎ 4 = 24칸 (`-` 1 포함)**
+**O 3 · O/◎ 2 · O/X 1 · X 16 · ◎ 2 = 24칸**
 
-> **`complete` 칸만 조건부다.** 같은 조작이 조건에 따라 `O`와 `X`로 갈리는 유일한 칸이며, 그 조건이 INV-3이다.
+> **조건부 칸 3개가 이 배치의 안전장치 전부다.**
+> `markProcessed`·`isolate`는 **이미 다룬 레코드면 조용히 건너뛴다**(재개의 정상 경로) — 시끄럽게 막으면 재개가 불가능해진다.
+> `complete`는 **건수가 안 맞으면 시끄럽게 막는다**(INV-3) — 조용히 넘어가면 절단을 놓친다.
+> 방향이 정반대이며, 하나라도 뒤집으면 정상 재개가 막히거나 조용한 절단이 통과한다.
+
+### `COMPLETED` 행이 전부 닫혀 있는데 보류 격리는 어떻게 재처리하나 (BR-50)
+
+**원 배치를 다시 열지 않는다.** `COMPLETED → PROCESSING` 재개방을 만들면 INV-4("완료 후 레코드 추가 없음")가 깨지고, **이미 마감·정산된 영업일의 배치가 다시 열릴 수 있다.**
+
+```
+원 배치     : COMPLETED 유지 (불변)
+                ↓ 보류 해제
+재처리 배치 : 입력  = 보류 해제된 격리 레코드
+              멱등키 = 원 (fileId, recordId) 를 그대로 승계
+```
+
+> ★ **멱등 키 승계가 이 설계의 전부다.** 새 키를 발급하면 운영자가 두 번 지시하거나 매입사가 같은 파일을 재전송했을 때 BR-23의 멱등이 적용되지 않아 **이중 출금**이 된다. 재처리 배치는 별개의 실행이지만 **멱등 공간은 원 파일과 같아야 한다.**
 
 ---
 
@@ -96,6 +116,7 @@ stateDiagram-v2
 | **레코드 처리 중 프로세스 종료** | **레코드 단위 커밋**이므로 커밋된 것까지 보존. 재개 시 그다음부터 |
 | **파일 전체를 한 트랜잭션으로 묶으면?** | 대용량에서 락이 과도하고, **중단 시 진행분이 전부 사라진다.** 레코드 단위 커밋이 맞다 |
 | 배치와 실시간 승인의 경합 | 계좌·승인 애그리게이트 단위 락에서 해소 |
+| **재처리 배치와 원 파일 재전송의 경합** | 둘 다 원 `(fileId, recordId)` 멱등 집합을 보므로 **먼저 커밋한 쪽만 반영**된다 |
 
 ---
 
@@ -134,4 +155,5 @@ stateDiagram-v2
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v0.2 | 2026-08-04 | 듀얼 리뷰 반영 — ★ **격리 중복 방지 추가**(INV-2를 두 집합 상호배타로. 없으면 격리 중복이 건수를 채워 INV-3이 무력화된다) · `isolate()`가 **불일치 적재를 호출**하는 지점 명시 · **BF9·BF10 신설**(미등재 X 보완) · 조건부 칸 `O/◎`·`O/X` 기호 도입 · **보류 격리 재처리를 멱등 승계 별도 배치로 확정**(§8) · 집계 정정 |
 | v0.1 | 2026-08-04 | 최초 작성 — 상태 4종, 전이 7종, 금지 8종. `FAILED`를 두지 않는 근거, 중복 레코드(조용히 건너뜀)와 건수 불일치(시끄럽게 차단)의 처리 분리, `PROCESSING` 갇힘을 막는 감시 전이 명시 |

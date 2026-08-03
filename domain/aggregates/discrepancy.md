@@ -69,9 +69,20 @@
 
 | 조작 | 코드명 | 사전조건 | 사후조건 | 이벤트 |
 |---|---|---|---|---|
-| **적재 또는 갱신** | `recordOrTouch(type, scope, subject, on, expected, actual)` | — | 없으면 생성, 있으면 `lastDetectedOn`·`detectionCount` 갱신. **처리완료였다면 미처리로 복귀** (INV-4) | `DiscrepancyRecorded` 또는 `DiscrepancyRedetected` |
+| **적재 또는 갱신** | `recordOrTouch(type, scope, subject, on, expected, actual)` | — (**호출 주체 = 대사 배치 탐지 또는 매입 배치 격리**) | 없으면 생성, 있으면 `lastDetectedOn`·`detectionCount` 갱신. **처리완료였다면 미처리로 복귀** (INV-4) | `DiscrepancyRecorded` 또는 `DiscrepancyRedetected` |
 | **조사 시작** | `investigate(operator)` | 상태 = 미처리 | 상태 = 조사중 | `DiscrepancyInvestigating` |
 | **처리 완료** | `resolve(operator, resolution)` | `resolution` 있음 (INV-3) | 상태 = 처리완료 | `DiscrepancyResolved` |
+
+### 누가 부르는가
+
+| 호출 주체 | 언제 | 비고 |
+|---|---|---|
+| **매입 배치** | `isolate()` 시점 — **즉시** | 격리 즉시 운영자 화면에 보인다. **보류 격리(BR-50)는 제외** |
+| **대사 배치** | 3자 비교에서 탐지 시 (BR-30·41) | 이미 적재된 건은 재발견 갱신 |
+
+> **격리를 즉시 적재하지 않으면 묻힌다.** 대사는 정산 완료에 딸려 시작되므로(BR-42), 정산이 실패·지연되면 격리 건이 `isolatedRecords` 안에만 남아 **아무도 못 본다.**
+>
+> **대신 같은 건을 대사가 또 탐지한다.** 이때 새 건이 되지 않는 것은 INV-2가 보장하지만, `detectionCount`가 "며칠째"가 아니라 "몇 번 탐지됐나"가 되지 않도록 **계수 단위를 대사 실행당 1회로 제한**해야 한다 → DC3.
 
 ### 지속 지표
 
@@ -127,7 +138,8 @@ BR-09가 자동 정정을 금지한 이유는 **사람이 실제로 판단하게
 | # | 의문 |
 |---|---|
 | **DC2** | 내부 대사(BR-41) 불일치의 `subject`를 무엇으로 잡는가 — 계정과목 단위인가 계좌 단위인가 |
-| **DC3** | 재발견이 며칠 이상 지속되면 별도 통지할 것인가 (미확정 수치 — BR-48) |
+| **DC3** | **`detectionCount`의 계수 단위** — 대사 실행당 1회인가 탐지 건마다 1인가. 후자면 배치 재실행이 횟수를 부풀려 지속 기간 지표로 못 쓴다 |
+| **DC4** | 재발견이 며칠 이상 지속되면 별도 통지할 것인가 (미확정 수치 — BR-48) |
 
 ---
 
@@ -135,6 +147,7 @@ BR-09가 자동 정정을 금지한 이유는 **사람이 실제로 판단하게
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v1.3 | 2026-08-04 | 듀얼 리뷰 반영 — **`recordOrTouch()`의 호출 주체 명시**(매입 배치 격리 즉시 + 대사 배치). 격리와 불일치를 잇는 지점이 어느 문서에도 없던 단절 해소. `detectionCount` 계수 단위를 DC3로 격상 |
 | v1.2 | 2026-08-03 | **M8 무효 승인 매입 신설**(BR-51) — 유형 7종. 보류 격리는 불일치가 아님을 명시(BR-50) |
 | v1.1 | 2026-08-03 | **DC1 확정 — 재발견 추적**(BR-48). 필드 3종 교체(`detectedOn` → `firstDetectedOn`·`lastDetectedOn`·`detectionCount`) · INV-2 유일성 키 변경 · INV-4 신설(처리완료 후 재발견 시 미처리 복귀) · 조작 `record` → `recordOrTouch`. §7을 닫힌/열린 의문으로 재편하고 선택지·기각 이유를 남김 |
 | v1.0 | 2026-08-03 | 최초 작성 — 자동 정정 금지를 조작 부재로 강제(INV-1), 유형 6종 + 내부 대사 |
