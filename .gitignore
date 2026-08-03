@@ -1,6 +1,9 @@
 # 작업 기록 — 로컬 전용, 공개 설계 문서 아님
 plans/
 
+# 하네스 세션 상태 — 로컬 전용
+.claude/
+
 # OS / 편집기
 .DS_Store
 Thumbs.db
