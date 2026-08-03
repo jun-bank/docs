@@ -219,7 +219,7 @@ public class Account {
     private Money balance;
     private Money holdAmount;   // 승인으로 점유된 금액
 
-    /** 가용잔액 = 원장잔액 − 홀딩 */
+    /** 가용잔액 = 계좌잔액 − 홀딩 */
     public Money availableBalance() {
         return balance.minus(holdAmount);
     }
