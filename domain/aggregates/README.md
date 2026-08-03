@@ -1,7 +1,7 @@
 # 애그리게이트 명세
 
 - 작성일: 2026-08-03
-- 상태: 작성중
+- 상태: 검토대기 — **9종 전부 작성**
 - 양식: `study/project-workflow/phase2/04-aggregate-format.md`
 - 입력: `domain/event-storming.md` ⑦ · `domain/context-map.md` §4 데이터 소유권
 
@@ -14,12 +14,12 @@
 | **계좌** `Account` | C1 뱅킹 | 실시간 | [account.md](account.md) | ✅ |
 | **카드** `Card` | C2 카드 | 실시간 | [card.md](card.md) | ✅ |
 | **승인** `Authorization` | C3 결제 | 실시간 | [authorization.md](authorization.md) | ✅ |
-| 취소 예약 `ReversalTombstone` | C3 결제 | 실시간 | (예정) | ○ |
-| 멱등 레코드 `IdempotencyRecord` | C3 결제 | 실시간 | (예정) | ○ |
-| 매입 배치 `CaptureBatch` | C3 결제 | 배치 | (예정) | ○ |
-| 정산 `Settlement` | C4 정산 | 배치 | (예정) | ○ |
-| 전표 `JournalEntry` | C5 원장 | 배치 | (예정) | ○ |
-| 불일치 `Discrepancy` | C6 대사 | 배치 | (예정) | ○ |
+| **취소 예약** `ReversalTombstone` | C3 결제 | 실시간 | [reversal-tombstone.md](reversal-tombstone.md) | ✅ |
+| **멱등 레코드** `IdempotencyRecord` | C3 결제 | 실시간 | [idempotency-record.md](idempotency-record.md) | ✅ |
+| **매입 배치** `CaptureBatch` | C3 결제 | 배치 | [capture-batch.md](capture-batch.md) | ✅ |
+| **정산** `Settlement` | C4 정산 | 배치 | [settlement.md](settlement.md) | ✅ |
+| **전표** `JournalEntry` | C5 원장 | 배치 | [journal-entry.md](journal-entry.md) | ✅ |
+| **불일치** `Discrepancy` | C6 대사 | 배치 | [discrepancy.md](discrepancy.md) | ✅ |
 
 ---
 
