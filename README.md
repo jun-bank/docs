@@ -23,9 +23,9 @@ jun-bank 시스템의 **단일 설계 출처(single source of design truth)**.
 |---|---|---|---|
 | 0 | `product/` | 제품 정의, 범위, 액터, 시나리오, 비즈니스 규칙 | 초안 v0.1 |
 | 1 | `domain/` | 용어사전, 이벤트 스토밍, 컨텍스트 맵, 애그리게이트, 상태 머신 | 작성 중 |
-| 2 | `drafts/architecture/` | SAD(arc42), ADR(MADR), 품질 속성 | 골격만 |
+| 2 | `architecture/` | SAD(arc42), ADR(MADR), 품질 속성 | 골격만 |
 | 2 | `contracts/` | OpenAPI(동기 계약), 이벤트 카탈로그(비동기 계약) | 미착수 |
-| 2 | `drafts/conventions/` | git·버전·커밋·코딩·마이그레이션 규약 | 미착수 |
+| 2 | `conventions/` | git·버전·커밋·코딩·마이그레이션 규약 | 미착수 |
 | 3 | `backlog/` | 에픽, 스프린트, 완료 정의 | 미착수 |
 
 ---
