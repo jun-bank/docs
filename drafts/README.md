@@ -14,10 +14,15 @@
 
 | 문서 | 워크플로상 위치 | 무엇을 앞질렀나 | 복귀 조건 |
 |---|---|---|---|
-| `01-sad.md` | Phase 3-9 (**아키텍처 설계의 마지막**) | 엮을 대상(서비스 분할·모델·ADR)이 아직 없는데 먼저 엮었다 | Phase 3-1~3-8 완료 |
-| `03-transaction-design.md` | Phase 3-7 | **서비스 경계가 미정인데** 흐름별 Saga 방식을 배정했다 | ADR-0003(서비스 분할) 확정 |
-| `c4-model.md` | Phase 3-8 | 컨테이너 다이어그램을 **추정으로** 그렸다 | ADR-0003 확정 + `infrastructure` 저장소 대조 |
-| `development-cycle.md` | Phase 4 영역 | 개발 주기를 표준화 이전에 정의했다 | Phase 4-1 문서 표준화 착수 시 |
+| `architecture/` **전체** | **Phase 3** | **Phase 2(도메인 정의)가 끝나지 않았는데 Phase 3을 통째로 썼다** | Phase 2 완료 |
+| ├ `02-drivers/` | Phase 3-1~3 | 제약·품질속성·품질시나리오 | Phase 2 완료 |
+| ├ `decisions/0001` | Phase 3-4 | 서비스 분할 근거가 없는 상태의 스타일 선정 | Phase 2 완료 |
+| └ `models/` | Phase 3-8 | 그릴 대상이 확정되기 전에 뷰를 그렸다 | ADR-0003 확정 |
+| `01-sad.md` | Phase 3-9 (**마지막**) | 엮을 대상이 아직 없는데 먼저 엮었다 | Phase 3-1~3-8 완료 |
+| `03-transaction-design.md` | Phase 3-7 | **서비스 경계가 미정인데** 흐름별 Saga 방식을 배정했다 | ADR-0003 확정 |
+| `c4-model.md` | Phase 3-8 | 컨테이너 다이어그램을 **추정으로** 그렸다 | ADR-0003 + `infrastructure` 대조 |
+| `conventions/` | Phase 0·4 혼재 | 규약을 표준화 절차 이전에 썼다 | Phase 4 착수 시 |
+| `development-cycle.md` | Phase 4 영역 | 개발 주기를 표준화 이전에 정의했다 | Phase 4-1 착수 시 |
 
 ---
 

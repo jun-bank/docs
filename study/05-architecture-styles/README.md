@@ -3,7 +3,7 @@
 > 추상화 레벨: ① 아키텍처 설계
 > 책 대응: 2.4.3 아키텍처 스타일과 아키텍처 패턴 (90쪽) · 3.3 시스템 아키텍처 선정 · 3.4 애플리케이션 아키텍처 선정
 
-**이 주제가 jun-bank의 MSA 채택 근거로 직결된다.** 여기를 채우고 나서 `architecture/decisions/0001-system-architecture-selection.md` 를 확정한다.
+**이 주제가 jun-bank의 MSA 채택 근거로 직결된다.** 여기를 채우고 나서 `drafts/architecture/decisions/0001-system-architecture-selection.md` 를 확정한다.
 
 ---
 
@@ -505,14 +505,14 @@ public class PaymentKernel {
 | 흐름 가시성 | | | | | | | | |
 | 초기 개발 속도 | | | | | | | | |
 
-> **채우는 법**: 절대 점수가 아니라 **서로 비교한 상대 점수**로 매긴다. 다 채운 뒤 **jun-bank의 품질 속성 우선순위**(`architecture/02-drivers/02-quality-attributes.md`)에서 상위 4개 행만 보고 판단하면 결론이 나온다.
+> **채우는 법**: 절대 점수가 아니라 **서로 비교한 상대 점수**로 매긴다. 다 채운 뒤 **jun-bank의 품질 속성 우선순위**(`drafts/architecture/02-drivers/02-quality-attributes.md`)에서 상위 4개 행만 보고 판단하면 결론이 나온다.
 
 ---
 
 # 4. 스스로 답할 질문
 
 1. **모놀리식과 분산형은 배타적 선택인가?** 한 시스템 안에서 섞일 수 있는가?
-   - 힌트: 분산형은 **시스템 레벨**(①), 레이어드·헥사고날은 **애플리케이션 레벨**(②) 이야기다. 마이크로서비스 각각이 내부적으로 헥사고날일 수 있다 → `conventions/abstraction-levels.md`
+   - 힌트: 분산형은 **시스템 레벨**(①), 레이어드·헥사고날은 **애플리케이션 레벨**(②) 이야기다. 마이크로서비스 각각이 내부적으로 헥사고날일 수 있다 → `drafts/conventions/abstraction-levels.md`
 2. **"MSA를 쓰는 이유"로 자주 언급되는 것들 중 실제로는 모놀리식으로도 되는 것**은?
    - 후보: 모듈 분리, 팀 분리, 도메인 경계, 코드 재사용, 기술 부채 격리
 3. 1인 개발·학습 목적이라는 제약에서 MSA의 대가는 얼마나 큰가?
@@ -534,7 +534,7 @@ public class PaymentKernel {
 - 선택하지 않은 것과 이유:
 - **되돌리는 조건**:
 
-> 여기가 채워지면 `architecture/decisions/0001-system-architecture-selection.md` 를 확정한다(현재 **제안됨** 상태).
+> 여기가 채워지면 `drafts/architecture/decisions/0001-system-architecture-selection.md` 를 확정한다(현재 **제안됨** 상태).
 > **학습 목적이 결정 동인이라면 그렇다고 적는다.** "MSA가 더 좋아서"가 아니라 "분산 환경의 문제를 직접 겪는 것이 목표이므로"가 정직한 근거다.
 
 ---

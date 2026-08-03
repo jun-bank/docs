@@ -97,7 +97,7 @@ Phase 9  품질 보증 체계        (책 5장)
 | `README.md` | 문서 4층 구조, 읽는 순서, **문서 규칙 4가지** |
 | `.gitignore` | 로컬 전용 디렉토리 제외 |
 | `decisions/0000-adr-template.md` | ADR 형식 (맥락·동인·선택지·결정·결과·**되돌리는 조건**) |
-| `conventions/abstraction-levels.md` | 4단계 레벨(아키텍처/모듈/컴포넌트/클래스)과 표기 의무 |
+| `drafts/conventions/abstraction-levels.md` | 4단계 레벨(아키텍처/모듈/컴포넌트/클래스)과 표기 의무 |
 
 **완료 기준**: 새 문서를 쓸 때 "어디에 두고 어떤 형식으로 쓸지"를 고민하지 않아도 되는 상태.
 
@@ -223,7 +223,7 @@ Phase 9  품질 보증 체계        (책 5장)
 
 | 산출물 | 담는 내용 |
 |---|---|
-| `conventions/document-standard.md` | 문서 종류별 목적·독자·형식·보관 위치·갱신 주기·버전 규칙 |
+| `drafts/conventions/document-standard.md` | 문서 종류별 목적·독자·형식·보관 위치·갱신 주기·버전 규칙 |
 
 **담을 것**:
 - 문서 유형 목록과 **각각의 독자**
@@ -440,8 +440,8 @@ Phase 9  품질 보증 체계        (책 5장)
 
 | 산출물 | 담는 내용 |
 |---|---|
-| `conventions/coding-convention.md` | 계층별 규칙 · 금지 사항 · 예외 처리 · 테스트 작성 |
-| `conventions/naming-convention.md` | 클래스·메서드·변수·패키지·DB·API·이벤트 명명 |
+| `drafts/conventions/coding-convention.md` | 계층별 규칙 · 금지 사항 · 예외 처리 · 테스트 작성 |
+| `drafts/conventions/naming-convention.md` | 클래스·메서드·변수·패키지·DB·API·이벤트 명명 |
 
 **코딩 규약에 담을 것**:
 - **계층별 규칙**: 도메인에 금지되는 import, 애플리케이션 서비스가 하지 말아야 할 것
@@ -471,10 +471,10 @@ Phase 9  품질 보증 체계        (책 5장)
 
 | 산출물 | 담는 내용 |
 |---|---|
-| `conventions/procedures/setup.md` | **개발 환경 설정 절차** — 처음부터 순서대로 |
-| `conventions/procedures/local-run.md` | 로컬 실행·디버깅·초기 데이터 |
-| `conventions/procedures/tooling.md` | 구현 도구 사용법 (Gradle 태스크, Docker, 마이그레이션 CLI) |
-| `conventions/procedures/troubleshooting.md` | 자주 겪는 문제와 해결 |
+| `drafts/conventions/procedures/setup.md` | **개발 환경 설정 절차** — 처음부터 순서대로 |
+| `drafts/conventions/procedures/local-run.md` | 로컬 실행·디버깅·초기 데이터 |
+| `drafts/conventions/procedures/tooling.md` | 구현 도구 사용법 (Gradle 태스크, Docker, 마이그레이션 CLI) |
+| `drafts/conventions/procedures/troubleshooting.md` | 자주 겪는 문제와 해결 |
 
 **절차서의 완료 기준**: **초기화된 환경에서 문서만 보고 따라 하면 동작한다.** (품질 시나리오 QS-10과 직결)
 
@@ -482,8 +482,8 @@ Phase 9  품질 보증 체계        (책 5장)
 
 | 산출물 | 담는 내용 |
 |---|---|
-| `conventions/guides/implementation-guide.md` | **구현 가이드라인** — 새 유스케이스를 만들 때의 단계별 지침 |
-| `conventions/guides/tutorial-first-usecase.md` | **튜토리얼** — 샘플 유스케이스를 처음부터 따라 만들기 |
+| `drafts/conventions/guides/implementation-guide.md` | **구현 가이드라인** — 새 유스케이스를 만들 때의 단계별 지침 |
+| `drafts/conventions/guides/tutorial-first-usecase.md` | **튜토리얼** — 샘플 유스케이스를 처음부터 따라 만들기 |
 
 **구현 가이드라인에 담을 것**:
 ```
@@ -860,5 +860,5 @@ Phase 0 ✅ ── 1 ◐ ── 2 ◐ ── 3 ◐ ── 4 ○ ── 5 ○ ─
 | **입력 없으면 시작 금지** | 각 Phase의 "선행 조건"이 비어 있으면 그 Phase를 시작하지 않는다 |
 | **결정 필요 항목의 가시화** | 미확정을 문서 안에 남기고 SAD §7에 집계 |
 | **회고에서 순서 위반 점검** | 사이클 ⑦단계에서 "이번에 순서를 건너뛴 것이 있나" 확인 |
-| **ADR 없이 되돌리기 어려운 결정 금지** | 레벨 ①은 ADR 필수 (`conventions/abstraction-levels.md` 규칙 4) |
+| **ADR 없이 되돌리기 어려운 결정 금지** | 레벨 ①은 ADR 필수 (`drafts/conventions/abstraction-levels.md` 규칙 4) |
 | **상위 레벨로 올라가기** | 구현 중 아키텍처를 바꾸고 싶어지면 코드로 우회하지 않고 Phase 3으로 올라간다 (규칙 5) |

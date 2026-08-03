@@ -1,7 +1,7 @@
 # study — 학습 노트
 
 > **이 디렉토리는 설계 문서가 아니다.** 공부하며 익히는 개인 학습 노트이며, 나중에 별도 저장소로 옮길 수 있다.
-> 여기 있는 내용은 **결정의 근거가 될 수 없다.** 결정은 `architecture/decisions/`(ADR)에만 남긴다.
+> 여기 있는 내용은 **결정의 근거가 될 수 없다.** 결정은 `drafts/architecture/decisions/`(ADR)에만 남긴다.
 
 ## 사용법
 
@@ -27,7 +27,7 @@
 | 06 | [오케스트레이션 vs 코레오그래피](06-orchestration-vs-choreography/) | ① | 3.3.3 | 분산 흐름을 누가 조율하는가 |
 | 07 | [애자일과 스쿼드 방식](07-agile-and-squad/) | 조직·프로세스 | 2.1 · 4.3 | 어떤 주기로 만들고 배울 것인가 |
 
-> "관련 레벨"은 `conventions/abstraction-levels.md`의 4단계(아키텍처 / 모듈 / 컴포넌트 / 클래스 설계)를 가리킨다. 어느 레벨의 이야기인지 의식하면서 공부하면 나중에 설계 논의가 흔들리지 않는다.
+> "관련 레벨"은 `drafts/conventions/abstraction-levels.md`의 4단계(아키텍처 / 모듈 / 컴포넌트 / 클래스 설계)를 가리킨다. 어느 레벨의 이야기인지 의식하면서 공부하면 나중에 설계 논의가 흔들리지 않는다.
 
 ## 학습 순서 (권고)
 
@@ -48,7 +48,7 @@
 | 주제 | 연결되는 결정 |
 |---|---|
 | 02 CLEAN (N↔L 충돌) | `Money` 6벌을 공유할 것인가 → ADR-0005 (예정) |
-| 03 도메인/애플리케이션 | 계층 규약 → `conventions/coding-convention.md` (예정) |
+| 03 도메인/애플리케이션 | 계층 규약 → `drafts/conventions/coding-convention.md` (예정) |
 | 05 아키텍처 스타일 | 시스템·애플리케이션 아키텍처 선정 → **ADR-0001**(제안됨) · ADR-0002 (예정) |
 | 06 오케/코레오 | 트랜잭션 흐름 설계 → `drafts/03-transaction-design.md` · ADR-0004 (예정) |
 | 07 애자일·스쿼드 | 개발 주기 → `drafts/development-cycle.md` |

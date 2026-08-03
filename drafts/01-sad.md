@@ -169,7 +169,7 @@
 | 모델 | 축 | 문서 |
 |---|---|---|
 | **4+1 뷰** | **어떤 관점**으로 볼 것인가 (논리·개발·프로세스·물리 + 시나리오) | [`models/4plus1-views.md`](models/4plus1-views.md) |
-| **C4 모델** | **어떤 배율**로 볼 것인가 (컨텍스트·컨테이너·컴포넌트·코드) | [`models/c4-model.md`](../drafts/c4-model.md) |
+| **C4 모델** | **어떤 배율**로 볼 것인가 (컨텍스트·컨테이너·컴포넌트·코드) | [`models/c4-model.md`](../c4-model.md) |
 
 ### 그리는 순서
 
@@ -228,7 +228,7 @@ presentation/    컨트롤러
 | 공용 | common-lib |
 | 도메인 | auth-server, user-service, account-service, transaction-service, transfer-service, card-service, ledger-service |
 
-**확인된 문제** (`conventions/abstraction-levels.md` §현재 식별된 문제의 레벨 분류):
+**확인된 문제** (`drafts/conventions/abstraction-levels.md` §현재 식별된 문제의 레벨 분류):
 
 | 결함 | 레벨 | 처리 |
 |---|---|---|
@@ -287,11 +287,11 @@ presentation/    컨트롤러
 | 1. 도메인 | `domain/glossary.md` | 초안 v0.1 |
 | 1. 도메인 | 이벤트 스토밍 · 컨텍스트 맵 · 애그리게이트 | 미착수 |
 | 2. 아키텍처 | **`drafts/01-sad.md`** (이 문서) | 초안 v0.1 |
-| 2. 아키텍처 | `architecture/02-drivers/` | 초안 v0.1 |
+| 2. 아키텍처 | `drafts/architecture/02-drivers/` | 초안 v0.1 |
 | 2. 아키텍처 | `drafts/03-transaction-design.md` | 초안 v0.1 |
-| 2. 아키텍처 | `architecture/decisions/` | 0001 제안됨 |
-| 2. 아키텍처 | `architecture/models/` | 골격 + 초안 다이어그램 |
-| 2. 규약 | `conventions/abstraction-levels.md` | **확정** |
+| 2. 아키텍처 | `drafts/architecture/decisions/` | 0001 제안됨 |
+| 2. 아키텍처 | `drafts/architecture/models/` | 골격 + 초안 다이어그램 |
+| 2. 규약 | `drafts/conventions/abstraction-levels.md` | **확정** |
 | 2. 규약 | `drafts/development-cycle.md` | 초안 v0.1 |
 | 2. 규약 | 코딩 규약 · git/버전 규약 · 마이그레이션 정책 | 미착수 |
 | 2. 계약 | `contracts/` (OpenAPI · 이벤트 카탈로그) | 미착수 |

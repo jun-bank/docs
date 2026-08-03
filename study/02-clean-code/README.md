@@ -449,7 +449,7 @@ public record Money(long amount, Currency currency) { ... }
 - **N 위반**인가 (같은 지식의 중복) — 그렇다면 common-lib로 옮긴다
 - **L을 지키기 위한 정당한 중복**인가 — 그렇다면 그대로 둔다
 
-**이 질문의 답이 곧 ADR이다.** → `architecture/decisions/` (ADR-0005 예정)
+**이 질문의 답이 곧 ADR이다.** → `drafts/architecture/decisions/` (ADR-0005 예정)
 
 판단 재료:
 - 6개의 `Money`가 **실제로 같은가?** 정밀도·통화·반올림 규칙이 서비스마다 달라야 할 이유가 있는가?
@@ -472,7 +472,7 @@ public record Money(long amount, Currency currency) { ... }
 
 1. 5개 속성 중 서로 **긴장 관계**에 있는 쌍은? (위 표를 보기 전에 스스로 답해 보기)
 2. `Money`가 6개 서비스에 복붙된 것은 **N 위반**인가, **L을 지키기 위한 정당한 중복**인가?
-   → 이 답이 `architecture/decisions/` 의 ADR로 이어진다
+   → 이 답이 `drafts/architecture/decisions/` 의 ADR로 이어진다
 3. "Assertive"와 SOLID의 SRP는 어떻게 다른가?
    - 힌트: SRP는 **책임의 개수**, Assertive는 **책임의 위치**
 4. 캡슐화가 잘 된 코드는 테스트하기 쉬운가 어려운가? 왜인가?
