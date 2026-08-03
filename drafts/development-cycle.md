@@ -52,7 +52,7 @@
 | 3.4 애플리케이션 아키텍처 | 레이어드/파이프라인/마이크로커널 중 선정. **현재 헥사고날 채택의 근거를 사후가 아닌 사전 결정으로 기록** | `architecture/04-application-architecture.md` + ADR | 미착수 |
 | 3.5.1 비교 평가 매트릭스 | 위 선정들을 트레이드오프 매트릭스로 비교 | 각 ADR 내부 | 미착수 |
 | 3.5.2 **ADR** | 결정을 ADR로 기록 | `architecture/decisions/` | 템플릿 준비됨 |
-| 3.6.1 아키텍처 기술서 | SAD 작성 | `architecture/01-sad.md` | 미착수 |
+| 3.6.1 아키텍처 기술서 | SAD 작성 | `drafts/01-sad.md` | 미착수 |
 | 3.6.2 아키텍처 모델 | C4 등 뷰 작성 | `architecture/diagrams/` | 미착수 |
 
 ### 3.3.4 서비스 분할이 이 프로젝트의 최대 분기점

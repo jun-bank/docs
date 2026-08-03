@@ -50,5 +50,5 @@
 | 02 CLEAN (N↔L 충돌) | `Money` 6벌을 공유할 것인가 → ADR-0005 (예정) |
 | 03 도메인/애플리케이션 | 계층 규약 → `conventions/coding-convention.md` (예정) |
 | 05 아키텍처 스타일 | 시스템·애플리케이션 아키텍처 선정 → **ADR-0001**(제안됨) · ADR-0002 (예정) |
-| 06 오케/코레오 | 트랜잭션 흐름 설계 → `architecture/03-transaction-design.md` · ADR-0004 (예정) |
-| 07 애자일·스쿼드 | 개발 주기 → `conventions/development-cycle.md` |
+| 06 오케/코레오 | 트랜잭션 흐름 설계 → `drafts/03-transaction-design.md` · ADR-0004 (예정) |
+| 07 애자일·스쿼드 | 개발 주기 → `drafts/development-cycle.md` |

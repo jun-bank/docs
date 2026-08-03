@@ -452,7 +452,7 @@ public AuthorizationResult authorize(AuthorizeCommand command) {
    - 멱등키가 없어 재시도 시 중복 생성된다
 3. **Outbox가 `transfer-service`에만 있다.** `user-service`는 try-catch로 삼키고 자체 재시도 테이블을 쓴다 → 품질 시나리오 **QS-05를 통과하지 못한다**
 
-> 이 세 가지가 `architecture/03-transaction-design.md`에서 통일해야 할 대상이다.
+> 이 세 가지가 `drafts/03-transaction-design.md`에서 통일해야 할 대상이다.
 
 ---
 

@@ -211,7 +211,7 @@ sequenceDiagram
 
 ### 작성 시점
 
-트랜잭션 설계(`03-transaction-design.md`) 확정 후. **가장 먼저 그릴 뷰.**
+트랜잭션 설계(`drafts/03-transaction-design.md`) 확정 후. **가장 먼저 그릴 뷰.**
 
 ---
 

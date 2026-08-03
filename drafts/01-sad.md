@@ -169,7 +169,7 @@
 | 모델 | 축 | 문서 |
 |---|---|---|
 | **4+1 뷰** | **어떤 관점**으로 볼 것인가 (논리·개발·프로세스·물리 + 시나리오) | [`models/4plus1-views.md`](models/4plus1-views.md) |
-| **C4 모델** | **어떤 배율**로 볼 것인가 (컨텍스트·컨테이너·컴포넌트·코드) | [`models/c4-model.md`](models/c4-model.md) |
+| **C4 모델** | **어떤 배율**로 볼 것인가 (컨텍스트·컨테이너·컴포넌트·코드) | [`models/c4-model.md`](../drafts/c4-model.md) |
 
 ### 그리는 순서
 
@@ -216,7 +216,7 @@ presentation/    컨트롤러
 
 **시스템 전역 규약**: 멱등성(ID-1~7) · Outbox(EV-1~6) · 재시도·타임아웃(RT-1~5) · Saga 상태(SG-1~5)
 
-→ 상세: [`03-transaction-design.md`](03-transaction-design.md)
+→ 상세: [`drafts/03-transaction-design.md`](03-transaction-design.md)
 
 ### 5.4 현재 구성 (재검토 대상)
 
@@ -233,8 +233,8 @@ presentation/    컨트롤러
 | 결함 | 레벨 | 처리 |
 |---|---|---|
 | 서비스 경계가 기술 직관으로 결정됨 | ① 아키텍처 | ADR-0003 |
-| 회원가입이 분산 트랜잭션인데 보상 없음 | ① 아키텍처 | `03-transaction-design.md` |
-| 신뢰성 전략(Outbox/Saga)이 서비스마다 다름 | ① 아키텍처 | `03-transaction-design.md` |
+| 회원가입이 분산 트랜잭션인데 보상 없음 | ① 아키텍처 | `drafts/03-transaction-design.md` |
+| 신뢰성 전략(Outbox/Saga)이 서비스마다 다름 | ① 아키텍처 | `drafts/03-transaction-design.md` |
 | email 이중 저장 — 정합성 소유자 불명 | ① 아키텍처 | ADR-0003 |
 | `Money` 6벌 중복 | ② 모듈 | ADR-0005 |
 | 스키마 마이그레이션 도구 부재 (`ddl-auto: update`) | ② 모듈 | ADR (예정) |
@@ -286,13 +286,13 @@ presentation/    컨트롤러
 | 0. 제품 | `product/00-product-definition.md` | 초안 v0.1 |
 | 1. 도메인 | `domain/glossary.md` | 초안 v0.1 |
 | 1. 도메인 | 이벤트 스토밍 · 컨텍스트 맵 · 애그리게이트 | 미착수 |
-| 2. 아키텍처 | **`architecture/01-sad.md`** (이 문서) | 초안 v0.1 |
+| 2. 아키텍처 | **`drafts/01-sad.md`** (이 문서) | 초안 v0.1 |
 | 2. 아키텍처 | `architecture/02-drivers/` | 초안 v0.1 |
-| 2. 아키텍처 | `architecture/03-transaction-design.md` | 초안 v0.1 |
+| 2. 아키텍처 | `drafts/03-transaction-design.md` | 초안 v0.1 |
 | 2. 아키텍처 | `architecture/decisions/` | 0001 제안됨 |
 | 2. 아키텍처 | `architecture/models/` | 골격 + 초안 다이어그램 |
 | 2. 규약 | `conventions/abstraction-levels.md` | **확정** |
-| 2. 규약 | `conventions/development-cycle.md` | 초안 v0.1 |
+| 2. 규약 | `drafts/development-cycle.md` | 초안 v0.1 |
 | 2. 규약 | 코딩 규약 · git/버전 규약 · 마이그레이션 정책 | 미착수 |
 | 2. 계약 | `contracts/` (OpenAPI · 이벤트 카탈로그) | 미착수 |
 | 3. 실행 | `backlog/` | 미착수 |
