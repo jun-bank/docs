@@ -19,7 +19,7 @@
 
 | 필드 | 타입 | 뜻 |
 |---|---|---|
-| `type` | `DiscrepancyType` | M1·M2·M4~**M12** (BR-09) |
+| `type` | `DiscrepancyType` | M1·M2·M4~**M13** (BR-09) |
 | `scope` | `ReconciliationScope` | **외부 대사**(BR-30) / **내부 대사**(BR-41) |
 | `subject` | `SubjectRef` | 대상 (상관 식별자 · 파일·레코드 ID · 계정과목 등) |
 | `firstDetectedOn` | `BusinessDate` | **최초** 발견 영업일 |
@@ -59,6 +59,11 @@
 | **M10** 카드 한도 정합 상이 | **내부** | 카드 `usage` ≠ Σ(승인 `limitContribution`) — `subject` = (카드ID, 기준일) (BR-05·41) |
 | **M11** 계좌 한도 정합 상이 | **내부** | 계좌 `dailyUsage` ≠ Σ(승인 `limitContribution`) — `subject` = (계좌ID, 기준일) (BR-44·41) |
 | **M12** 잔액-원장 상이 | **내부** | 계좌 `balance` ≠ 그 계좌의 **고객예금 보조부 잔액** — `subject` = (계좌ID, 영업일) (BR-41) |
+
+| **M13** 입금 멱등 충돌 | **내부** | 같은 `(key, operation)`에 다른 요청 지문 — `subject` = (key, operation) (BR-29·38) |
+
+> ★ **`DepositConflict`가 구독자만 있고 적재할 유형이 없었다** (R9 H5) — BR-41이 명문으로
+> 경고한 실패다. 이벤트를 C6으로 보내면서 **받아 적을 곳을 안 만들었다.**
 
 > ★ **M12는 계좌 단위다.** 계정과목 합계로 대조하면 **상계가 은폐한다** — 한 계좌가 +7,
 > 다른 계좌가 −7 어긋나면 합계는 맞는다. 그래서 전표 항목이 `subjectId`를 든다 (`journal-entry.md` INV-7).

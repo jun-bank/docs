@@ -4,7 +4,7 @@
 ★ 통과하는 검산은 "결함이 없다"를 뜻하지 않는다. "이 검산이 아무것도 안 한다"일 수도 있다.
   R7 U1이 이것을 손으로 발견했다 — "R6가 잡은 치명 3건을 되돌려도 전부 통과한다".
 """
-import subprocess, sys, shutil, tempfile, pathlib
+import subprocess, sys, shutil, tempfile, pathlib, re
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
@@ -16,12 +16,20 @@ MUT = [
   "`Authorization` `Account` `Receivable` `CaptureBatch`", "`Authorization` `Account` `Receivable`", "R7 U2"),
  ("배정 오류 — promoteIsolated를 단독으로", "tools/gen_matrix.py",
   '"CaptureBatch.promoteIsolated":"E2",', '"CaptureBatch.promoteIsolated":"—",', "R8 S1"),
+ ("배정 오류 — isolate를 별도로", "tools/gen_matrix.py",
+  '"CaptureBatch.isolate":"—",', '"CaptureBatch.isolate":"별도",', "R8 S12"),
+ ("배정 오류 — markSettled를 단독으로", "tools/gen_matrix.py",
+  '"Authorization.markSettled":"별도",', '"Authorization.markSettled":"—",', "R8 S13"),
+ ("변경 조작을 `조회`로 위장", "tools/gen_matrix.py",
+  '"Receivable.recover":"E3 E4",', '"Receivable.recover":"조회",', "R9 Opus"),
+ ("과잉 배정 — recover에 없는 E2를 더한다", "tools/gen_matrix.py",
+  '"Receivable.recover":"E3 E4",', '"Receivable.recover":"E2 E3 E4",', "R9 Opus"),
  ("이동한 번호 잔재 — RC-1을 INV-10으로", "domain/aggregates/authorization.md",
   "(**RC-1** — 승인 단독으로 검증 불가)", "(INV-10)", "R7 U6"),
  ("없는 불변식 참조 — 카드 RC-1을 INV-5로", "domain/aggregates/authorization.md",
   "**카드 RC-1**", "카드 INV-5", "R8 K9"),
- ("집계 선언 불일치 — 11종을 10종으로", "product/01-business-rules.md",
-  "→ **11종 전부 탐지", "→ **10종 전부 탐지", "R7 U8"),
+ ("집계 선언 불일치 — 선언 수를 1 줄인다", "product/01-business-rules.md",
+  "AUTO:count", None, "R7 U8"),
  ("종수 선언 불일치 — 8종을 7종으로", "domain/state-machines/README.md",
   "**8종 작성**", "**7종 작성**", "R8 K13"),
  ("부수 효과 `〃` 주입", "domain/aggregates/receivable.md",
@@ -46,7 +54,12 @@ def main():
             tree = pathlib.Path(td)/"docs"
             shutil.copytree(ROOT, tree, ignore=shutil.ignore_patterns(".git", "__pycache__"))
             f = tree/rel; t = f.read_text()
-            if old is None:                       # `〃` 주입 — 사후조건 칸
+            if old == "AUTO:count":               # 선언 수를 문서에서 읽어 1 줄인다
+                m = re.search(r"유효 유형 (\d+)종", t)
+                if not m: print(f"  ⚠️  {name} — 선언을 못 찾음"); continue
+                k = int(m.group(1))
+                t = t.replace(f"→ **{k}종 전부 탐지", f"→ **{k-1}종 전부 탐지", 1)
+            elif old is None:                     # `〃` 주입 — 사후조건 칸
                 lines = t.splitlines()
                 for li, ln in enumerate(lines):
                     if ln.startswith("| **회수**"):

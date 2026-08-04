@@ -7,7 +7,7 @@
 import sys, re, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import docs_model as d
-from gen_matrix import ASSIGN, build
+from gen_matrix import ASSIGN, NOTE, build
 
 ROOT = d.ROOT
 FAIL = []
@@ -61,6 +61,35 @@ for p in TARGET:
             for i in cols:
                 if i < len(r) and "〃" in r[i]:
                     bad("⑤", f"{rel} {r[0][:24]} — 부수 효과에 `〃`")
+
+# ── ③-b 경계 참여 **조작** 목록 == ASSIGN (양방향) — 오배정·과잉 배정을 잡는다
+declared_ops = {}
+for hdr, rows in d._rows((d.AGG/"README.md").read_text(),
+                         lambda c: c[0] == "#" and "참여 조작" in " ".join(c)):
+    oi = next(i for i, h in enumerate(hdr) if "참여 조작" in h)
+    for r in rows:
+        declared_ops[r[0].strip("* ")] = set(re.findall(r"`([\w.]+)`", r[oi]))
+if not declared_ops: bad("③", "경계 표에서 참여 조작 열을 읽지 못했다")
+used_ops = {}
+for k, b in ASSIGN.items():
+    for e in b.split():
+        if e.startswith("E"): used_ops.setdefault(e, set()).add(k)
+for e in sorted(set(declared_ops) | set(used_ops)):
+    dc, us = declared_ops.get(e, set()), used_ops.get(e, set())
+    for o in sorted(dc - us): bad("③", f"{e} 참여 조작 {o} — 대장 배정에 {e}가 없다")
+    for o in sorted(us - dc): bad("③", f"{e}를 단 조작 {o} — 경계 표 참여 조작에 없다 (과잉 배정?)")
+
+# ── ⑪ `별도` 는 촉발 이벤트가 있어야 한다 (그것이 `—`와 다른 점이다)
+EVENTS = set()
+for p_ in sorted(d.AGG.glob("*.md")):
+    for hdr, rows in d._rows(p_.read_text(), lambda c: any("이벤트" in h for h in c)):
+        for r in rows: EVENTS |= set(re.findall(r"`([A-Z]\w+)`", " ".join(r)))
+for k, b in ASSIGN.items():
+    cited = {x for x in re.findall(r"`([A-Z]\w+)`", NOTE.get(k, "")) if x in EVENTS}
+    if b.strip() == "별도" and not cited:
+        bad("⑪", f"{k}가 `별도`인데 비고에 촉발 이벤트가 없다 — `—`(단일)와 구분되지 않는다")
+    if b.strip() != "별도" and cited:
+        bad("⑪", f"{k}는 촉발 이벤트({sorted(cited)})를 인용하는데 배정이 `{b}` 다 — `별도`여야 한다")
 
 # ── ⑧ 교차 호출 → 공유 경계 (배정의 정확성을 독립 출처로 검사한다)
 #    문서가 스스로 "남의 조작을 부른다"고 적었으면, 그 둘은 같은 트랜잭션에 있어야 한다.

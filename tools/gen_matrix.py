@@ -43,11 +43,12 @@ NOTE = {
  "Receivable.recover":"E4 = 반환액이 회수하는 다른 미수",
  "DepositReceipt.record":"★ 입금·정정을 한 번만 반영시킨다 (BR-29)",
  "CaptureBatch.isolate":"배치만 변경 — 불일치 적재는 Outbox (BR-40)",
+ "Discrepancy.investigate":"","Discrepancy.resolve":"",
  "CaptureBatch.promoteIsolated":"★ 재처리 경로의 멱등 — 자금 반영과 같은 커밋",
- "Authorization.markSettled":"정산 완료 후 별도 논리 단위 (BR-40)",
- "JournalEntry.post":"BR-40 — 원장은 별도 논리 단위",
- "JournalEntry.reverse":"BR-40",
- "Discrepancy.recordOrTouch":"탐지 배치·격리가 Outbox로 넘긴다",
+ "Authorization.markSettled":"`SettlementCompleted` 수신 — 별도 논리 단위 (BR-40)",
+ "JournalEntry.post":"상류 이벤트(`Deposited`·`Refunded` 등)를 ACL이 번역 — BR-40",
+ "JournalEntry.reverse":"오기표 정정 — `JournalPosted` 원전표를 뒤집는다 (BR-10·47)",
+ "Discrepancy.recordOrTouch":"`DiscrepancyRecorded` — 탐지 배치·격리가 Outbox로 넘긴다",
 }
 
 def build():
