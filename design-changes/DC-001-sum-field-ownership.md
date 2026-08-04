@@ -171,7 +171,7 @@
 | **4** | `domain/state-machines/receivable.md` **신규** · 상태 머신 README | 미수 상태 머신 · 설계 판단 ⑦ | `b95a951` | ✅ |
 | **5** | `domain/state-machines/authorization.md` · `card.md` · `README.md` | T15·F23 제거 · 매트릭스 88칸 · ③ 근거 | `730630d` | ✅ |
 | **6** | `domain/context-map.md` · `event-storming.md` | 소유권 행 · 이벤트 재배치 · 합계 필드 경고 | `3770115` | ✅ |
-| **7** | DC-001 §8 | 기존 findings 재판정 | | ⏳ |
+| **7** | DC-001 §8 | 기존 findings 재판정 — 소멸 7·잔존 5·변형 3 | `a8625c6` | ✅ |
 | **8** | — | 재리뷰 (§9 검증) | | ⏳ |
 
 ---
