@@ -43,8 +43,9 @@
 | 조작 | 코드명 | 사전조건 | 사후조건 | 이벤트 |
 |---|---|---|---|---|
 | **예약 기록** | `record(correlationId, at, ttl)` | 같은 `correlationId`의 예약이 없음 | 예약 생성 | `ReversalTombstoneRecorded` |
-| **소비** | `consume()` | `consumed = false`, 미만료 | `consumed = true` | `ReversalTombstoneConsumed` |
-| **만료 정리** | `expire(now)` | `now ≥ expiresAt` | **레코드 삭제** — 이후 같은 상관 식별자는 "예약 없음"과 동치가 된다 | `ReversalTombstoneExpired` |
+| **소비** | `consume(now)` | `consumed = false` **AND `now < expiresAt`** — 시각을 직접 판정한다(정리 배치를 믿지 않는다) | `consumed = true` | `ReversalTombstoneConsumed` |
+| **보관 정리** | `purge()` | `consumed = true` AND 보관 기간 경과 (RT2) | 레코드 삭제 | `ReversalTombstonePurged` |
+| **만료 정리** | `expire(now)` | `consumed = false` AND `now ≥ expiresAt` | **레코드 삭제** — 이후 같은 상관 식별자는 "예약 없음"과 동치가 된다 | `ReversalTombstoneExpired` |
 
 ### 중복 망취소 처리 (BR-13 + BR-22)
 
@@ -80,5 +81,6 @@
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v1.2 | 2026-08-04 | 재점검 반영 — `consume()`이 **시각을 인자로 받아 직접 판정**(만료 경과·미삭제 구간이 존재한다) · `purge()` 신설(소비된 예약의 삭제 주체가 없었다) |
 | v1.1 | 2026-08-04 | 듀얼 리뷰 반영 — `expire()`의 사후조건을 **레코드 삭제**로 명확화(만료 후 상태가 "존재하며 무시"인지 "부재"인지 문서마다 갈리던 모호성 해소) · TTL 경계 경합을 RT3로 등재 |
 | v1.0 | 2026-08-03 | 최초 작성 |

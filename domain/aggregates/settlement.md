@@ -37,6 +37,8 @@
 | **INV-3** | **`netAmount`는 음수일 수 있다** | BR-43 | — (이것은 정상이다) |
 | **INV-4** | `status = 완료` 이면 `netAmount`가 바뀌지 않는다 | BR-21 | 확정 후 금액 변동 |
 
+> ⚠️ **임계 미만에서는 호출할 수 없다.** 자동 재시도가 남아 있는데 운영자가 `retryCount = 0`으로 밀면 **재시도 임계 자체가 무의미해진다** — 실패가 운영자 목록에 영영 오르지 않고 무한 반복된다.
+
 > **`escalate()`가 상태를 바꾸지 않으므로 `실패`는 종료가 아니다.** 자동 재시도는 임계까지만이고, 그 이후에는 **운영자 강제 재개**만이 유일한 탈출구다. 이 조작이 없으면 임계 초과 `실패`가 사실상 종료 상태가 되어 **그날 순액이 영영 확정되지 않는다.**
 
 > ⚠️ **INV-3이 반직관적이다.** 환불이 그날 매입보다 많으면 순액이 음수가 되고, 이는 **매입사가 우리에게 지급**하는 방향이다. 정상이며 막으면 안 된다.
@@ -54,7 +56,7 @@
 | **산출 실패** | `fail(reason)` | 상태 = 산출중 | 상태 = 실패, `retryCount` 증가 | `SettlementFailed` |
 | **재시도** | `retry()` | **상태 = 실패** AND `retryCount < 임계` (BR-37) | 상태 = 산출중 | `SettlementRetried` |
 | **운영자 통지** | `escalate()` | 상태 = 실패 AND `retryCount ≥ 임계` | 운영자 목록에 오름 | `SettlementEscalated` |
-| **운영자 강제 재개** | `resumeByOperator(operator, reason)` | 상태 = 실패 | `retryCount = 0`, 상태 = 산출중. **사유 기록 필수** | `SettlementResumedByOperator` |
+| **운영자 강제 재개** | `resumeByOperator(operator, reason)` | 상태 = 실패 **AND `retryCount ≥ 임계`** | `retryCount = 0`, 상태 = 산출중. **사유 기록 필수** | `SettlementResumedByOperator` |
 
 ### 멱등한 재산출 (BR-37)
 
@@ -95,6 +97,7 @@ calculate() 를 N회 실행 → netAmount 동일   ← 멱등
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v1.3 | 2026-08-04 | 재점검 반영 — `resumeByOperator()`에 **`retryCount ≥ 임계` 사전조건 추가**. 없으면 임계 미만에서 카운트를 초기화해 재시도 임계를 우회할 수 있었다(상태 머신 SF10과 정합) |
 | v1.2 | 2026-08-04 | 듀얼 리뷰 반영 — `calculate()` 사후조건을 **이벤트 발행까지로 축소**(전표·`markSettled`를 묶으면 재시도가 이중 기표 — BR-40 위반) · `retry()`·`escalate()`에 **상태 = 실패** 사전조건 추가 · **`resumeByOperator()` 신설**(임계 초과 후 탈출 경로 부재 해소) |
 | v1.1 | 2026-08-03 | INV-4와 BR-47(역분개 귀속 영업일)의 연결 명시 |
 | v1.0 | 2026-08-03 | 최초 작성 — 순액 음수 허용(INV-3), 멱등 재산출 근거 명시 |

@@ -27,11 +27,10 @@ stateDiagram-v2
     [*] --> PENDING: 영업일 시작
     PENDING --> CALCULATING: close (마감 시각)
     CALCULATING --> COMPLETED: calculate
-    CALCULATING --> FAILED: fail
+    CALCULATING --> FAILED: fail (집계 실패 · 진척 없음 감시)
     FAILED --> CALCULATING: retry
     FAILED --> FAILED: escalate (임계 초과)
     FAILED --> CALCULATING: resumeByOperator (운영자)
-    CALCULATING --> FAILED: 진척 없음 감시
     COMPLETED --> [*]
 ```
 
@@ -74,11 +73,12 @@ calculate() 를 N회 실행 → netAmount 동일
 | **SF2** | `COMPLETED` | `close` · `retry` · `fail` | 끝난 영업일 | 확정 후 재계산 경로가 열린다 | `SETTLEMENT_COMPLETED` |
 | **SF3** | `PENDING` | `calculate` | **마감하지 않고 집계**하면 그 뒤에 들어온 거래가 빠진다 | **순액 누락** — 매입사에 덜 지급하고 대사에서야 발견 | `SETTLEMENT_NOT_CLOSED` |
 | **SF4** | `PENDING` | `retry` · `fail` | 시도한 적이 없다 | `retryCount`가 근거 없이 증가 | `SETTLEMENT_NOT_CALCULATING` |
-| **SF5** | `CALCULATING` | `close` | 이미 마감됐다 | 마감 시각이 덮어써져 **귀속 경계가 흔들린다** | `SETTLEMENT_ALREADY_CLOSED` |
+| **SF5** | `CALCULATING`·`FAILED` | `close` | 이미 마감됐다 | 마감 시각이 덮어써져 **귀속 경계가 흔들린다** | `SETTLEMENT_ALREADY_CLOSED` |
 | **SF6** | `FAILED` | `retry` (**임계 초과**) | **자동** 재시도가 무한하면 실패를 감춘다 | 운영자가 영원히 모른다 | `SETTLEMENT_RETRY_EXHAUSTED` → `escalate` → **`resumeByOperator`로만 재개** |
 | **SF7** | 모든 상태 | `close` (**같은 영업일 두 번**) | INV-1 위반 | 같은 날 정산이 둘 → **이중 지급** | `SETTLEMENT_DUPLICATE_DATE` |
 | **SF8** | `PENDING`·`CALCULATING`·`COMPLETED` | `escalate` · `resumeByOperator` | 실패한 적이 없다 | 근거 없는 운영자 통지·재개 | `SETTLEMENT_NOT_FAILED` |
 | **SF10** | `FAILED` | `resumeByOperator` (**임계 미만**) | 아직 **자동** 재시도가 남아 있다 | `retryCount = 0`으로 초기화되어 **SF6의 임계 자체를 우회**한다 | `SETTLEMENT_RETRY_REMAINING` |
+| **SF11** | `FAILED` | `escalate` (**임계 미만**) | 아직 자동 재시도가 남아 있다 | 정상 재시도 중인 건이 운영자 목록에 올라 **진짜 미결이 묻힌다** | `SETTLEMENT_RETRY_REMAINING` |
 | **SF9** | `FAILED` | `calculate` · `fail` | 재시도는 `retry`·`resumeByOperator`를 거쳐 `CALCULATING`으로 돌아간 뒤에만 | 실패 상태에서 바로 집계해 `retryCount`가 세어지지 않는다 | `SETTLEMENT_NOT_CALCULATING` |
 
 > ★ **SF6이 막는 것은 "자동" 재시도뿐이다.** 임계를 넘으면 자동 경로는 닫히지만 **운영자 강제 재개(S6)는 열려 있다.** 이 구분이 없으면 `FAILED`가 사실상 종료 상태가 되어, 그날 순액이 영영 확정되지 않고 승인들이 `CAPTURED`에 잔류하며 대사 트리거(BR-42)까지 막힌다 — **문서가 "FAILED는 종료가 아니다"라고 선언한 것이 거짓이 된다.**
@@ -93,14 +93,14 @@ calculate() 를 N회 실행 → netAmount 동일
 |---|---|---|---|---|---|---|
 | **`PENDING`** | **O** (S1) | X (SF3) | X (SF4) | X (SF4) | X (SF8) | X (SF8) |
 | **`CALCULATING`** | X (SF5) | **O** (S2) | **O** (S3) | ◎ | X (SF8) | X (SF8) |
-| **`FAILED`** | X (SF2) | X (SF9) | X (SF9) | **O/X** (S4 / SF6) | **O** (S5) | **O/X** (S6 / SF10) |
+| **`FAILED`** | X (SF5) | X (SF9) | X (SF9) | **O/X** (S4 / SF6) | **O/X** (S5 / SF11) | **O/X** (S6 / SF10) |
 | **`COMPLETED`** | X (SF2) | X (SF1) | X (SF2) | X (SF2) | X (SF8) | X (SF8) |
 
-**O 4 · O/X 2 · X 17 · ◎ 1 = 24칸**
+**O 3 · O/X 3 · X 17 · ◎ 1 = 24칸**
 
 > **`FAILED` 행에 나가는 길이 두 개다.** `retry`는 임계까지의 **자동** 경로, `resumeByOperator`는 임계 이후의 **수동** 경로. 후자가 없으면 `FAILED`가 사실상 종료 상태가 된다(SF6 주석).
 >
-> **`FAILED` 행의 두 칸이 `retryCount` 임계를 사이에 두고 정확히 반대다.** `retry`는 임계 **미만**에서만, `resumeByOperator`는 임계 **이상**에서만 열린다. 겹치면 운영자가 임계 전에 카운트를 0으로 밀어 SF6을 우회할 수 있다.
+> **`FAILED` 행의 세 칸이 `retryCount` 임계 하나로 갈린다.** `retry`는 임계 **미만**에서만, `escalate`·`resumeByOperator`는 임계 **이상**에서만 열린다. 겹치면 운영자가 임계 전에 카운트를 0으로 밀어 SF6을 우회하거나(SF10), 정상 재시도 중인 건이 운영자 목록에 올라 진짜 미결이 묻힌다(SF11).
 
 ---
 
@@ -154,6 +154,7 @@ calculate() 를 N회 실행 → netAmount 동일
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v0.4 | 2026-08-04 | 재점검 반영 — `FAILED/close`의 근거를 **SF2(COMPLETED 전용) → SF5**로 정정하고 SF5 범위 확장 · **SF11 신설**(임계 미만 `escalate`가 미정의 칸이었다) · 전이도의 감시 간선을 `fail`에 합침 · 애그리게이트에 임계 사전조건 반영 |
 | v0.3 | 2026-08-04 | post-fix 반영 — 진척 감시를 **새 전이가 아니라 S3의 트리거**로 연결(번호·계약·집계 없이 전이라고 선언했었다) · **S6에 `retryCount ≥ 임계` 사전조건 추가** + SF10 신설(임계 미만에서 호출하면 카운트 초기화로 SF6을 우회) |
 | v0.2 | 2026-08-04 | 듀얼 리뷰 반영 — ★ **`resumeByOperator`(S6) 신설**(임계 초과 후 탈출 경로가 없어 `FAILED`가 사실상 종료였다) · ★ **`CALCULATING` 진척 감시를 §7에 정식 등재**(README가 있다고 단언했으나 실제로는 열린 의문뿐이었다) · ★ **비영업일 서술을 BR-25에 맞게 정정**(토·일자 `Settlement`를 만들면 월요일 건과 대상이 겹쳐 이중 계상) · S2 사후조건을 **이벤트 발행에서 끊음**(BR-40) · `retry`·`escalate`에 상태 사전조건 · **SF8·SF9 신설**(미등재 X 보완) · 집계 정정 |
 | v0.1 | 2026-08-04 | 최초 작성 — 상태 4종, 전이 5종, 금지 7종. `close`와 `calculate`를 나눈 근거(SF3 조용한 누락), 순액 산출은 멱등이나 그 반영은 아니라는 구분(STS1) |
