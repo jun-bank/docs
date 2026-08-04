@@ -47,7 +47,7 @@
 | `status` | `AuthorizationStatus` | 상태 (§4) |
 | `holdingFunds` | `boolean` | **이 승인이 홀딩을 잡고 있는가** |
 | **`heldAmount`** | `Money` | **이 승인이 점유 중인 홀딩액.** 계좌 `holdTotal` 등식의 구성 요소 (BR-04 · INV-6) |
-| **`limitContribution`** | `Money` | **이 승인이 카드·계좌 한도에서 차지하는 몫.** 한도 등식의 구성 요소 (BR-05 · 카드 INV-5) |
+| **`limitContribution`** | `Money` | **이 승인이 카드·계좌 한도에서 차지하는 몫.** 한도 등식의 구성 요소 (BR-05 · **카드 RC-1**) |
 | `capturedAmount` | `Money?` | 매입된 금액 (null = 미매입) |
 | `withdrawnAmount` | `Money` | 매입 시 즉시 출금된 금액 (BR-20). **매입 시점 확정 후 불변** — 감사 근거 |
 | `returnedTotal` | `Money` | **고객에게 실제 반환한 누계.** 환불 산식의 결과이며 **그 시점 총 회수액**(`withdrawnAmount + 미수.recoveredAmount`)을 넘지 않는다 (**RC-1** — 승인 단독으로 검증 불가) |

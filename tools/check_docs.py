@@ -49,6 +49,7 @@ for e in sorted(set(decl) | set(used)):
 
 # ── ⑤ 부수 효과·사후조건 열의 `〃` (조작·전이 표에서만 — 여기서만 결함이 된다)
 TARGET = sorted(d.AGG.glob("*.md")) + sorted((ROOT/"domain/state-machines").glob("*.md"))
+WIDE   = TARGET + [ROOT/"product/01-business-rules.md", ROOT/"domain/context-map.md", ROOT/"domain/event-storming.md"]
 def body(p):
     t = p.read_text()
     return t.split("\n## 변경 이력")[0]          # 이력은 옛 번호를 인용해야 한다
@@ -61,14 +62,62 @@ for p in TARGET:
                 if i < len(r) and "〃" in r[i]:
                     bad("⑤", f"{rel} {r[0][:24]} — 부수 효과에 `〃`")
 
-# ── ⑤ 이동·폐기된 심볼 (정본 문서 본문에서만 — 이력·변천 문서는 인용해야 한다)
-DEAD = {"INV-10": "RC-1로 이동", "INV-11": "RC-2로 이동",
-        "receivableTotal": "DC-001에서 제거", "recoverReceivable": "DC-001에서 제거"}
+# ── ⑧ 교차 호출 → 공유 경계 (배정의 정확성을 독립 출처로 검사한다)
+#    문서가 스스로 "남의 조작을 부른다"고 적었으면, 그 둘은 같은 트랜잭션에 있어야 한다.
+#    ASSIGN 은 사람 판단이므로 ASSIGN 끼리 비교해서는 오배정을 잡을 수 없다.
+REAL = lambda b: {e for e in b.split() if e.startswith("E")}
+owner_b = {}
+for k, b in ASSIGN.items():
+    owner_b.setdefault(k.split(".")[0], set()).update(REAL(b))
+ko2code = {ko: c for c, (ko, f) in idx.items()}
 for p in TARGET:
+    stem = p.stem
+    me = next((c for c, (ko, f) in idx.items() if f == stem + ".md"), None)
+    if me is None: continue
     for n, line in enumerate(body(p).splitlines(), 1):
-        for sym, why in DEAD.items():
-            if re.search(rf"\b{sym}\b", line):
-                bad("⑤", f"{p.relative_to(ROOT)}:{n} 폐기 심볼 {sym} ({why})")
+        for callee, op in set(re.findall(r"`([A-Z][a-zA-Z]*)\.([a-z][a-zA-Z]*)\(", line)):
+            if callee == me or callee not in idx: continue
+            key = f"{callee}.{op}"
+            if key not in ASSIGN: bad("⑧", f"{p.relative_to(ROOT)}:{n} 없는 조작 호출: {key}"); continue
+            if ASSIGN[key].strip() == "별도": continue   # 의도적 분리 (BR-40)
+            shared = owner_b.get(me, set()) & REAL(ASSIGN[key])
+            if not shared:
+                bad("⑧", f"{p.relative_to(ROOT)}:{n} {me}가 {key}를 부르는데 "
+                         f"공유 트랜잭션 경계가 없다 (호출자 {sorted(owner_b.get(me,set())) or '없음'} "
+                         f"vs 피호출 {sorted(REAL(ASSIGN[key])) or '없음'})")
+
+# ── ⑨ 불변식 참조 무결성 (폐기 심볼 하드코딩을 대신한다)
+DEFINED = {}
+for p in sorted(d.AGG.glob("*.md")):
+    if p.name == "README.md": continue
+    t = body(p)
+    DEFINED[p.stem] = set(re.findall(r"\| \*{0,2}(INV-\d+|RC-\d+|POST-\d+|PRE-\d+)\*{0,2} \|", t))
+stem_of = {ko: f[:-3] for c, (ko, f) in idx.items()}
+for p in TARGET:
+    if p.stem not in DEFINED: continue
+    for n, line in enumerate(body(p).splitlines(), 1):
+        for ko, num in re.findall(r"(계좌|카드|승인|미수|배치|정산|전표|불일치|멱등|예약)\s*((?:INV|RC)-\d+)", line):
+            tgt = stem_of.get(ko) or {"배치":"capture-batch","예약":"reversal-tombstone","멱등":"idempotency-record"}.get(ko)
+            if tgt and tgt in DEFINED and num not in DEFINED[tgt]:
+                bad("⑨", f"{p.relative_to(ROOT)}:{n} {ko} {num} — {tgt}.md에 정의가 없다")
+        bare = re.findall(r"(?<![가-힣] )\b(INV-\d+|RC-\d+)\b", line)
+        for num in set(bare):
+            if re.search(rf"(계좌|카드|승인|미수|배치|정산|전표|불일치|멱등|예약)\s*{num}", line): continue
+            m2 = re.search(rf"`([a-z-]+)\.md`[^|]{{0,20}}{num}", line)   # `journal-entry.md` INV-6
+            if m2:
+                if m2.group(1) in DEFINED and num not in DEFINED[m2.group(1)]:
+                    bad("⑨", f"{p.relative_to(ROOT)}:{n} {m2.group(1)}.md {num} — 정의가 없다")
+                continue
+            if p.parent.name == "aggregates" and num not in DEFINED[p.stem]:
+                bad("⑨", f"{p.relative_to(ROOT)}:{n} {num} — 이 문서에 정의가 없다")
+
+# ── ⑩ 종수 선언 vs 실제 파일 수
+for d_, pat in ((d.AGG, "*.md"), (ROOT/"domain/state-machines", "*.md")):
+    n_files = len([x for x in d_.glob(pat) if x.name != "README.md"])
+    rm = d_/"README.md"
+    m = re.search(r"상태:.*?(\d+)종", rm.read_text())
+    if m and int(m.group(1)) != n_files:
+        bad("⑩", f"{rm.relative_to(ROOT)} 헤더 {m.group(1)}종 vs 실제 파일 {n_files}개")
 
 # ── ⑥ 손으로 쓴 집계 수치
 for p in sorted(ROOT.rglob("*.md")):
