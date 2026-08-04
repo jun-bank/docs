@@ -12,6 +12,7 @@
 | 애그리게이트 | 컨텍스트 | 경계 | 문서 | 상태 |
 |---|---|---|---|---|
 | **계좌** `Account` | C1 뱅킹 | 실시간 | [account.md](account.md) | ✅ |
+| **미수** `Receivable` | C1 뱅킹 | 실시간 · 배치 | [receivable.md](receivable.md) | ✅ **DC-001** |
 | **카드** `Card` | C2 카드 | 실시간 | [card.md](card.md) | ✅ |
 | **승인** `Authorization` | C3 결제 | 실시간 | [authorization.md](authorization.md) | ✅ |
 | **취소 예약** `ReversalTombstone` | C3 결제 | 실시간 | [reversal-tombstone.md](reversal-tombstone.md) | ✅ |
@@ -49,6 +50,8 @@ private Account account;       // ❌
 > **전표는 두 예외 어디에도 없다.** BR-40이 원장 기표를 별도 논리 단위로 두었으므로, 위 트랜잭션이 커밋된 뒤 **유실되지 않는 경로**(Outbox 등)로 기표된다.
 >
 > **이 목록에 없는 것은 예외가 아니다.** 새 예외가 필요해 보이면 먼저 경계를 다시 본다.
+>
+> ⚠️ **예외가 늘어나는 것 자체가 신호다.** E3·E4는 DC-001에서 미수를 분리하며 생겼다 — 분리로 **소유는 명확해졌지만 협력은 늘었다.** 다섯 번째가 필요해지면 경계를 다시 본다.
 
 ### 불변식과 사전조건의 구분
 
