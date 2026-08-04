@@ -186,6 +186,30 @@ for p in sorted(ROOT.rglob("*.md")):
         for r in set(re.findall(r"BR-\d+", line)):
             if r not in brs: bad("⑦", f"{p.relative_to(ROOT)}:{n} 없는 규칙 참조: {r}")
 
+# ── ⑬ ACL 소유 규칙 표가 **모든 경계**를 덮는가
+#    R9 T1의 뿌리: 표가 E3·E4·E5만 덮어 E1·E2가 옛 규칙으로 남았다.
+je = (d.AGG/"journal-entry.md").read_text()
+owned = set(re.findall(r"\| \*\*(E[1-5]) ", je))
+for e in sorted(set(decl) - owned):
+    bad("⑬", f"ACL 소유 규칙 표에 {e} 행이 없다 — 그 경계의 이벤트가 판정 없이 남는다")
+
+# ── ⑫ 열린 의문 색인 == 각 상태 머신 문서의 의문 ID (양방향)
+SM = ROOT/"domain/state-machines"
+docq = set()
+for p_ in sorted(SM.glob("*.md")):
+    if p_.name == "README.md": continue
+    m = re.search(r"\n## \d+\. (?:미해결|의문).*?(?=\n## |\Z)", p_.read_text(), re.S)
+    if not m: bad("⑫", f"{p_.relative_to(ROOT)} 의문 절이 없다"); continue
+    docq |= set(re.findall(r"\| \*{0,2}([A-Z]{2,4}\d+)\*{0,2} \|", m.group(0)))
+rm = (SM/"README.md").read_text()
+sec = rm[rm.index("## 열린 의문"):] if "## 열린 의문" in rm else ""
+idxq = set(re.findall(r"^\| \*\*([A-Z]{2,4}\d+)\*\*", sec, re.M))
+for q in sorted(idxq - docq): bad("⑫", f"색인에만 있는 의문(유령): {q}")
+for q in sorted(docq - idxq): bad("⑫", f"문서에만 있는 의문(누락): {q}")
+m = re.search(r"## 열린 의문 \((\d+)건\)", rm)
+if m and int(m.group(1)) != len(idxq):
+    bad("⑫", f"열린 의문 선언 {m.group(1)}건 vs 실제 {len(idxq)}건")
+
 if FAIL:
     print(f"실패 {len(FAIL)}건\n" + "\n".join("  " + x for x in FAIL)); sys.exit(1)
 print(f"통과 — 애그리게이트 {len(idx)} · 조작 {len(canon)} · 경계 {len(decl)}")

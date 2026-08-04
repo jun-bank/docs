@@ -36,6 +36,10 @@ MUT = [
   None, None, "R1 C1"),
  ("기준소스의 없는 불변식 참조 — 계좌 RC-9", "product/01-business-rules.md",
   "**계좌 RC-1**", "계좌 RC-9", "R8 S17"),
+ ("열린 의문 유령 — 색인에 없는 ID 추가", "domain/state-machines/README.md",
+  "| **RCS5** |", "| **XXS9** | 미수 | 유령 |\n| **RCS5** |", "R9 M4"),
+ ("ACL 소유 규칙에서 E2 행 제거", "domain/aggregates/journal-entry.md",
+  "| **E2 매입** | `Withdrawn` (C1) | 출금분 |\n", "", "R9 T1"),
  ("없는 규칙 참조 — BR-99", "domain/aggregates/account.md",
   "(BR-34)", "(BR-99)", "상시"),
 ]

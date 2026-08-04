@@ -125,7 +125,7 @@
 | **망취소** | `reverse()` | 상태 ∈ {성립, **만료**} (멱등 — 이미 무효면 무시) | 상태 = 무효. `holdingFunds`가 참일 때만 홀딩·한도 복원 (BR-49) | `Reversed` |
 | **승인취소** | `void(amount)` | 상태 ∈ {성립, **만료**}, **미매입**, INV-1 | 부분이면 `cancelledAmount` 증가, 전액이면 무효. 복원 조건은 `reverse()`와 동일 | `Voided` |
 | **만료** | `expire(at)` | 상태 = 성립, **`frozen = false`** (BR-28) | 상태 = 만료, `holdingFunds = false` | `Expired` |
-| **매입** | `capture(amount, at)` | INV-2·INV-3 (`amount ≤ 승인액 − 누적취소액`), 상태 ∈ {성립, 만료}, **`frozen = false`** (BR-50) | 상태 = 매입됨 · `holdingFunds = false` · `heldAmount = 0` · **미매입분만큼 `limitContribution` 감액**(BR-24 — 카드·계좌 한도도 함께, E2) | `Captured` |
+| **매입** | `capture(amount, at)` | INV-2·INV-3 (`amount ≤ 승인액 − 누적취소액`), 상태 ∈ {성립, 만료}, **`frozen = false`** (BR-50) | 상태 = 매입됨 · `holdingFunds = false` · `heldAmount = 0` · ★ **복원액 = `limitContribution` − min(매입액, `limitContribution`)** 만큼 `limitContribution` 감액 + `Card.restoreLimit` · `Account.restoreAccountLimit`(BR-24, E2). **만료로 이미 복원됐으면 `limitContribution = 0`이라 복원액도 0** — 이중 복원이 산식으로 막힌다 (R9 H1) | `Captured` |
 | **환불** | `refund(amount, receivable, recoverable)` | 상태 = 매입됨, **INV-7** | `refundedTotal` 증가 → 반환액·소멸액 파생 → **소멸 먼저, 그다음 계좌 입금(`recoverable`이 회수 대상)** → `returnedTotal` 증가. 잔여 채무 0이면 상태 = 환불됨. **승인·자기 미수·계좌·회수 대상 미수들이 한 커밋**(E4) | `Refunded` |
 | **보류** | `freeze()` | 종료 상태 아님 | `frozen = true` | `Frozen` |
 | **보류 해제** | `unfreeze()` | `frozen = true`. **종료 상태에서도 허용** — 보류 목록에서 내릴 유일한 경로다 | `frozen = false` | `Unfrozen` |
@@ -203,7 +203,7 @@ EXPIRED    → CAPTURED    지연 매입 (BR-19) — 만료는 채무 소멸이 
 | 승인취소됨 | `Voided` | 승인ID, 취소액, 전액 여부 | — |
 | 만료됨 | `Expired` | 승인ID, 시각 | — |
 | **매입됨** | `Captured` | 승인ID, 매입액, 영업일 | ⚠️ **원장 아님** — 자금 이동 분개는 계좌 `Withdrawn`이 소유한다 (ACL 소유 규칙) · **C4 정산** |
-| **환불됨** | `Refunded` | 승인ID, **`reductionAmount`(거래 축소액)** · **`writtenOffAmount`(자기 미수 소멸분)** · **`returnedAmount`(고객 반환액)** · **`recoveredAmount`(반환액 중 다른 미수 회수분)** · **`creditedAmount`(반환액 중 잔액 증가분)**, 영업일 | **C5 원장** · **C4 정산** |
+| **환불됨** | `Refunded` | 승인ID, ★ **`accountId`**(보조부 기표 대상 — `journal-entry.md` INV-7), **`reductionAmount`(거래 축소액)** · **`writtenOffAmount`(자기 미수 소멸분)** · **`returnedAmount`(고객 반환액)** · **`recoveredAmount`(반환액 중 다른 미수 회수분)** · **`creditedAmount`(반환액 중 잔액 증가분)**, 영업일 | **C5 원장** · **C4 정산** |
 | 보류/해제 | `Frozen` · `Unfrozen` | 승인ID, 운영자 | 운영자 |
 | 정산 확정 | `Settled` | 승인ID, 정산일 | — |
 
