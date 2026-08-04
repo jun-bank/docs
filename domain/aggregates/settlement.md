@@ -87,6 +87,23 @@ calculate() 를 N회 실행 → netAmount 동일   ← 멱등
 
 ---
 
+## 4.1 발행 이벤트
+
+| 이벤트 | 코드명 | 발생 | 담는 것 | 구독 |
+|---|---|---|---|---|
+| 영업일 마감됨 | `BusinessDateClosed` | `close()` | `businessDate` | C3 결제 |
+| 정산 완료됨 | `SettlementCompleted` | `calculate()` | `businessDate`, **`captureTotal`** · **`refundTotal`** · **`netAmount`** | **C5 원장** · C3 결제 |
+| 정산 실패됨 | `SettlementFailed` | `fail()` | `businessDate`, `retryCount`, 사유 | **C6 대사** · 운영 |
+
+> ⚠️ **이 절이 없었다** (R10 ⑮). 조작 표의 이벤트 열에 이름만 있고 **무엇을 싣는지가 어디에도 없어서**,
+> 원장 ACL이 `차) 매입사 미지급금 / 대) 예치금` 을 어느 금액으로 기표할지 계약이 없었다.
+>
+> ★ **`refundTotal`은 환불의 `reductionAmount`(거래 축소액) 누계다** — 반환액이 아니다.
+> 매입 10 · 출금 7 · 미수 3 에서 4만 환불이면 정산에 들어가는 값은 **4**이지 반환액 1이 아니다.
+> 순액은 *"매입사에게 줄 돈"* 이므로 거래 축소액을 따른다 (BR-21 · BR-43 ①).
+
+---
+
 ## 5. 경계 근거
 
 | 질문 | 답 |

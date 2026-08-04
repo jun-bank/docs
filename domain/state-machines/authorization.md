@@ -73,15 +73,15 @@ stateDiagram-v2
 |---|---|---|---|---|---|---|
 | T1 | `REQUESTED` | `authorize` | `AUTHORIZED` | 카드·한도·가용잔액 전부 통과 · **유효한 취소 예약 없음**(존재 AND 미만료 — 예약 §0) | 홀딩 생성(`heldAmount` 설정) · 승인번호 발번 · **카드 + 계좌 한도** 사용액 증가(`limitContribution` 설정) | BR-04·05·15·17·44 |
 | T2 | `REQUESTED` | `decline` | `DECLINED` | 검증 중 하나라도 실패 | **거절 사유 기록** | BR-15·36 |
-| T3 | `REQUESTED` | **`createVoidedByTombstone`** | `VOIDED` | **유효한 취소 예약 존재**(예약 §0) | **홀딩을 만들지 않고 한도도 쓰지 않는다** · 예약 소비 | BR-22 |
-| T4 | `AUTHORIZED` | `reverse` | `VOIDED` | — | 홀딩 해제 · **카드·계좌 한도** 복원 | BR-13·24·44 |
-| T5 | `AUTHORIZED` | `void`(전액) | `VOIDED` | `취소액 = 승인액 − 누적취소액` | 홀딩 해제 · **카드·계좌 한도** 복원 · **역분개 없음** | BR-26·44 |
-| T6 | `AUTHORIZED` | `void`(부분) | `AUTHORIZED` | INV-1 (`누적취소액 ≤ 승인액`) | 홀딩 부분 해제 · **카드·계좌 한도** 부분 복원 | BR-11·24·26·44 |
-| T7 | `AUTHORIZED` | `expire` | `EXPIRED` | 기한 도래 **AND `frozen = false`** | 홀딩 해제 · **카드·계좌 한도** 복원. **채무 존속** | BR-03·24·28·44 |
+| T3 | `REQUESTED` | **`createVoidedByTombstone`** | `VOIDED` | **유효한 취소 예약 존재**(예약 §0) | **홀딩을 만들지 않고 한도도 쓰지 않는다** (`heldAmount` = 0 · `limitContribution` = 0) · 예약 소비 | BR-22 |
+| T4 | `AUTHORIZED` | `reverse` | `VOIDED` | — | 홀딩 해제(**`heldAmount` → 0**) · **카드·계좌 한도** 복원(**`limitContribution` → 0**) | BR-13·24·44 |
+| T5 | `AUTHORIZED` | `void`(전액) | `VOIDED` | `취소액 = 승인액 − 누적취소액` | 홀딩 해제(**`heldAmount` → 0**) · **카드·계좌 한도** 복원(**`limitContribution` → 0**) · **역분개 없음** | BR-26·44 |
+| T6 | `AUTHORIZED` | `void`(부분) | `AUTHORIZED` | INV-1 (`누적취소액 ≤ 승인액`) | 홀딩 부분 해제(**`heldAmount` 감액**) · **카드·계좌 한도** 부분 복원(**`limitContribution` 감액**) | BR-11·24·26·44 |
+| T7 | `AUTHORIZED` | `expire` | `EXPIRED` | 기한 도래 **AND `frozen = false`** | 홀딩 해제(**`heldAmount` → 0**) · **카드·계좌 한도** 복원(**`limitContribution` → 0**). **채무 존속** | BR-03·24·28·44 |
 | T8 | `AUTHORIZED` | `capture` | `CAPTURED` | `매입액 ≤ 승인액 − 누적취소액` (INV-3) | 출금 또는 **미수 적재** · 홀딩 **전액** 해제 · ★ **한도 복원** — 복원액 = `limitContribution` − min(매입액, `limitContribution`) (BR-24, **E2**) · 전표 기표 | BR-16·18·20·**24** |
 | T9 | `EXPIRED` | `capture` | `CAPTURED` | `매입액 ≤ 승인액 − 누적취소액` (INV-3) | 출금 또는 미수 적재 · **홀딩 해제 없음**(만료가 이미 풀었다 — `holdingFunds = false`) · 전표 기표 · ★ **한도 복원액이 0이다** — 만료(T7)가 이미 복원해 `limitContribution = 0`이므로 T8과 **같은 산식**이 0을 낸다. 특례가 아니다 | BR-19·24 |
-| T10 | `CAPTURED` | `refund` (**잔여 채무 0이 됨**) | `REFUNDED` | **INV-7** (`refundedTotal + 요청액 ≤ capturedAmount`) | `refundedTotal` 증가 → 반환액·소멸액 파생 → **① 미수 `writeOff()`(소멸액>0·미결일 때만) ② 계좌 `refund(반환액)` ③ `returnedTotal` 증가** · 역분개 · 한도 복원 **없음**. **승인·미수·계좌가 한 커밋**(E4) | BR-24·26·**43 ①** |
-| T11 | `CAPTURED` | `refund` (**잔여 채무 > 0**) | `CAPTURED` | **INV-7** | T10과 **같은 3단계**(소멸 → 계좌 입금 → `returnedTotal`) · 역분개 · 한도 복원 없음. **결과 상태만 다르다** | BR-11·26·**43 ①** |
+| T10 | `CAPTURED` | `refund` (**잔여 채무 0이 됨**) | `REFUNDED` | **INV-7** (`refundedTotal + 요청액 ≤ capturedAmount`) | `refundedTotal` 증가 → 반환액·소멸액 파생 → **① 미수 `writeOff()`(소멸액>0·미결일 때만) ② 계좌 `refund(반환액)` ③ `returnedTotal` 증가** · 역분개 · 한도 복원 **없음**(`limitContribution` 불변 — 매입 시 확정됐다). **승인·미수·계좌가 한 커밋**(E4) | BR-24·26·**43 ①** |
+| T11 | `CAPTURED` | `refund` (**잔여 채무 > 0**) | `CAPTURED` | **INV-7** | T10과 **같은 3단계**(소멸 → 계좌 입금 → `returnedTotal`) · 역분개 · 한도 복원 없음(`limitContribution` 불변). **결과 상태만 다르다** | BR-11·26·**43 ①** |
 | T12 | `CAPTURED` | `markSettled` | `SETTLED` | 정산 순액 산출 완료 | — | BR-21 |
 | T13 | `EXPIRED` | `reverse` · `void`(전액) | `VOIDED` | — | **채무 소멸**. 홀딩·**두 층 한도** 모두 만료 시 이미 복원됐으므로 **재복원하지 않는다** | BR-49 |
 | T14 | `EXPIRED` | `void` (**부분**) | `EXPIRED` | INV-1 | `cancelledAmount`만 증가. **홀딩·한도 재복원 없음**(`holdingFunds = false`가 판정) | BR-11·26·49 |

@@ -143,10 +143,10 @@
 
 | 이벤트 | 코드명 | 언제 | 담는 정보 | 구독자 |
 |---|---|---|---|---|
-| 미수 발생 | `ReceivableIncurred` | `incur()` | 미수ID, **`origin`·`sourceRef`**, 계좌ID, 금액, 영업일 | **C5 원장** · 운영자 |
-| 미수 회수 | `ReceivableRecovered` | `recover()` | 미수ID, 회수액, 잔여 | ⚠️ **원장 아님** — 회수 분개는 유입 이벤트가 소유한다 (ACL 소유 규칙) |
-| **미수 소멸** | `ReceivableWrittenOff` | `writeOff()` | 미수ID, 소멸액, 잔여, **원인 = 환불** | **C5 원장** |
-| 보류 / 해제 | `ReceivableFrozen` · `ReceivableUnfrozen` | | 미수ID, 운영자 | 운영자 |
+| 미수 발생 | `ReceivableIncurred` | `incur()` | 미수ID, **`accountId`**, **`origin`·`sourceRef`**, 계좌ID, 금액, 영업일 | **C5 원장** · 운영자 |
+| 미수 회수 | `ReceivableRecovered` | `recover()` | 미수ID, **`accountId`**, 회수액, 잔여 | ⚠️ **원장 아님** — 회수 분개는 유입 이벤트가 소유한다 (ACL 소유 규칙) |
+| **미수 소멸** | `ReceivableWrittenOff` | `writeOff()` | 미수ID, **`accountId`**, 소멸액, 잔여, **원인 = 환불** | **C5 원장** |
+| 보류 / 해제 | `ReceivableFrozen` · `ReceivableUnfrozen` | | 미수ID, **`accountId`**, 운영자 | 운영자 |
 
 > **회수와 소멸은 전표가 다르다.** 회수는 `차) 예치금 / 대) 미수금`(자금이 들어왔다), 소멸은 `차) 매입사 미지급금 / 대) 미수금`(받을 권리를 버렸다). **한 이벤트로 합치면 원장이 구분할 수 없다.**
 

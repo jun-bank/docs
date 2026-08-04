@@ -193,6 +193,66 @@ owned = set(re.findall(r"\| \*\*(E[1-5]) ", je))
 for e in sorted(set(decl) - owned):
     bad("⑬", f"ACL 소유 규칙 표에 {e} 행이 없다 — 그 경계의 이벤트가 판정 없이 남는다")
 
+# ── ⑭ 등식 우변 필드 ↔ 전이 사후조건
+#    RC 등식의 우변 필드를 바꾸는 전이가 그것을 사후조건에 적었는가.
+#    "홀딩·한도를 건드리는데 구성 요소를 안 적음"이 세 라운드 연속 나왔다.
+RHS = set()
+for p_ in sorted(d.AGG.glob("*.md")):
+    for n_, line in enumerate(body(p_).splitlines(), 1):
+        if re.match(r"\| \*{0,2}RC-\d+", line):
+            RHS |= {x for x in re.findall(r"`(\w+)`", line) if x[0].islower()}
+RHS &= {"heldAmount", "limitContribution", "recoveredAmount", "outstanding"}
+TOUCH = ("홀딩", "한도")
+sm = ROOT/"domain/state-machines/authorization.md"
+for hdr, rows in d._rows(body(sm), lambda c: "부수 효과" in c):
+    fi = hdr.index("부수 효과")
+    for r in rows:
+        if fi >= len(r): continue
+        eff = r[fi]
+        if not any(t in eff for t in TOUCH): continue
+        if "복원하지 않는다" in eff or "해제 없음" in eff or "재복원 없음" in eff: continue
+        named = {x for x in re.findall(r"`(\w+)`", eff)}
+        if not (named & RHS):
+            bad("⑭", f"{sm.relative_to(ROOT)} {r[0]} — 홀딩·한도를 바꾸는데 "
+                     f"등식 구성 요소({sorted(RHS)})를 사후조건에 안 적었다")
+
+# ── ⑮ ACL ↔ 이벤트 payload ↔ 보조부
+#    ACL이 쓰는 필드가 그 이벤트 payload에 있는가. 보조부 계정은 식별자를 싣는가.
+PAYLOAD = {}
+for p_ in sorted(d.AGG.glob("*.md")):
+    for hdr, rows in d._rows(body(p_), lambda c: any("담는" in h for h in c)):
+        ci = next(i for i, h in enumerate(hdr) if "담는" in h)
+        for r in rows:
+            ev = re.findall(r"`(\w+)`", r[1] if len(r) > 1 else "")
+            if not ev: continue
+            PAYLOAD.setdefault(ev[0], set()).update(re.findall(r"`(\w+)`", r[ci]) if ci < len(r) else [])
+SUBLEDGER = ("고객예금", "미수금")
+je = (d.AGG/"journal-entry.md").read_text()
+for hdr, rows in d._rows(je, lambda c: c[:2] == ["상류 이벤트", "전표"]):
+    for r in rows:
+        ev = re.findall(r"`(\w+)`", r[0])
+        if not ev or "기표 없음" in r[1] or "원장 아님" in r[1]: continue
+        ev = ev[0]
+        if ev not in PAYLOAD: bad("⑮", f"ACL이 번역하는 `{ev}` 의 발행 이벤트 정의를 못 찾았다"); continue
+        for f in {x for x in re.findall(r"`(\w+)`", r[1]) if x[0].islower()}:
+            if f not in PAYLOAD[ev]:
+                bad("⑮", f"ACL의 `{ev}` 전표가 `{f}` 를 쓰는데 그 이벤트 payload에 없다")
+        if any(a in r[1] for a in SUBLEDGER) and not (PAYLOAD[ev] & {"accountId", "subjectId"}):
+            bad("⑮", f"`{ev}` 가 보조부 계정을 기표하는데 payload에 `accountId`가 없다 (INV-7)")
+
+# ── ⑯ 배정 커버리지 — 독립 출처로 검사되는 비율
+verified = set()
+for p_ in TARGET:
+    t = body(p_)
+    for callee, op in set(re.findall(r"`([A-Z][a-zA-Z]*)\.([a-z][a-zA-Z]*)\(", t)):
+        if f"{callee}.{op}" in ASSIGN: verified.add(f"{callee}.{op}")
+e_assigned = {k for k, v in ASSIGN.items() if any(x.startswith("E") for x in v.split())}
+cov = len(verified & e_assigned) * 100 // max(1, len(e_assigned))
+COVERAGE_FLOOR = 15
+if cov < COVERAGE_FLOOR:
+    bad("⑯", f"배정 커버리지 {cov}% — 경계 배정 {len(e_assigned)}건 중 "
+             f"독립 출처로 검사되는 것은 {len(verified & e_assigned)}건. 하한 {COVERAGE_FLOOR}%")
+
 # ── ⑫ 열린 의문 색인 == 각 상태 머신 문서의 의문 ID (양방향)
 SM = ROOT/"domain/state-machines"
 docq = set()
