@@ -19,7 +19,7 @@
 
 | 필드 | 타입 | 뜻 |
 |---|---|---|
-| `type` | `DiscrepancyType` | M1·M2·M4~**M13** (BR-09) |
+| `type` | `DiscrepancyType` | M1·M2·M4~**M14** (BR-09) |
 | `scope` | `ReconciliationScope` | **외부 대사**(BR-30) / **내부 대사**(BR-41) |
 | `subject` | `SubjectRef` | 대상 (상관 식별자 · 파일·레코드 ID · 계정과목 등) |
 | `firstDetectedOn` | `BusinessDate` | **최초** 발견 영업일 |
@@ -61,6 +61,11 @@
 | **M12** 잔액-원장 상이 | **내부** | 계좌 `balance` ≠ 그 계좌의 **고객예금 보조부 잔액** — `subject` = (계좌ID, 영업일) (BR-41) |
 
 | **M13** 입금 멱등 충돌 | **내부** | 같은 `(key, operation)`에 다른 요청 지문 — `subject` = (key, operation) (BR-29·38) |
+| **M14** 미수-원장 상이 | **내부** | Σ(그 계좌 미수 `outstanding()`) ≠ 미수금 보조부 잔액 — `subject` = (계좌ID, 영업일) (BR-41) |
+
+> ★ **M14가 없으면 `subjectId`를 들기만 하고 안 쓴다** — 비용은 치르고 보호는 없는 상태다.
+> 잡는 것: 미수 **발생·회수·소멸 중 하나만 기표**된 경우 · **회수 이중 기표**(R9 T3 유형) ·
+> 소멸과 반환의 **배분 오류**.
 
 > ★ **`DepositConflict`가 구독자만 있고 적재할 유형이 없었다** (R9 H5) — BR-41이 명문으로
 > 경고한 실패다. 이벤트를 C6으로 보내면서 **받아 적을 곳을 안 만들었다.**
