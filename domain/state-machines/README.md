@@ -186,7 +186,7 @@
 | 필드 | 판정 | 결과 |
 |---|---|---|
 | 계좌 `receivable` (**폐기**) | **② 별도 애그리게이트** | 회수 순서·보류·진행도가 갈 곳이 생겼다 |
-| 정산 `captureTotal`·`refundTotal` | **③ (미완)** | C3 버킷이 모델에 없다 → **DC-002** |
+| 정산 `captureTotal`·`refundTotal` | **③ 성립** | 정본 = 승인 `capturedAmount` + `settledBusinessDate` · 탐지 = **M15** (DC-002) |
 | 계좌 `holdTotal` | **③ 의식적 예외** | 등식(**RC-1**, 우변 = 승인 `heldAmount`) · 경계(E1 — 성립·해제·복원) · 탐지(BR-41 → **M9**) |
 | 카드 `usage` | **③ 의식적 예외** | 등식(**RC-1**, 우변 = 승인 `limitContribution`) · 경계(E1·E2) · 탐지(BR-41 → **M10**) |
 | 계좌 `dailyUsage` | **③ 의식적 예외** | 〃 계좌 층 — 탐지 **M11** |

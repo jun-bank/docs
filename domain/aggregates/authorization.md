@@ -47,6 +47,7 @@
 | `status` | `AuthorizationStatus` | 상태 (§4) |
 | `holdingFunds` | `boolean` | **이 승인이 홀딩을 잡고 있는가** |
 | **`heldAmount`** | `Money` | **이 승인이 점유 중인 홀딩액.** 계좌 `holdTotal` 등식의 구성 요소 (BR-04 · INV-6) |
+| **`settledBusinessDate`** | `BusinessDate?` | ★ **정산에 반영된 영업일** — `markSettled()` 시 확정, 이후 **불변**. 정산 합계 등식의 **부분집합을 고르는 키**다 (DC-002) |
 | **`limitBasisDate`** | `BusinessDate` | ★ **이 승인이 소비한 한도 버킷** — 성립 시 확정, 이후 **불변**. `at`(원장 귀속 영업일)과 다른 개념이다 (DC-003) |
 | **`limitContribution`** | `Money` | **이 승인이 그 기준일 한도에서 차지하는 몫.** 한도 등식의 구성 요소 (BR-05 · **카드 RC-1**) |
 | `capturedAmount` | `Money?` | 매입된 금액 (null = 미매입) |
@@ -127,10 +128,10 @@
 | **승인취소** | `void(amount)` | 상태 ∈ {성립, **만료**}, **미매입**, INV-1 | 부분이면 `cancelledAmount` 증가, 전액이면 무효. 복원 조건은 `reverse()`와 동일 | `Voided` |
 | **만료** | `expire(at)` | 상태 = 성립, **`frozen = false`** (BR-28) | 상태 = 만료, `holdingFunds = false` | `Expired` |
 | **매입** | `capture(amount, at)` | INV-2·INV-3 (`amount ≤ 승인액 − 누적취소액`), 상태 ∈ {성립, 만료}, **`frozen = false`** (BR-50) | 상태 = 매입됨 · `holdingFunds = false` · `heldAmount = 0` · ★ **`at`의 영업일 = `limitBasisDate` 일 때만 한도 복원**(DC-003): 복원액 = `limitContribution` − min(매입액, `limitContribution`) 만큼 `Card.restoreLimit(복원액, limitBasisDate)` · `Account.restoreAccountLimit(복원액, limitBasisDate)` 호출 후 `limitContribution` 감액 (BR-24, E2). **기준일이 다르면 셋 다 불변** — 그 버킷은 이미 닫혔다(`usage`가 리셋됐다). 만료로 이미 복원됐으면 `limitContribution = 0`이라 복원액도 0 | `Captured` |
-| **환불** | `refund(amount, receivable, recoverable)` | 상태 = 매입됨, **INV-7** | `refundedTotal` 증가 → 반환액·소멸액 파생 → **소멸 먼저, 그다음 계좌 입금(`recoverable`이 회수 대상)** → `returnedTotal` 증가. 잔여 채무 0이면 상태 = 환불됨. **승인·자기 미수·계좌·회수 대상 미수들이 한 커밋**(E4) | `Refunded` |
+| **환불** | `refund(amount, receivable, recoverable)` | 상태 ∈ {**매입됨, 정산완료**}, **INV-7** | `refundedTotal` 증가 → 반환액·소멸액 파생 → **소멸 먼저, 그다음 계좌 입금(`recoverable`이 회수 대상)** → `returnedTotal` 증가. 잔여 채무 0이면 상태 = 환불됨. **승인·자기 미수·계좌·회수 대상 미수들이 한 커밋**(E4) | `Refunded` |
 | **보류** | `freeze()` | 종료 상태 아님 | `frozen = true` | `Frozen` |
 | **보류 해제** | `unfreeze()` | `frozen = true`. **종료 상태에서도 허용** — 보류 목록에서 내릴 유일한 경로다 | `frozen = false` | `Unfrozen` |
-| **정산 확정** | `markSettled()` | 상태 = 매입됨. **`frozen` 여부와 무관** (BR-28에 정산 제외가 없다) | 상태 = 정산완료 | `Settled` |
+| **정산 확정** | `markSettled(businessDate)` | 상태 = 매입됨. **`frozen` 여부와 무관** (BR-28에 정산 제외가 없다) | 상태 = 정산완료 · ★ **`settledBusinessDate` 확정**(이후 불변 — 정산 등식의 부분집합 키, DC-002) | `Settled` |
 
 ### 조작 상세 — `capture()` 가 두 상태에서 허용되는 이유
 

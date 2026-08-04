@@ -266,6 +266,20 @@ for p_ in sorted(ROOT.rglob("*.md")):
             bad("⑰", f"{p_.relative_to(ROOT)}:{n} 불일치 유형 {mm.group(1)}종 선언 "
                      f"— BR-09 정본은 {len(canon_m)}종. 파생 문서는 건수를 적지 않는다")
 
+# ── ⑱ ③ 의식적 예외는 세 칸이 전부 채워져야 한다 (04 §4)
+#    "등재만 하고 정본·탐지가 비어 있다"가 R7 U7 · DC-002 였다.
+for p_ in sorted(d.AGG.glob("*.md")):
+    t = body(p_)
+    for m in re.finditer(r"###[^\n]*의식적 예외.*?(?=\n### |\n## |\Z)", t, re.S):
+        blk = m.group(0)
+        cells = dict(re.findall(r"^\| \*\*(등식|정본|트랜잭션 경계|탐지)\*\* \| (.+?) \|\s*$", blk, re.M))
+        for k in ("등식", "탐지"):
+            if k not in cells: bad("⑱", f"{p_.relative_to(ROOT)} ③ 예외에 `{k}` 칸이 없다")
+        for k, v in cells.items():
+            if re.search(r"미정|미완|불충분|없다|⚠️", v):
+                bad("⑱", f"{p_.relative_to(ROOT)} ③ 예외의 `{k}`가 미완이다 — "
+                         f"세 칸이 채워지지 않으면 ③을 고를 수 없다 (04 §4)")
+
 # ── ⑫ 열린 의문 색인 == 각 상태 머신 문서의 의문 ID (양방향)
 SM = ROOT/"domain/state-machines"
 docq = set()

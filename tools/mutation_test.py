@@ -42,6 +42,8 @@ MUT = [
  ("ACL이 쓰는 필드를 payload에서 지운다", "domain/aggregates/receivable.md",
   "| **미수 소멸** | `ReceivableWrittenOff` | `writeOff()` | 미수ID, **`accountId`**,",
   "| **미수 소멸** | `ReceivableWrittenOff` | `writeOff()` | 미수ID,", "R10 ⑮"),
+ ("정산 ③ 정본을 다시 비운다", "domain/aggregates/settlement.md",
+  "★ **승인 `capturedAmount` + `settledBusinessDate`** (C3 결제)", "**미정**", "DC-002"),
  ("파생 문서가 유형 건수를 따로 선언", "domain/glossary.md",
   "유형은 **BR-09 정본 표**가 소유한다", "유형 7종은 BR-09 참조 —", "R10"),
  ("열린 의문 유령 — 색인에 없는 ID 추가", "domain/state-machines/README.md",

@@ -32,8 +32,8 @@
 > 매입이 먼저 → 반영하고 `CAPTURED`. 뒤늦은 취소는 `refund()`로 강등.
 > 취소가 먼저 → 채무 소멸하고 `VOIDED`. 뒤늦은 매입은 격리(**M8** — F12).
 
-**② `SETTLED`는 종료 상태이고, 이후 환불이 와도 이 승인은 바뀌지 않는다.**
-환불은 **별도 차감 거래**로 다음 영업일 정산에 반영된다(BR-43). 원거래를 되돌리면 마감된 영업일의 순액이 움직인다(BR-47과 같은 논리).
+**② `SETTLED`는 종료 상태이고, 이후 환불이 와도 이 승인의 *상태는* 바뀌지 않는다.**
+★ **그러나 `refundedTotal`은 오른다** (T16 · DC-002) — 상한 INV-7의 좌변이 그 필드이므로, 안 올리면 같은 승인을 **무한히 환불**할 수 있다(매입 10을 6+6으로 12 축소). 상태와 `settledBusinessDate`는 불변이므로 **마감된 순액은 재계산되지 않는다.** 축소액은 **별도 차감 거래**로 다음 영업일 정산에 반영된다(BR-43). 원거래를 되돌리면 마감된 영업일의 순액이 움직인다(BR-47과 같은 논리).
 
 ---
 
@@ -82,7 +82,8 @@ stateDiagram-v2
 | T9 | `EXPIRED` | `capture` | `CAPTURED` | `매입액 ≤ 승인액 − 누적취소액` (INV-3) | 출금 또는 미수 적재 · **홀딩 해제 없음**(만료가 이미 풀었다 — `holdingFunds = false`) · 전표 기표 · ★ **한도 복원 없음** — 만료(T7)가 이미 복원해 `limitContribution = 0`이고, 만료 후 매입은 기준일도 다르다. T8과 **같은 조건·같은 산식**이 0을 낸다 (DC-003). 특례가 아니다 | BR-19·24 |
 | T10 | `CAPTURED` | `refund` (**잔여 채무 0이 됨**) | `REFUNDED` | **INV-7** (`refundedTotal + 요청액 ≤ capturedAmount`) | `refundedTotal` 증가 → 반환액·소멸액 파생 → **① 미수 `writeOff()`(소멸액>0·미결일 때만) ② 계좌 `refund(반환액)` ③ `returnedTotal` 증가** · 역분개 · 한도 복원 **없음**(`limitContribution` 불변 — 매입 시 확정됐다). **승인·미수·계좌가 한 커밋**(E4) | BR-24·26·**43 ①** |
 | T11 | `CAPTURED` | `refund` (**잔여 채무 > 0**) | `CAPTURED` | **INV-7** | T10과 **같은 3단계**(소멸 → 계좌 입금 → `returnedTotal`) · 역분개 · 한도 복원 없음(`limitContribution` 불변). **결과 상태만 다르다** | BR-11·26·**43 ①** |
-| T12 | `CAPTURED` | `markSettled` | `SETTLED` | 정산 순액 산출 완료 | — | BR-21 |
+| T12 | `CAPTURED` | `markSettled` | `SETTLED` | 정산 순액 산출 완료 | `settledBusinessDate` 확정(이후 불변 — 정산 등식의 부분집합 키, DC-002) | BR-21 |
+| **T16** | `SETTLED` | `refund` | `SETTLED` | **INV-7** (`refundedTotal + 요청액 ≤ capturedAmount`) | ★ **T10·T11과 같은 3단계**(소멸 → 계좌 입금 → `returnedTotal`) · `refundedTotal` 증가 · **상태와 `settledBusinessDate` 불변** — 마감 순액은 재계산되지 않고 축소액이 다음 영업일 정산에 별도 차감으로 반영된다(BR-43) · 한도 복원 없음(`limitContribution` 불변) | BR-21·**43 ①**·47 |
 | T13 | `EXPIRED` | `reverse` · `void`(전액) | `VOIDED` | — | **채무 소멸**. 홀딩·**두 층 한도** 모두 만료 시 이미 복원됐으므로 **재복원하지 않는다** | BR-49 |
 | T14 | `EXPIRED` | `void` (**부분**) | `EXPIRED` | INV-1 | `cancelledAmount`만 증가. **홀딩·한도 재복원 없음**(`holdingFunds = false`가 판정) | BR-11·26·49 |
 | T15 | `REQUESTED` 외 모든 상태 | `freeze`(종료 아닐 때) / `unfreeze`(**종료 포함 전부**) | **상태 불변** | 운영자 조작 | **자동 만료**(BR-28)·**매입 반영**(BR-50)에서 제외. **정산은 막지 않는다** | BR-28·50 |
