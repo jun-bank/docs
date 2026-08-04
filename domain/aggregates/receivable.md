@@ -39,7 +39,7 @@
 | `incurredBusinessDate` | `BusinessDate` | **발생 영업일** — FIFO 정렬의 1차 키 (BR-34) |
 | `frozen` | `boolean` | 보류 — 회수 대상에서 제외 (BR-28) |
 | **`origin`** | `ReceivableOrigin` | **`CAPTURE`**(매입 부족분) 또는 **`DEPOSIT_REVERSAL`**(입금 정정 — BR-38) |
-| **`sourceRef`** | `SourceRef` | 발생 출처. `CAPTURE`면 `AuthorizationId`, `DEPOSIT_REVERSAL`이면 **입금 식별자** |
+| **`sourceRef`** | `SourceRef` | 발생 출처. `CAPTURE`면 `AuthorizationId`, `DEPOSIT_REVERSAL`이면 ★ **`ReversalId`(정정 지시)** — 입금 식별자가 아니다 (DC-003 R10). 한 입금을 여러 번 부분 정정하면 **정정마다 별개의 채권**이 생긴다 |
 
 ### 파생 값
 
@@ -71,6 +71,15 @@
 | **INV-6** | 같은 `(origin, sourceRef)`의 미수는 **하나만** 존재한다 | BR-20·38 | 같은 부족분이 두 채권이 되어 **이중 청구** | `incur()` |
 
 > ★ **INV-1과 INV-4가 이 애그리게이트의 존재 이유다.** 이전에는 이 두 명제를 **계좌 합계와 승인 필드에 걸쳐** 지켜야 했고, 그래서 네 라운드 연속으로 깨졌다(DC-001 §2). 이제 **한 애그리게이트 안에서 검증된다.**
+
+---
+
+> ★ **`DEPOSIT_REVERSAL`의 `sourceRef`가 입금 식별자였다** (R10 치명3). 정정 멱등 키는 R9에서
+> `reversalId`로 옮겼는데 **미수 쪽은 안 옮겼다** — 그래서 둘째 부분 정정이 `DepositReceipt`를
+> 통과한 뒤 미수 INV-6에 막혀 롤백됐다. **막는 자리만 옮긴 셈이었다.**
+>
+> 입금 20 전액 사용 → 정정 R1=10이 미수 `(DEPOSIT_REVERSAL, R1)`을 만들고,
+> 정상 지시 R2=5도 `(DEPOSIT_REVERSAL, R2)`로 **별개 채권**이 된다.
 
 ---
 

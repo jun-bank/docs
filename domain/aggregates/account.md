@@ -203,7 +203,7 @@
 |---|---|---|---|---|
 | 홀딩 점유됨 | `HoldPlaced` | `hold()` 성공 | **`accountId`**, 금액 | — (같은 트랜잭션) |
 | 홀딩 해제됨 | `HoldReleased` | `releaseHold()` | **`accountId`**, 금액 | — |
-| 출금됨 | `Withdrawn` | `capture()` | **`accountId`**, 금액, 영업일 | **C5 원장** |
+| 출금됨 | `Withdrawn` | `capture()` | **`accountId`**, ★ **`withdrawnAmount`(계좌에서 실제 나간 돈 — 매입액이 아니다)**, 영업일 | **C5 원장** |
 | 입금됨 | `Deposited` | `deposit()` | **`accountId`**, **`receivedAmount`(총 유입액)**, **`recoveredAmount`(미수 회수분)**, **`creditedAmount`(잔액 증가분)**, 입금식별자, 영업일 | **C5 원장** |
 | 환불 입금됨 | **`RefundCredited`** | `refund()` | **`accountId`**, 회수분, 잔액 증가분, 원거래 | ⚠️ **원장 아님** — 승인 `Refunded`가 이미 기표한다 (이름도 C3 `Refunded`와 충돌했다) |
 | 입금 정정됨 | `DepositReversed` | `reverseDeposit()` | **`accountId`**, **`amount`(정정 총액)** · **`recoveredFromBalance`(잔액에서 회수한 몫)** · **`receivableIncurred`(부족분)**, `sourceRef`, 사유 | **C5 원장** |

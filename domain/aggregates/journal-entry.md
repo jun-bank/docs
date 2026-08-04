@@ -86,7 +86,7 @@
 | 상류 이벤트 | 전표 |
 |---|---|
 | `Deposited` (C1) | 차) 예치금 `receivedAmount` / 대) 미수금 `recoveredAmount` · 고객예금 `creditedAmount` — **한 전표로 분할 기표**한다 |
-| `Withdrawn` (C1, 매입) | 차) 고객예금 / 대) 매입사 미지급금 |
+| `Withdrawn` (C1, 매입) | 차) 고객예금 `withdrawnAmount` / 대) 매입사 미지급금 `withdrawnAmount` — ★ **출금액이지 매입액이 아니다.** 부족분은 `ReceivableIncurred(CAPTURE)`가 소유한다 |
 | `ReceivableIncurred` (C1, `origin = CAPTURE`) | 차) 미수금 / 대) 매입사 미지급금 |
 | `ReceivableIncurred` (C1, **`origin = DEPOSIT_REVERSAL`**) | 차) 미수금 / 대) **예치금** — 착오 입금분을 되돌린 것이라 매입사와 무관하다 (BR-38) |
 | **`DepositReversed`** (C1) | 차) 고객예금 `recoveredFromBalance` / 대) 예치금 `recoveredFromBalance` — **잔액에서 실제로 회수한 몫만.** 부족분은 위 `ReceivableIncurred`가 소유한다 |
@@ -109,7 +109,7 @@
 | 트랜잭션 | 이벤트 | 그 이벤트가 소유한 줄 |
 |---|---|---|
 | **E1 승인** | — | **없다** — 홀딩·한도는 자금 이동이 아니다 |
-| **E2 매입** | `Withdrawn` (C1) | 출금분 |
+| **E2 매입** | `Withdrawn` (C1) | 출금분 `withdrawnAmount` |
 | | `ReceivableIncurred(CAPTURE)` | 부족분 |
 | | `Captured` (C3) | **없음** — 상태 변화만 알린다 |
 | **E3 입금** | `Deposited` | 유입 전액 — 회수분·잔액증가분으로 **분할** |
