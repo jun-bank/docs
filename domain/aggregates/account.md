@@ -206,7 +206,7 @@
 | 출금됨 | `Withdrawn` | `capture()` | 계좌ID, 금액, 영업일 | **C5 원장** |
 | 입금됨 | `Deposited` | `deposit()` | 계좌ID, **`receivedAmount`(총 유입액)**, **`recoveredAmount`(미수 회수분)**, **`creditedAmount`(잔액 증가분)**, 입금식별자, 영업일 | **C5 원장** |
 | 환불 입금됨 | **`RefundCredited`** | `refund()` | 계좌ID, 회수분, 잔액 증가분, 원거래 | ⚠️ **원장 아님** — 승인 `Refunded`가 이미 기표한다 (이름도 C3 `Refunded`와 충돌했다) |
-| 입금 정정됨 | `DepositReversed` | `reverseDeposit()` | 계좌ID, 금액, 사유 | **C5 원장** |
+| 입금 정정됨 | `DepositReversed` | `reverseDeposit()` | 계좌ID, **`amount`(정정 총액)** · **`recoveredFromBalance`(잔액에서 회수한 몫)** · **`receivableIncurred`(부족분)**, `sourceRef`, 사유 | **C5 원장** |
 
 > 원장은 이 이벤트를 **전표 언어로 번역**한다 (컨텍스트 맵 R6, ACL).
 >
