@@ -75,13 +75,22 @@
 | **INV-7** | **`refundedTotal ≤ capturedAmount`** — 환불은 거래를 줄이는 것이므로 상한은 **매입액**이다 | BR-43 ① | **받지 않은 미수분까지 반환** — 잔액이 부풀고 미수는 남아 이후 입금을 또 상계한다 | `refund()` |
 | **INV-8** | `withdrawnAmount`는 **불변**, `refundedTotal`·`returnedTotal`은 **단조 증가** | BR-43 ① | 상한이 스스로 커지거나 반환 이력이 사라진다 | `capture()` 후 · `refund()` 후 |
 | **INV-9** | `cancelledAmount`와 `refundedTotal`은 **서로 섞이지 않는다** — 환불은 `cancelledAmount`를 올리지 않는다 | BR-16 ③ · BR-43 | 환불이 취소액에 들어가면 `capturedAmount ≤ amount − cancelledAmount`(INV-3)가 **매입 후에 사후 위반**된다 | `refund()` 후 |
-| **INV-10** | **`returnedTotal ≤ withdrawnAmount + 미수.recoveredAmount`** (= 그 시점 총 회수액) | BR-43 ① | 실제로 받은 돈보다 많이 돌려준다. **상한을 `withdrawnAmount`로 고정하면 미수를 갚은 고객이 낸 만큼 못 받는다** — AU9가 기각한 모델이다 | **E4 커밋 후** (승인 단독으로 검증 불가) |
-| **INV-11** | `refund()` 후 **회수액 ≤ 잔여 채무** (회수액 = `withdrawnAmount + 미수.recoveredAmount − returnedTotal`) | BR-43 ① | 초과 회수분이 남으면 **돌려줘야 할 돈을 안 돌려준 상태**다 | **E4 커밋 후** |
 | **INV-2** | **매입은 1회만** — `capturedAmount`가 한 번 설정되면 다시 바뀌지 않는다 | BR-16 ② | 이중 출금 | `capture()` |
 | **INV-3** | `capturedAmount ≤ amount − cancelledAmount` | BR-16 ③ | **부분 취소된 만큼을 다시 매입** — 이중 청구 | `capture()` |
 | **INV-4** | **매입 후에는 `holdingFunds = false`** | BR-18 | 가용잔액 이중 차감 | `capture()` 후 |
 | **INV-5** | `status = 성립` 이면 `approvalNumber ≠ null` | BR-17 | 승인번호 없는 성립 승인 | 상태 전이 후 |
 | **INV-6** | 종료 상태(**거절·무효·환불완료·정산완료**)에서는 상태 전이가 일어나지 않는다. **만료는 종료가 아니다** — 지연 매입(BR-19)과 만료 후 취소(BR-49)가 정상 경로다 | BR-19·49 | 죽은 거래의 부활 / 반대로 만료를 넣으면 **정상 경로가 차단** | 모든 전이 |
+
+### 대사 불변식 — 승인 단독으로 검증 불가 ★
+
+**미수를 함께 읽어야 참·거짓을 알 수 있다.** 양식 §4의 분류에 따라 INV와 분리한다.
+
+| # | 명제 | 근거 | 위반 시 | 어디서 검증되나 |
+|---|---|---|---|---|
+| **RC-1** | **`returnedTotal ≤ withdrawnAmount + 미수.recoveredAmount`** (= 그 시점 총 회수액) | BR-43 ① | 실제로 받은 돈보다 많이 돌려준다. **상한을 `withdrawnAmount`로 고정하면 미수를 갚은 고객이 낸 만큼 못 받는다** — AU9가 기각한 모델이다 | **E4 커밋 안에서 검사** |
+| **RC-2** | `refund()` 후 **회수액 ≤ 잔여 채무** (회수액 = `withdrawnAmount + 미수.recoveredAmount − returnedTotal`) | BR-43 ① | 초과 회수분이 남으면 **돌려줘야 할 돈을 안 돌려준 상태**다 | **E4 커밋 안에서 검사** |
+
+> ⚠️ **INV로 적으면 안 된다.** 검증 위치에 *"승인 단독으로 검증 불가"* 라고 쓰면서 INV 표에 두는 것은 **"항상 참"이라 선언하고 아무도 검사하지 않는** 상태다 (양식 §4). E4가 승인·미수를 함께 잠그므로 **그 커밋 안에서는 검사할 수 있다.**
 
 ---
 
@@ -116,8 +125,8 @@
 | **망취소** | `reverse()` | 상태 ∈ {성립, **만료**} (멱등 — 이미 무효면 무시) | 상태 = 무효. `holdingFunds`가 참일 때만 홀딩·한도 복원 (BR-49) | `Reversed` |
 | **승인취소** | `void(amount)` | 상태 ∈ {성립, **만료**}, **미매입**, INV-1 | 부분이면 `cancelledAmount` 증가, 전액이면 무효. 복원 조건은 `reverse()`와 동일 | `Voided` |
 | **만료** | `expire(at)` | 상태 = 성립, **`frozen = false`** (BR-28) | 상태 = 만료, `holdingFunds = false` | `Expired` |
-| **매입** | `capture(amount, at)` | INV-2·INV-3 (`amount ≤ 승인액 − 누적취소액`), 상태 ∈ {성립, 만료}, **`frozen = false`** (BR-50) | 상태 = 매입됨, `holdingFunds = false` | `Captured` |
-| **환불** | `refund(amount, receivable)` | 상태 = 매입됨, **INV-7** | `refundedTotal` 증가 → 반환액·소멸액 파생 → **소멸 먼저, 그다음 계좌 입금** → `returnedTotal` 증가. 잔여 채무 0이면 상태 = 환불됨. **승인·미수·계좌가 한 커밋**(E4) | `Refunded` |
+| **매입** | `capture(amount, at)` | INV-2·INV-3 (`amount ≤ 승인액 − 누적취소액`), 상태 ∈ {성립, 만료}, **`frozen = false`** (BR-50) | 상태 = 매입됨 · `holdingFunds = false` · `heldAmount = 0` · **미매입분만큼 `limitContribution` 감액**(BR-24 — 카드·계좌 한도도 함께, E2) | `Captured` |
+| **환불** | `refund(amount, receivable, recoverable)` | 상태 = 매입됨, **INV-7** | `refundedTotal` 증가 → 반환액·소멸액 파생 → **소멸 먼저, 그다음 계좌 입금(`recoverable`이 회수 대상)** → `returnedTotal` 증가. 잔여 채무 0이면 상태 = 환불됨. **승인·자기 미수·계좌·회수 대상 미수들이 한 커밋**(E4) | `Refunded` |
 | **보류** | `freeze()` | 종료 상태 아님 | `frozen = true` | `Frozen` |
 | **보류 해제** | `unfreeze()` | `frozen = true`. **종료 상태에서도 허용** — 보류 목록에서 내릴 유일한 경로다 | `frozen = false` | `Unfrozen` |
 | **정산 확정** | `markSettled()` | 상태 = 매입됨. **`frozen` 여부와 무관** (BR-28에 정산 제외가 없다) | 상태 = 정산완료 | `Settled` |
@@ -147,10 +156,11 @@ EXPIRED    → CAPTURED    지연 매입 (BR-19) — 만료는 채무 소멸이 
    if 소멸액 > 0 AND 미수.상태 = 미결:
        미수.writeOff(소멸액)                       ← ★ 반환액 입금보다 먼저
 6) returnedTotal += 반환액                         INV-10: ≤ withdrawnAmount + 미수회수
-   if 반환액 > 0: 계좌.refund(반환액, 회수대상)      ← 자기 미수는 대상에서 제외 (BR-34 예외②)
+   if 반환액 > 0: 계좌.refund(반환액, recoverable)     ← 자기 미수는 대상에서 제외 (BR-34 예외②)
+                                                       recoverable 도 E4 참여자다
 7) 잔여 채무 = 0 이면 상태 = 환불됨
 
-── 1~7이 한 트랜잭션 (E4: 승인 + 미수 + 계좌) ──
+── 1~7이 한 트랜잭션 (E4: 승인 + 자기 미수 + 계좌 + `recoverable` 미수들) ──
 ```
 
 > ★ **5단계가 6단계보다 먼저다.** 반환액도 계좌로 들어오는 자금이라 순서를 뒤집으면 **자기 미수가 회수 대상에 들어가** `recover()`가 잔여를 줄이고, 뒤이은 `writeOff(소멸액)`이 잔여 초과로 **거절**되어 환불 전체가 롤백된다 (BR-34 예외 ②).
@@ -246,6 +256,7 @@ EXPIRED    → CAPTURED    지연 매입 (BR-19) — 만료는 채무 소멸이 
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v1.9 | 2026-08-04 | **DC-001 단계 12** — **INV-10·INV-11을 대사 불변식 RC-1·RC-2로 이동**(검증 위치에 "승인 단독 검증 불가"라 써 놓고 INV에 뒀다 — P1 재발) · `refund()`에 `recoverable` 인자 추가(E4 참여자) · `capture()`에 **부분 매입의 `limitContribution` 감액** 명시(BR-24 — T8에 한도 복원이 한 글자도 없었다) |
 | v1.8 | 2026-08-04 | **DC-001 단계 10** — `heldAmount`·`limitContribution` 신설(계좌·카드 ③ 등식의 구성 요소. 없으면 등식 계산 불가) · **INV-10 상한 정정**(`withdrawnAmount` → `+ 미수.recoveredAmount` — 옛 상한은 AU9가 기각한 모델이었다) · `refund()` 절차에 **소멸 선행·조건부 호출·계좌 입금 포함**(E4) · 검산표 4행 정정 |
 | v1.7 | 2026-08-04 | **DC-001 단계 3** — `recoveredAmount` **제거**(미수가 소유). `returnedTotal` 신설 + INV-10 재정의 · INV-11 신설 · `recoverReceivable()` 제거 · `refund()`가 **미수를 인자로 받아 `writeOff()` 호출**(E4). 회수액을 **저장하지 않고 매번 계산** — 저장하면 그것이 다시 합계 필드가 되어 미수와 어긋난다 |
 | v1.6 | 2026-08-04 | **AU9·AU10 확정 — 환불 모델 교체.** 환불액을 "반환액"에서 **"거래 축소액"** 으로 재정의하고 반환액을 파생 계산으로 바꿨다. `receivableAmount` → **`recoveredAmount`**(회수 총액, 상환 배분으로 증가·반환으로 감소) · INV-7 상한을 `capturedAmount`로 · INV-10 신설 · `recoverReceivable()` 신설. 미수 소멸이 **별도 조작에서 산식의 파생**이 되어 계좌 합계 침범 위험이 사라졌다 |

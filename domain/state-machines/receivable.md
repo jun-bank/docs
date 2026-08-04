@@ -48,11 +48,11 @@ stateDiagram-v2
 
 | # | 현재 | 전이 | 다음 | 조건 | 부수 효과 | 근거 |
 |---|---|---|---|---|---|---|
-| V1 | `ABSENT` | `incur` | `OPEN` | `amount > 0` | 채권 생성 · `incurredBusinessDate` 확정(FIFO 키) · 전표 `차) 미수금` | BR-20 |
+| V1 | `ABSENT` | `incur` | `OPEN` | `amount > 0` · 같은 `(origin, sourceRef)` 없음 (INV-6) | 채권 생성 · `origin`·`sourceRef` 확정 · `incurredBusinessDate` 확정(FIFO 키) · 전표는 **`origin`별로 갈린다**(`CAPTURE` → 대) 매입사 미지급금 / `DEPOSIT_REVERSAL` → 대) 예치금) | BR-20·38 |
 | V2 | `OPEN` | `recover` (**잔여 > 0 유지**) | `OPEN` | `frozen = false` AND `amount ≤ outstanding()` | `recoveredAmount` 증가 · 전표 `차) 예치금 / 대) 미수금` | BR-34 |
-| V3 | `OPEN` | `recover` (**잔여 0이 됨**) | `CLOSED` | `frozen = false` AND `amount ≤ outstanding()` | `recoveredAmount` 증가 · **계좌의 `receivableBlockLifted` 해제 판단**(E3에 계좌가 있다) | BR-34·45 |
+| V3 | `OPEN` | `recover` (**잔여 0이 됨**) | `CLOSED` | `frozen = false` AND `amount ≤ outstanding()` | `recoveredAmount` 증가 · **계좌가 자기 `receivableBlockLifted`를 재평가**(E3에 계좌가 있다 — 미수가 계좌 필드를 직접 바꾸지 않는다) | BR-34·45 |
 | V4 | `OPEN` | `writeOff` (**잔여 > 0 유지**) | `OPEN` | **`amount > 0`** AND `amount ≤ outstanding()`. **`frozen`과 무관** | `writtenOffAmount` 증가 · 전표 `차) 매입사 미지급금 / 대) 미수금`. **자금 이동 없음** | BR-43 ① |
-| V5 | `OPEN` | `writeOff` (**잔여 0이 됨**) | `CLOSED` | `amount > 0` AND `amount ≤ outstanding()`. **`frozen`과 무관** | `writtenOffAmount` 증가 · 전표 `차) 매입사 미지급금 / 대) 미수금` · **자금 이동 없음** · 계좌의 차단 해제 판단(E4에 계좌가 있다) | BR-43 ①·45 |
+| V5 | `OPEN` | `writeOff` (**잔여 0이 됨**) | `CLOSED` | `amount > 0` AND `amount ≤ outstanding()`. **`frozen`과 무관** | `writtenOffAmount` 증가 · 전표 `차) 매입사 미지급금 / 대) 미수금` · **자금 이동 없음** · **계좌가 자기 차단 플래그를 재평가**(E4에 계좌가 있다) | BR-43 ①·45 |
 | V6 | `OPEN` · `CLOSED` | `freeze` / `unfreeze` | **상태 불변** | 운영자 조작 (`freeze`는 `OPEN`만) | 회수 대상 선정에서 제외 / 복귀 | BR-28 |
 
 > ⚠️ **부수 효과·조건 열에 `〃`를 쓰지 않는다** (애그리게이트 README). 위 표에서 전부 풀어 썼다 — 이 프로젝트에서 `〃`가 **네 라운드 연속으로 결함을 만들었다.**
@@ -160,5 +160,6 @@ stateDiagram-v2
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v0.3 | 2026-08-04 | **DC-001 단계 12** — V1에 `(origin, sourceRef)` 사전조건과 **`origin`별 전표 분기** 명시 · V3·V5의 *"계좌 플래그 해제 판단"* 을 **"계좌가 자기 필드를 재평가"** 로 정정(미수가 남의 애그리게이트를 바꾸는 것으로 읽혔다) |
 | v0.2 | 2026-08-04 | **DC-001 단계 10** — V3·V5의 `〃` 제거(네 번째 재발) · **VF9 신설**(`writeOff(0)`이 `CLOSED` 미수에 가 정상 환불을 실패시켰다) · VF6 키를 `(origin, sourceRef)`로 · E4 참여자에 계좌 추가 · 환불 내 소멸/입금 순서 명시 |
 | v0.1 | 2026-08-04 | 최초 작성 (**DC-001 단계 4**) — 상태 3종(`ABSENT` 포함), 전이 6종, 금지 8종, 매트릭스 15칸. **VF1(종결된 채권의 재회수 금지)** 이 4차 치명의 재발 방지책이며 이전 구조에는 그 자리가 없었음을 명시. `recover`(보류가 막음)와 `writeOff`(보류 무관)의 구분, `CLOSED`에서 `unfreeze`만 열린 근거, E3·E4 락 순서를 FIFO 키로 겸하는 방침 |
