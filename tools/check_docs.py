@@ -86,6 +86,27 @@ for p in TARGET:
                          f"공유 트랜잭션 경계가 없다 (호출자 {sorted(owner_b.get(me,set())) or '없음'} "
                          f"vs 피호출 {sorted(REAL(ASSIGN[key])) or '없음'})")
 
+# ── ⑧-b 경계 주석 ⟨En⟩ — 산문에서도 경계를 기계 판독 가능하게
+#     ⑧은 애그리게이트 단위라, 같은 애그리게이트의 다른 조작 배정은 검사되지 않는다(R8 K3).
+#     조작 단위로 강제하려면 문서가 "이 절차는 En이다"를 기계가 읽을 수 있게 적어야 한다.
+for p in TARGET:
+    blocks, cur = [], []
+    for line in body(p).splitlines():
+        if line.strip(): cur.append(line)
+        elif cur: blocks.append(cur); cur = []
+    if cur: blocks.append(cur)
+    for blk in blocks:
+        txt = "\n".join(blk)
+        tags = set(re.findall(r"⟨(E\d)⟩", txt))
+        if not tags: continue
+        for callee, op in set(re.findall(r"`([A-Z][a-zA-Z]*)\.([a-z][a-zA-Z]*)\(", txt)):
+            key = f"{callee}.{op}"
+            if key not in ASSIGN: bad("⑧", f"{p.relative_to(ROOT)} ⟨{'/'.join(tags)}⟩ 없는 조작: {key}"); continue
+            for t_ in tags:
+                if t_ not in ASSIGN[key].split():
+                    bad("⑧", f"{p.relative_to(ROOT)} ⟨{t_}⟩ 절차에 {key}가 있으나 "
+                             f"그 조작의 배정은 `{ASSIGN[key]}` 다")
+
 # ── ⑨ 불변식 참조 무결성 (폐기 심볼 하드코딩을 대신한다)
 DEFINED = {}
 for p in sorted(d.AGG.glob("*.md")):

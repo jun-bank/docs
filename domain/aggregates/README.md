@@ -106,7 +106,7 @@ private Account account;       // ❌
 | `refund` | 승인 `Authorization` | E4 | 소멸 먼저 → 계좌 입금 |
 | `freeze` | 승인 `Authorization` | — |  |
 | `unfreeze` | 승인 `Authorization` | — |  |
-| `markSettled` | 승인 `Authorization` | — |  |
+| `markSettled` | 승인 `Authorization` | 별도 | 정산 완료 후 별도 논리 단위 (BR-40) |
 | `record` | 취소 예약 `ReversalTombstone` | — |  |
 | `consume` | 취소 예약 `ReversalTombstone` | E1 |  |
 | `purge` | 취소 예약 `ReversalTombstone` | — |  |
@@ -118,10 +118,10 @@ private Account account;       // ❌
 | `receive` | 매입 배치 `CaptureBatch` | — |  |
 | `start` | 매입 배치 `CaptureBatch` | — |  |
 | `markProcessed` | 매입 배치 `CaptureBatch` | E2 E4 | E4 = 매입 파일의 **취소 레코드** |
-| `isolate` | 매입 배치 `CaptureBatch` | 별도 | 불일치 적재는 Outbox (BR-40과 같은 이유) |
+| `isolate` | 매입 배치 `CaptureBatch` | — | 배치만 변경 — 불일치 적재는 Outbox (BR-40) |
 | `interrupt` | 매입 배치 `CaptureBatch` | — |  |
 | `complete` | 매입 배치 `CaptureBatch` | — |  |
-| `promoteIsolated` | 매입 배치 `CaptureBatch` | — |  |
+| `promoteIsolated` | 매입 배치 `CaptureBatch` | E2 | ★ 재처리 경로의 멱등 — 자금 반영과 같은 커밋 |
 | `close` | 정산 `Settlement` | — |  |
 | `calculate` | 정산 `Settlement` | — |  |
 | `fail` | 정산 `Settlement` | — |  |
