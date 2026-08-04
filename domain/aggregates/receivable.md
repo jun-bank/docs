@@ -38,6 +38,8 @@
 | `writtenOffAmount` | `Money` | 환불로 채무가 줄어 **소멸**한 누계 (BR-43 ①) |
 | `incurredBusinessDate` | `BusinessDate` | **발생 영업일** — FIFO 정렬의 1차 키 (BR-34) |
 | `frozen` | `boolean` | 보류 — 회수 대상에서 제외 (BR-28) |
+| **`origin`** | `ReceivableOrigin` | **`CAPTURE`**(매입 부족분) 또는 **`DEPOSIT_REVERSAL`**(입금 정정 — BR-38) |
+| **`sourceRef`** | `SourceRef` | 발생 출처. `CAPTURE`면 `AuthorizationId`, `DEPOSIT_REVERSAL`이면 **입금 식별자** |
 
 ### 파생 값
 
@@ -52,7 +54,7 @@
 
 | 참조 대상 | 참조 방식 | 왜 참조하는가 |
 |---|---|---|
-| 승인 | `AuthorizationId` | **어느 거래에서 생겼는가** — 환불 시 소멸 대상을 찾는 키 |
+| 승인 | `AuthorizationId` (**`origin = CAPTURE`일 때만**) | 어느 거래에서 생겼는가 — 환불 시 소멸 대상을 찾는 키 |
 | 계좌 | `AccountId` | 어느 계좌의 채권인가 — 회수 대상 조회 키 |
 
 ---
@@ -66,6 +68,7 @@
 | **INV-3** | `recoveredAmount`·`writtenOffAmount`는 **단조 증가** | BR-34·43 | 회수 이력이 사라진다 | 모든 조작 후 |
 | **INV-4** | `outstanding() == 0` 이면 **더 이상 회수·소멸되지 않는다** | BR-43 | ★ **소멸한 채권을 계속 회수** — 4차 Q3이 정확히 이것이었다 | `recover()` · `writeOff()` |
 | **INV-5** | `frozen = true` 이면 **회수 대상으로 선정되지 않는다** | BR-28 | 조사 중 자동 회수 — 되돌리기 어렵다 | 회수 대상 조회 |
+| **INV-6** | 같은 `(origin, sourceRef)`의 미수는 **하나만** 존재한다 | BR-20·38 | 같은 부족분이 두 채권이 되어 **이중 청구** | `incur()` |
 
 > ★ **INV-1과 INV-4가 이 애그리게이트의 존재 이유다.** 이전에는 이 두 명제를 **계좌 합계와 승인 필드에 걸쳐** 지켜야 했고, 그래서 네 라운드 연속으로 깨졌다(DC-001 §2). 이제 **한 애그리게이트 안에서 검증된다.**
 
@@ -92,9 +95,9 @@
 
 | 조작 | 코드명 | 사전조건 | 사후조건 | 발행 이벤트 |
 |---|---|---|---|---|
-| **발생** | `incur(authorizationId, accountId, amount, businessDate)` | `amount > 0` | 생성, 상태 = 미결 | `ReceivableIncurred` |
+| **발생** | `incur(origin, sourceRef, accountId, amount, businessDate)` | `amount > 0`, **같은 `(origin, sourceRef)` 없음** | 생성, 상태 = 미결 | `ReceivableIncurred` |
 | **회수** | `recover(amount)` | 상태 = 미결 · **`frozen = false`** · `amount ≤ outstanding()` (INV-1·4·5) | `recoveredAmount` 증가. 잔여 0이면 종결 | `ReceivableRecovered` |
-| **소멸** | `writeOff(amount)` | 상태 = 미결 · `amount ≤ outstanding()` (INV-1·4) | `writtenOffAmount` 증가. 잔여 0이면 종결 | `ReceivableWrittenOff` |
+| **소멸** | `writeOff(amount)` | 상태 = 미결 · `amount > 0` · `amount ≤ outstanding()` (INV-1·4) | `writtenOffAmount` 증가. 잔여 0이면 종결 | `ReceivableWrittenOff` |
 | **보류** | `freeze(operator)` | 상태 = 미결 | `frozen = true` | `ReceivableFrozen` |
 | **보류 해제** | `unfreeze(operator)` | `frozen = true` | `frozen = false` | `ReceivableUnfrozen` |
 
@@ -140,7 +143,7 @@
 
 | 이벤트 | 코드명 | 언제 | 담는 정보 | 구독자 |
 |---|---|---|---|---|
-| 미수 발생 | `ReceivableIncurred` | `incur()` | 미수ID, 승인ID, 계좌ID, 금액, 영업일 | **C5 원장** · 운영자 |
+| 미수 발생 | `ReceivableIncurred` | `incur()` | 미수ID, **`origin`·`sourceRef`**, 계좌ID, 금액, 영업일 | **C5 원장** · 운영자 |
 | 미수 회수 | `ReceivableRecovered` | `recover()` | 미수ID, 회수액, 잔여 | **C5 원장** |
 | **미수 소멸** | `ReceivableWrittenOff` | `writeOff()` | 미수ID, 소멸액, 잔여, **원인 = 환불** | **C5 원장** |
 | 보류 / 해제 | `ReceivableFrozen` · `ReceivableUnfrozen` | | 미수ID, 운영자 | 운영자 |
@@ -156,7 +159,7 @@
 | **왜 이 범위인가** | INV-1(회수+소멸 ≤ 발생액)과 INV-4(종결 후 불변)가 **한 채권 안에서** 성립해야 한다. 그 둘을 계좌 합계와 승인 필드에 걸쳐 지키려다 네 라운드 연속 실패했다 (DC-001) |
 | **왜 더 크지 않은가** | 계좌에 합치면 **회수 순서·보류·진행도를 담을 자리가 없다** — 그것이 원래 구조였고 실패했다. 승인에 합치면 정산완료(`SETTLED`)된 거래의 채권이 승인 종료와 함께 접근 불가가 된다 |
 | **왜 더 작지 않은가** | `recoveredAmount`·`writtenOffAmount`를 빼면 INV-1·INV-4를 지킬 수 없다. `incurredBusinessDate`를 빼면 FIFO가 성립하지 않는다 |
-| **트랜잭션 단위인가** | 원칙상 예. **단 회수는 계좌·미수들과 한 트랜잭션**(README E3), **소멸은 승인·미수와 한 트랜잭션**(E4) |
+| **트랜잭션 단위인가** | 원칙상 예. **회수는 계좌·미수들과**(E3), **소멸은 승인·미수·계좌와**(E4) 한 트랜잭션 — E4에 계좌가 있어야 반환액 입금과 `receivableBlockLifted` 갱신이 함께 성립한다 |
 
 ### 합계 필드 판정 (양식 §4)
 
@@ -187,6 +190,7 @@
 | **RC1** | **미수의 보류는 승인 보류와 별개인가.** BR-28은 "거래를 보류한다"고만 하는데, 미수가 독립 채권이 된 지금 **미수만 보류**하는 것이 가능해졌다. 운영자 화면에서 둘을 어떻게 보이나 | BR-28 범위 · 운영 화면 |
 | **RC2** | **미수에도 소멸 시효가 있는가.** 영원히 회수되지 않는 채권이 `미결`로 쌓인다. 대손 처리 개념이 현 범위에 없다 | 제품 범위 · 원장 계정 |
 | **RC3** | 한 계좌의 미수가 많을 때 **배분 대상 수 상한** | 미확정 수치 · E3 락 시간 |
+| **RC4** | **`DEPOSIT_REVERSAL` 미수는 환불로 소멸하지 않는다** — 원거래 승인이 없으므로 `writeOff` 경로가 없다. 회수 외에 종결되는 길이 있는가 | BR-38 · RC2와 같은 계열 |
 
 ---
 
@@ -194,4 +198,5 @@
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v0.2 | 2026-08-04 | **DC-001 단계 10** — `origin`·`sourceRef` 신설. `incur()`가 승인ID를 필수로 받으면 **입금 정정(BR-38)의 미수를 만들 수 없었다**(원거래 승인이 없다). 유일성 키를 `(origin, sourceRef)`로 하고 INV-6으로 등재 · `writeOff`에 `amount > 0` 사전조건 |
 | v0.1 | 2026-08-04 | 최초 작성 (**DC-001 단계 2**) — 계좌의 `receivable` 합계 필드를 독립 애그리게이트로 승격. 불변식 5종(INV-1·4가 존재 이유), 상태 2종, 조작 5종. `recover`(자금 유입·보류 대상)와 `writeOff`(환불·보류 무관)를 나눈 근거, 회수 대상 선정을 **대상 먼저 → 합계 나중** 순으로 명시 |
