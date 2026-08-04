@@ -203,7 +203,7 @@ EXPIRED    → CAPTURED    지연 매입 (BR-19) — 만료는 채무 소멸이 
 | 승인취소됨 | `Voided` | 승인ID, 취소액, 전액 여부 | — |
 | 만료됨 | `Expired` | 승인ID, 시각 | — |
 | **매입됨** | `Captured` | 승인ID, 매입액, 영업일 | **C5 원장** · **C4 정산** |
-| **환불됨** | `Refunded` | 승인ID, 환불액, 영업일 | **C5 원장** · **C4 정산** |
+| **환불됨** | `Refunded` | 승인ID, **`reductionAmount`(거래 축소액)** · **`writtenOffAmount`(자기 미수 소멸분)** · **`returnedAmount`(고객 반환액)** · **`recoveredAmount`(반환액 중 다른 미수 회수분)** · **`creditedAmount`(반환액 중 잔액 증가분)**, 영업일 | **C5 원장** · **C4 정산** |
 | 보류/해제 | `Frozen` · `Unfrozen` | 승인ID, 운영자 | 운영자 |
 | 정산 확정 | `Settled` | 승인ID, 정산일 | — |
 
