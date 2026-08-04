@@ -1,7 +1,7 @@
 # 상태 머신
 
 - 작성일: 2026-08-04
-- 상태: 검토대기 — **8종 작성** (DC-001로 미수 추가) · 듀얼 리뷰 8회차 반영 중
+- 상태: **Phase 2 종료** — 8종 작성 (DC-001로 미수 추가) · 듀얼 리뷰 **10라운드** 반영 완료. 인계: [`../handoff-to-phase3.md`](../handoff-to-phase3.md)
 - 양식: `study/project-workflow/phase2/05-state-machine-format.md`
 - 입력: `domain/aggregates/` · `product/01-business-rules.md`
 

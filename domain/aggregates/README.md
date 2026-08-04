@@ -1,7 +1,7 @@
 # 애그리게이트 명세
 
 - 작성일: 2026-08-03
-- 상태: 검토대기 — **11종 전부 작성** (DC-001로 미수 · R8로 입금 수신 추가)
+- 상태: **Phase 2 종료** — 11종 전부 작성 (DC-001 미수 · R8 입금 수신). 인계: [`../handoff-to-phase3.md`](../handoff-to-phase3.md)
 - 양식: `study/project-workflow/phase2/04-aggregate-format.md`
 - 입력: `domain/event-storming.md` ⑦ · `domain/context-map.md` §4 데이터 소유권
 
