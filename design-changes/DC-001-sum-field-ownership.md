@@ -165,7 +165,7 @@
 | 단계 | 문서 | 무엇을 | 커밋 | 상태 |
 |---|---|---|---|---|
 | **0** | 절차·양식·진단 | 토대 변경 절차 · 합계 필드 판정 · DC-001 §1~§6 | `66952c7` | ✅ |
-| **1** | `product/01-business-rules.md` | BR-20·34·43 재작성(미수 소유·상계·환불) · BR-04·05·24에 ③ 3종 추가 | | ⏳ |
+| **1** | `product/01-business-rules.md` | BR-20·34·43 재작성(미수 소유·상계·환불) · BR-04·05·24 ③ 3종 · BR-41 탐지 | `91ec6e4` | ✅ |
 | **2** | `domain/aggregates/receivable.md` **신규** | 미수 애그리게이트 | | ⏳ |
 | **3** | `domain/aggregates/account.md` · `authorization.md` · `card.md` · `README.md` | `receivable` 제거 · `recoveredAmount` 이관 · `holdTotal`·`usage`에 ③ 3종 · E3 재작성 | | ⏳ |
 | **4** | `domain/state-machines/receivable.md` **신규** | 미수 상태 머신 | | ⏳ |
