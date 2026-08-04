@@ -133,7 +133,7 @@
 | **계좌 한도 사용** | `useAccountLimit(amount, at)` | PRE-3 | `dailyUsage` 증가 (기준일 리셋 포함) | `AccountLimitUsed` |
 | **계좌 한도 복원** | `restoreAccountLimit(amount, at)` | **`amount ≤ dailyUsage.amount`** (위반 시 거절) | `dailyUsage` 감소. **기준일이 다르면 아무 일도 하지 않는다**(오류 아님 — 카드와 동일) | `AccountLimitRestored` |
 | **미수 차단 해제** | `liftReceivableBlock(operator)` | **미결 미수 존재** | `receivableBlockLifted = true` | `ReceivableBlockLifted` |
-| **입금 정정** | `reverseDeposit(amount, sourceRef)` | — | `balance` 감소. 부족분은 **`Receivable.incur(origin=DEPOSIT_REVERSAL, sourceRef)`** — 원거래 승인이 없으므로 **입금 식별자를 출처로 쓴다** | `DepositReversed` |
+| **입금 정정** | `reverseDeposit(amount, sourceRef)` | ★ **같은 `sourceRef`의 정정 멱등 레코드가 없음** (E5 — `IdempotencyRecord`) | `balance` 감소. 부족분은 **`Receivable.incur(origin=DEPOSIT_REVERSAL, sourceRef)`** — 원거래 승인이 없으므로 **입금 식별자를 출처로 쓴다**. **멱등 레코드 기록도 같은 커밋**(E5) | `DepositReversed` |
 
 ### 조작 상세 — `capture()` (BR-18 + BR-20)
 
@@ -150,6 +150,27 @@
 ```
 
 > **계좌는 미수 금액을 들지 않는다.** 부족분은 `Receivable` 한 건이 되고, 그 채권의 회수·소멸·보류는 전부 미수 자신이 통제한다 (DC-001).
+
+### 이벤트 금액을 셋으로 나눈 이유 ★ (R7 U4)
+
+`deposit()` 하나가 **두 이벤트**를 만든다 — `Deposited` 와 (회수분만큼의) `ReceivableRecovered`.
+`Deposited`에 **총 유입액**을 실으면 원장에서 **예치금 차변이 두 번** 잡힌다:
+
+```
+입금 6 · 미수 회수 2 · 잔액 증가 4
+
+  Deposited(6)            차) 예치금 6 / 대) 고객예금 6      ← 틀렸다
+  ReceivableRecovered(2)  차) 예치금 2 / 대) 미수금 2
+                          ────────────────────────
+                          예치금 차변 8  ≠  실제 유입 6
+
+  올바른 분개:  차) 예치금 6 / 대) 미수금 2 · 고객예금 4
+```
+
+> **`receivedAmount = recoveredAmount + creditedAmount`** 를 이벤트가 스스로 들고 있어야
+> 원장이 **한 유입을 한 번만** 기표할 수 있다. 검산: `Σ 예치금 차변 = Σ receivedAmount`.
+
+---
 
 ### 조작 상세 — `deposit()` · `refund()` — 회수가 먼저다 (BR-34)
 
@@ -183,7 +204,7 @@
 | 홀딩 점유됨 | `HoldPlaced` | `hold()` 성공 | 계좌ID, 금액 | — (같은 트랜잭션) |
 | 홀딩 해제됨 | `HoldReleased` | `releaseHold()` | 계좌ID, 금액 | — |
 | 출금됨 | `Withdrawn` | `capture()` | 계좌ID, 금액, 영업일 | **C5 원장** |
-| 입금됨 | `Deposited` | `deposit()` | 계좌ID, 금액, 입금식별자, 영업일 | **C5 원장** |
+| 입금됨 | `Deposited` | `deposit()` | 계좌ID, **`receivedAmount`(총 유입액)**, **`recoveredAmount`(미수 회수분)**, **`creditedAmount`(잔액 증가분)**, 입금식별자, 영업일 | **C5 원장** |
 | 환불 입금됨 | `Refunded` | `refund()` | 계좌ID, 금액, 원거래 | **C5 원장** |
 | 입금 정정됨 | `DepositReversed` | `reverseDeposit()` | 계좌ID, 금액, 사유 | **C5 원장** |
 

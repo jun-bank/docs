@@ -69,11 +69,13 @@
 
 | 상류 이벤트 | 전표 |
 |---|---|
-| `Deposited` (C1) | 차) 예치금 / 대) 고객예금 |
+| `Deposited` (C1) | 차) 예치금 `receivedAmount` / 대) 미수금 `recoveredAmount` · 고객예금 `creditedAmount` — **한 전표로 분할 기표**한다 |
 | `Withdrawn` (C1, 매입) | 차) 고객예금 / 대) 매입사 미지급금 |
 | `ReceivableIncurred` (C1, `origin = CAPTURE`) | 차) 미수금 / 대) 매입사 미지급금 |
 | `ReceivableIncurred` (C1, **`origin = DEPOSIT_REVERSAL`**) | 차) 미수금 / 대) **예치금** — 착오 입금분을 되돌린 것이라 매입사와 무관하다 (BR-38) |
 | `ReceivableRecovered` (C1) | 차) 예치금 / 대) 미수금 — **자금이 들어와 채권이 줄었다** |
+
+> ★ **입금으로 인한 회수는 `Deposited` 전표에 이미 포함돼 있다** — `ReceivableRecovered`를 따로 기표하면 **예치금 차변이 두 번** 잡힌다. 별도 기표는 **자금 유입 없이 일어난 회수**(환불 반환액이 다른 미수를 회수하는 경우 등)에만 한다.
 | **`ReceivableWrittenOff`** (C1) | 차) 매입사 미지급금 / 대) 미수금 — **받을 권리를 버렸다.** 자금 이동 없음 (BR-43 ①) |
 | `Refunded` (C3) | **역분개** — 원 매입 전표의 반대 |
 | `SettlementCompleted` (C4) | 차) 매입사 미지급금 / 대) 예치금 |
