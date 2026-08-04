@@ -1,7 +1,7 @@
 # 애그리게이트 명세
 
 - 작성일: 2026-08-03
-- 상태: 검토대기 — **9종 전부 작성**
+- 상태: 검토대기 — **10종 전부 작성** (DC-001로 미수 추가)
 - 양식: `study/project-workflow/phase2/04-aggregate-format.md`
 - 입력: `domain/event-storming.md` ⑦ · `domain/context-map.md` §4 데이터 소유권
 
