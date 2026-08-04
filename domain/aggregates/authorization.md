@@ -47,7 +47,8 @@
 | `status` | `AuthorizationStatus` | 상태 (§4) |
 | `holdingFunds` | `boolean` | **이 승인이 홀딩을 잡고 있는가** |
 | **`heldAmount`** | `Money` | **이 승인이 점유 중인 홀딩액.** 계좌 `holdTotal` 등식의 구성 요소 (BR-04 · INV-6) |
-| **`limitContribution`** | `Money` | **이 승인이 카드·계좌 한도에서 차지하는 몫.** 한도 등식의 구성 요소 (BR-05 · **카드 RC-1**) |
+| **`limitBasisDate`** | `BusinessDate` | ★ **이 승인이 소비한 한도 버킷** — 성립 시 확정, 이후 **불변**. `at`(원장 귀속 영업일)과 다른 개념이다 (DC-003) |
+| **`limitContribution`** | `Money` | **이 승인이 그 기준일 한도에서 차지하는 몫.** 한도 등식의 구성 요소 (BR-05 · **카드 RC-1**) |
 | `capturedAmount` | `Money?` | 매입된 금액 (null = 미매입) |
 | `withdrawnAmount` | `Money` | 매입 시 즉시 출금된 금액 (BR-20). **매입 시점 확정 후 불변** — 감사 근거 |
 | `returnedTotal` | `Money` | **고객에게 실제 반환한 누계.** 환불 산식의 결과이며 **그 시점 총 회수액**(`withdrawnAmount + 미수.recoveredAmount`)을 넘지 않는다 (**RC-1** — 승인 단독으로 검증 불가) |
@@ -125,7 +126,7 @@
 | **망취소** | `reverse()` | 상태 ∈ {성립, **만료**} (멱등 — 이미 무효면 무시) | 상태 = 무효. `holdingFunds`가 참일 때만 홀딩·한도 복원 (BR-49) | `Reversed` |
 | **승인취소** | `void(amount)` | 상태 ∈ {성립, **만료**}, **미매입**, INV-1 | 부분이면 `cancelledAmount` 증가, 전액이면 무효. 복원 조건은 `reverse()`와 동일 | `Voided` |
 | **만료** | `expire(at)` | 상태 = 성립, **`frozen = false`** (BR-28) | 상태 = 만료, `holdingFunds = false` | `Expired` |
-| **매입** | `capture(amount, at)` | INV-2·INV-3 (`amount ≤ 승인액 − 누적취소액`), 상태 ∈ {성립, 만료}, **`frozen = false`** (BR-50) | 상태 = 매입됨 · `holdingFunds = false` · `heldAmount = 0` · ★ **복원액 = `limitContribution` − min(매입액, `limitContribution`)** 만큼 `limitContribution` 감액 + `Card.restoreLimit` · `Account.restoreAccountLimit`(BR-24, E2). **만료로 이미 복원됐으면 `limitContribution = 0`이라 복원액도 0** — 이중 복원이 산식으로 막힌다 (R9 H1) | `Captured` |
+| **매입** | `capture(amount, at)` | INV-2·INV-3 (`amount ≤ 승인액 − 누적취소액`), 상태 ∈ {성립, 만료}, **`frozen = false`** (BR-50) | 상태 = 매입됨 · `holdingFunds = false` · `heldAmount = 0` · ★ **`at`의 영업일 = `limitBasisDate` 일 때만 한도 복원**(DC-003): 복원액 = `limitContribution` − min(매입액, `limitContribution`) 만큼 `Card.restoreLimit(복원액, limitBasisDate)` · `Account.restoreAccountLimit(복원액, limitBasisDate)` 호출 후 `limitContribution` 감액 (BR-24, E2). **기준일이 다르면 셋 다 불변** — 그 버킷은 이미 닫혔다(`usage`가 리셋됐다). 만료로 이미 복원됐으면 `limitContribution = 0`이라 복원액도 0 | `Captured` |
 | **환불** | `refund(amount, receivable, recoverable)` | 상태 = 매입됨, **INV-7** | `refundedTotal` 증가 → 반환액·소멸액 파생 → **소멸 먼저, 그다음 계좌 입금(`recoverable`이 회수 대상)** → `returnedTotal` 증가. 잔여 채무 0이면 상태 = 환불됨. **승인·자기 미수·계좌·회수 대상 미수들이 한 커밋**(E4) | `Refunded` |
 | **보류** | `freeze()` | 종료 상태 아님 | `frozen = true` | `Frozen` |
 | **보류 해제** | `unfreeze()` | `frozen = true`. **종료 상태에서도 허용** — 보류 목록에서 내릴 유일한 경로다 | `frozen = false` | `Unfrozen` |
