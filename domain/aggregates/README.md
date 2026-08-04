@@ -1,7 +1,7 @@
 # 애그리게이트 명세
 
 - 작성일: 2026-08-03
-- 상태: 검토대기 — **10종 전부 작성** (DC-001로 미수 추가)
+- 상태: 검토대기 — **11종 전부 작성** (DC-001로 미수 · R8로 입금 수신 추가)
 - 양식: `study/project-workflow/phase2/04-aggregate-format.md`
 - 입력: `domain/event-storming.md` ⑦ · `domain/context-map.md` §4 데이터 소유권
 
@@ -13,6 +13,7 @@
 |---|---|---|---|---|
 | **계좌** `Account` | C1 뱅킹 | 실시간 | [account.md](account.md) | ✅ |
 | **미수** `Receivable` | C1 뱅킹 | 실시간 · 배치 | [receivable.md](receivable.md) | ✅ **DC-001** |
+| **입금 수신** `DepositReceipt` | C1 뱅킹 | 실시간 | [deposit-receipt.md](deposit-receipt.md) | ✅ **R8** |
 | **카드** `Card` | C2 카드 | 실시간 | [card.md](card.md) | ✅ |
 | **승인** `Authorization` | C3 결제 | 실시간 | [authorization.md](authorization.md) | ✅ |
 | **취소 예약** `ReversalTombstone` | C3 결제 | 실시간 | [reversal-tombstone.md](reversal-tombstone.md) | ✅ |
@@ -45,9 +46,9 @@ private Account account;       // ❌
 |---|---|---|---|
 | **E1** | 승인의 **성립·해제·복원** — **계좌·카드·승인**(성립 시 멱등 포함, **예약 무효 시 취소 예약 소비**) | `Authorization` `Account` `Card` `IdempotencyRecord` `ReversalTombstone` | 홀딩·한도·승인번호·멱등이 따로 커밋되면 초과 승인과 이중 처리가 난다. **해제·복원도 포함해야** `holdTotal`·`usage` 등식(BR-04·05)이 어긋나는 구간 없이 성립한다 — 망취소·승인취소·만료가 전부 여기 든다. ★ **예약 소비도 같은 커밋** — `createVoidedByTombstone`이 무효 승인을 만들고 예약을 안 지우면, 같은 예약이 **다음 승인도 무효로 만든다** |
 | **E2** | 매입 레코드 반영 — **승인·계좌·카드·매입 배치·(부족 시) 미수** | `Authorization` `Account` `Card` `CaptureBatch` `Receivable` | *격리에 있다 = 미반영, 처리에 있다 = 반영됨*이 성립하려면 **자금 이동과 집합 갱신이 같은 커밋**이어야 한다. 갈리면 그 사이의 프로세스 종료가 **이중 출금 창구**가 된다. **부족분의 `Receivable.incur(CAPTURE, 승인ID, …)`도 같은 커밋** — 빠지면 출금은 됐는데 채권이 없다. **카드도 참여자다** — 부분 매입의 한도 복원(BR-24)이 여기서 일어나므로 빠지면 `usage` 등식이 깨진다 |
-| **E3** | 미수 회수 — **계좌 + 회수 대상 미수들** | `Account` `Receivable` | 회수 대상을 고르고(보류 제외) 그 합으로 회수액을 정한 뒤 각 미수를 갱신하는 것이 **한 커밋**이어야 한다. 갈리면 회수액과 실제 회수 합계가 어긋나 **환불 반환액이 틀어진다**(BR-34·43) |
+| **E3** | 미수 회수 — **계좌 + 회수 대상 미수들 + 입금 수신** | `Account` `Receivable` `DepositReceipt` | 회수 대상을 고르고(보류 제외) 그 합으로 회수액을 정한 뒤 각 미수를 갱신하는 것이 **한 커밋**이어야 한다. ★ **입금 수신 기록도 같은 커밋** — 반영 후 기록 전 종료 시 **재수신이 또 반영되어 잔액이 2배**가 된다 (BR-29). 갈리면 회수액과 실제 회수 합계가 어긋나 **환불 반환액이 틀어진다**(BR-34·43) |
 | **E4** | 환불 — **승인 + 그 승인의 미수 + 계좌 + 반환액 회수 대상 미수들 + (매입 파일 경로면) 매입 배치** | `Authorization` `Account` `Receivable` `CaptureBatch` | 잔여 채무가 줄면 미수가 그만큼 **소멸**하고, 반환액이 **계좌로 입금**된다(BR-43 ①). 갈리면 ① *채무는 줄었는데 채권은 남은* 구간 ② **커밋 후 입금 전 종료 시 장부상 반환·실제 잔액 0** — 재시도는 INV-7이 막아 **고객 돈이 영구 증발** ③ 반환액이 회수할 **다른 미수가 빠지면** 그 금액이 잔액에도 없고 채권도 안 줄어 **증발**하거나, 재시도 시 **이중 회수**된다 ④ ★ **매입 파일의 취소 레코드로 들어온 환불이면 `markProcessed()`도 같은 커밋** — 환불 커밋 후 처리 표시 전에 종료되면 **같은 레코드가 재처리**된다. 부분 환불은 INV-7 상한 안에서 두 번 성공하므로 **고객에게 이중 반환**되고 정산 합계도 부푼다 |
-| **E5** | 입금 정정 — **계좌 + 미수 + 멱등 레코드** | `Account` `Receivable` `IdempotencyRecord` | 착오 입금을 되돌릴 때 잔액이 부족하면 부족분이 **채권**이 된다(BR-38·20). 갈리면 ① 계좌만 커밋 후 종료 시 **고객은 썼는데 채권이 0** ② 역순 실패 시 잔액이 남은 채 채권도 생겨 **이중 청구** ③ ★ **멱등이 없으면 같은 정정이 두 번 먹는다** — 부족분 미수의 `(origin, sourceRef)` 유일성은 **잔액이 부족할 때만** 작동한다. 잔액 20에 정정 10을 두 번 호출하면 둘 다 미수 없이 성공해 **20이 사라진다** |
+| **E5** | 입금 정정 — **계좌 + 미수 + 입금 수신** | `Account` `Receivable` `DepositReceipt` | 착오 입금을 되돌릴 때 잔액이 부족하면 부족분이 **채권**이 된다(BR-38·20). 갈리면 ① 계좌만 커밋 후 종료 시 **고객은 썼는데 채권이 0** ② 역순 실패 시 잔액이 남은 채 채권도 생겨 **이중 청구** ③ ★ **멱등이 없으면 같은 정정이 두 번 먹는다** — 부족분 미수의 `(origin, sourceRef)` 유일성은 **잔액이 부족할 때만** 작동한다. 잔액 20에 정정 10을 두 번 호출하면 둘 다 미수 없이 성공해 **20이 사라진다.** 소유자는 `DepositReceipt`이며 키는 `(depositId, 정정)`이다 |
 
 > **전표는 네 예외 어디에도 없다.** BR-40이 원장 기표를 별도 논리 단위로 두었으므로, 위 트랜잭션이 커밋된 뒤 **유실되지 않는 경로**(Outbox 등)로 기표된다.
 >
@@ -89,6 +90,10 @@ private Account account;       // ❌
 | `writeOff` | 미수 `Receivable` | E4 |  |
 | `freeze` | 미수 `Receivable` | — |  |
 | `unfreeze` | 미수 `Receivable` | — |  |
+| `find` | 입금 수신 `DepositReceipt` | 조회 |  |
+| `record` | 입금 수신 `DepositReceipt` | E3 E5 | ★ 입금·정정을 한 번만 반영시킨다 (BR-29) |
+| `assertSameRequest` | 입금 수신 `DepositReceipt` | 조회 |  |
+| `expire` | 입금 수신 `DepositReceipt` | — |  |
 | `assertUsable` | 카드 `Card` | 조회 |  |
 | `useLimit` | 카드 `Card` | E1 |  |
 | `restoreLimit` | 카드 `Card` | E1 E2 | E2 = 부분 매입 한도 복원 (BR-24) |
@@ -112,7 +117,7 @@ private Account account;       // ❌
 | `purge` | 취소 예약 `ReversalTombstone` | — |  |
 | `expire` | 취소 예약 `ReversalTombstone` | — |  |
 | `find` | 멱등 레코드 `IdempotencyRecord` | 조회 |  |
-| `record` | 멱등 레코드 `IdempotencyRecord` | E1 E5 | E5 = 입금 정정 재호출 차단 |
+| `record` | 멱등 레코드 `IdempotencyRecord` | E1 |  |
 | `assertSameRequest` | 멱등 레코드 `IdempotencyRecord` | 조회 |  |
 | `expire` | 멱등 레코드 `IdempotencyRecord` | — |  |
 | `receive` | 매입 배치 `CaptureBatch` | — |  |

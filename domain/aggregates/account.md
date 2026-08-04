@@ -128,12 +128,12 @@
 | **홀딩 점유** | `hold(amount)` | `amount ≤ availableBalance()` (PRE-1) | `holdTotal` 증가. `balance` 불변 | `HoldPlaced` |
 | **홀딩 해제** | `releaseHold(amount)` | `amount ≤ holdTotal` | `holdTotal` 감소 | `HoldReleased` |
 | **매입 출금** | `capture(captureAmount, heldAmount, restoreLimit)` | `heldAmount ≤ holdTotal` | `holdTotal` **전액 해제** · `balance` 감소 · **미매입분만큼 `dailyUsage` 감액**(BR-24) · 부족분은 **`Receivable.incur(CAPTURE, …)`** — 전부 **같은 커밋**(E2) | `Withdrawn` |
-| **입금** | `deposit(amount, recoverable)` | `amount > 0` | **회수 대상 미수들을 FIFO로 회수**(`recoverable` — 보류 제외) 후 **잔여분만** `balance` 증가 (BR-34) | `Deposited` |
+| **입금** | `deposit(depositId, amount, recoverable)` | `amount > 0`, ★ **`(depositId, 입금)` 수신 기록이 없음** (E3 — `DepositReceipt`) | **회수 대상 미수들을 FIFO로 회수**(`recoverable` — 보류 제외) 후 **잔여분만** `balance` 증가 (BR-34) | `Deposited` |
 | **환불 입금** | `refund(amount, recoverable)` | `amount ≥ 0` | **입금과 동일** — FIFO 회수 후 잔여만 `balance` 증가 (BR-34). **`amount = 0`도 정상**(미수만 소멸한 환불) | `Refunded` |
 | **계좌 한도 사용** | `useAccountLimit(amount, at)` | PRE-3 | `dailyUsage` 증가 (기준일 리셋 포함) | `AccountLimitUsed` |
 | **계좌 한도 복원** | `restoreAccountLimit(amount, at)` | **`amount ≤ dailyUsage.amount`** (위반 시 거절) | `dailyUsage` 감소. **기준일이 다르면 아무 일도 하지 않는다**(오류 아님 — 카드와 동일) | `AccountLimitRestored` |
 | **미수 차단 해제** | `liftReceivableBlock(operator)` | **미결 미수 존재** | `receivableBlockLifted = true` | `ReceivableBlockLifted` |
-| **입금 정정** | `reverseDeposit(amount, sourceRef)` | ★ **같은 `sourceRef`의 정정 멱등 레코드가 없음** (E5 — `IdempotencyRecord`) | `balance` 감소. 부족분은 **`Receivable.incur(origin=DEPOSIT_REVERSAL, sourceRef)`** — 원거래 승인이 없으므로 **입금 식별자를 출처로 쓴다**. **멱등 레코드 기록도 같은 커밋**(E5) | `DepositReversed` |
+| **입금 정정** | `reverseDeposit(depositId, amount)` | ★ **`(depositId, 정정)` 수신 기록이 없음** (E5 — `DepositReceipt`) | `balance` 감소. 부족분은 **`Receivable.incur(origin=DEPOSIT_REVERSAL, sourceRef)`** — 원거래 승인이 없으므로 **입금 식별자를 출처로 쓴다**. **멱등 레코드 기록도 같은 커밋**(E5) | `DepositReversed` |
 
 ### 조작 상세 — `capture()` (BR-18 + BR-20)
 
