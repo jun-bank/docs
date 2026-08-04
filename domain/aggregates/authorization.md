@@ -50,7 +50,7 @@
 | **`limitContribution`** | `Money` | **이 승인이 카드·계좌 한도에서 차지하는 몫.** 한도 등식의 구성 요소 (BR-05 · 카드 INV-5) |
 | `capturedAmount` | `Money?` | 매입된 금액 (null = 미매입) |
 | `withdrawnAmount` | `Money` | 매입 시 즉시 출금된 금액 (BR-20). **매입 시점 확정 후 불변** — 감사 근거 |
-| `returnedTotal` | `Money` | **고객에게 실제 반환한 누계.** 환불 산식의 결과이며 `withdrawnAmount`를 넘지 않는다 (INV-10) |
+| `returnedTotal` | `Money` | **고객에게 실제 반환한 누계.** 환불 산식의 결과이며 **그 시점 총 회수액**(`withdrawnAmount + 미수.recoveredAmount`)을 넘지 않는다 (**RC-1** — 승인 단독으로 검증 불가) |
 | `cancelledAmount` | `Money` | **매입 전** 누적 취소액 (승인취소·부분취소). 환불은 포함하지 않는다 |
 | `refundedTotal` | `Money` | **매입 후** 누적 환불액 — **매입액 기준**(반환액이 아니다). INV-7의 좌변 |
 | `frozen` | `boolean` | 보류 여부 (BR-28) |
@@ -155,7 +155,7 @@ EXPIRED    → CAPTURED    지연 매입 (BR-19) — 만료는 채무 소멸이 
 5) 미수 소멸액 = 미수 ? max(0, 미수.outstanding() − max(0, 잔여채무 − 회수액)) : 0
    if 소멸액 > 0 AND 미수.상태 = 미결:
        미수.writeOff(소멸액)                       ← ★ 반환액 입금보다 먼저
-6) returnedTotal += 반환액                         INV-10: ≤ withdrawnAmount + 미수회수
+6) returnedTotal += 반환액                         RC-1: ≤ withdrawnAmount + 미수회수
    if 반환액 > 0: 계좌.refund(반환액, recoverable)     ← 자기 미수는 대상에서 제외 (BR-34 예외②)
                                                        recoverable 도 E4 참여자다
 7) 잔여 채무 = 0 이면 상태 = 환불됨
