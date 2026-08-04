@@ -19,7 +19,7 @@
 
 | 필드 | 타입 | 뜻 |
 |---|---|---|
-| `type` | `DiscrepancyType` | M1·M2·M4~**M11** (BR-09) |
+| `type` | `DiscrepancyType` | M1·M2·M4~**M12** (BR-09) |
 | `scope` | `ReconciliationScope` | **외부 대사**(BR-30) / **내부 대사**(BR-41) |
 | `subject` | `SubjectRef` | 대상 (상관 식별자 · 파일·레코드 ID · 계정과목 등) |
 | `firstDetectedOn` | `BusinessDate` | **최초** 발견 영업일 |
@@ -58,6 +58,10 @@
 | **M9** 홀딩 정합 상이 | **내부** | 계좌 `holdTotal` ≠ Σ(승인 `heldAmount`) — `subject` = 계좌ID (BR-04·41) |
 | **M10** 카드 한도 정합 상이 | **내부** | 카드 `usage` ≠ Σ(승인 `limitContribution`) — `subject` = (카드ID, 기준일) (BR-05·41) |
 | **M11** 계좌 한도 정합 상이 | **내부** | 계좌 `dailyUsage` ≠ Σ(승인 `limitContribution`) — `subject` = (계좌ID, 기준일) (BR-44·41) |
+| **M12** 잔액-원장 상이 | **내부** | 계좌 `balance` ≠ 그 계좌의 **고객예금 보조부 잔액** — `subject` = (계좌ID, 영업일) (BR-41) |
+
+> ★ **M12는 계좌 단위다.** 계정과목 합계로 대조하면 **상계가 은폐한다** — 한 계좌가 +7,
+> 다른 계좌가 −7 어긋나면 합계는 맞는다. 그래서 전표 항목이 `subjectId`를 든다 (`journal-entry.md` INV-7).
 | **(내부)** 잔액-원장 상이 | **내부** | 계좌잔액 합계 ≠ 원장 계정 잔액 (BR-41) |
 
 > M3는 **폐기된 번호**다 (M4와 범위가 같았다). 재사용하지 않는다.
