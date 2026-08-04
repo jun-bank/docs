@@ -108,6 +108,10 @@
 
 | 트랜잭션 | 이벤트 | 그 이벤트가 소유한 줄 |
 |---|---|---|
+| **E1 승인** | — | **없다** — 홀딩·한도는 자금 이동이 아니다 |
+| **E2 매입** | `Withdrawn` (C1) | 출금분 |
+| | `ReceivableIncurred(CAPTURE)` | 부족분 |
+| | `Captured` (C3) | **없음** — 상태 변화만 알린다 |
 | **E3 입금** | `Deposited` | 유입 전액 — 회수분·잔액증가분으로 **분할** |
 | | `ReceivableRecovered` | **없음** (위가 덮는다) |
 | **E4 환불** | `Refunded` | 반환분 |
@@ -115,6 +119,10 @@
 | **E5 입금 정정** | `DepositReversed` | 잔액 회수분 |
 | | `ReceivableIncurred(DEPOSIT_REVERSAL)` | 부족분 |
 
+> ★ **이 표는 E1~E5를 전부 덮어야 한다.** 초판(R8 S6)은 **E3·E4·E5만 적었고**,
+> 그래서 `Captured`가 소유 판정 없이 남아 `Withdrawn`과 **이중 기표**될 수 있었다 (R9 T1).
+> **규칙을 세우면서 적용 범위를 절반만 적으면 안 쓴 범위가 옛 규칙으로 남는다.**
+>
 > ⚠️ **E3만 "한 이벤트가 분할"이고 나머지는 "이벤트마다 자기 몫"이다.**
 > 다르게 보이지만 규칙은 하나다 — **회수는 유입 이벤트 없이 일어나지 않으므로**
 > `ReceivableRecovered`에는 단독 소유분이 아예 없다.
@@ -184,6 +192,9 @@ Refunded(returned=1)      차) 매입사 미지급금 1 / 대) 고객예금 1   
 > `writtenOffAmount + returnedAmount = reductionAmount` 가 이벤트 안에서 성립한다.
 
 > **`reverse()`는 남는다.** 오기표 정정(BR-10·47)이 그 조작의 용도다 — 환불은 오기표가 아니다.
+
+| 상류 이벤트 | 전표 |
+|---|---|
 | **`ReceivableWrittenOff`** (C1) | 차) 매입사 미지급금 / 대) 미수금 — **받을 권리를 버렸다.** 자금 이동 없음 (BR-43 ①) |
 | **`Refunded`** (C3) | 차) 매입사 미지급금 `returnedAmount` / 대) 미수금 `recoveredAmount` · 고객예금 `creditedAmount` — **한 전표로 분할 기표**. **역분개가 아니다** |
 | `SettlementCompleted` (C4) | 차) 매입사 미지급금 / 대) 예치금 |

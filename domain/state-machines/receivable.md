@@ -49,7 +49,7 @@ stateDiagram-v2
 | # | 현재 | 전이 | 다음 | 조건 | 부수 효과 | 근거 |
 |---|---|---|---|---|---|---|
 | V1 | `ABSENT` | `incur` | `OPEN` | `amount > 0` · 같은 `(origin, sourceRef)` 없음 (INV-6) | 채권 생성 · `origin`·`sourceRef` 확정 · `incurredBusinessDate` 확정(FIFO 키) · 전표는 **`origin`별로 갈린다**(`CAPTURE` → 대) 매입사 미지급금 / `DEPOSIT_REVERSAL` → 대) 예치금) | BR-20·38 |
-| V2 | `OPEN` | `recover` (**잔여 > 0 유지**) | `OPEN` | `frozen = false` AND `amount ≤ outstanding()` | `recoveredAmount` 증가 · 전표 `차) 예치금 / 대) 미수금` | BR-34 |
+| V2 | `OPEN` | `recover` (**잔여 > 0 유지**) | `OPEN` | `frozen = false` AND `amount ≤ outstanding()` | `recoveredAmount` 증가 · ⚠️ **전표 없음** — 회수 분개는 유입 이벤트(`Deposited`·`Refunded`)가 소유한다 (`journal-entry.md` ACL 소유 규칙) | BR-34 |
 | V3 | `OPEN` | `recover` (**잔여 0이 됨**) | `CLOSED` | `frozen = false` AND `amount ≤ outstanding()` | `recoveredAmount` 증가 · **계좌가 자기 `receivableBlockLifted`를 재평가**(E3에 계좌가 있다 — 미수가 계좌 필드를 직접 바꾸지 않는다) | BR-34·45 |
 | V4 | `OPEN` | `writeOff` (**잔여 > 0 유지**) | `OPEN` | **`amount > 0`** AND `amount ≤ outstanding()`. **`frozen`과 무관** | `writtenOffAmount` 증가 · 전표 `차) 매입사 미지급금 / 대) 미수금`. **자금 이동 없음** | BR-43 ① |
 | V5 | `OPEN` | `writeOff` (**잔여 0이 됨**) | `CLOSED` | `amount > 0` AND `amount ≤ outstanding()`. **`frozen`과 무관** | `writtenOffAmount` 증가 · 전표 `차) 매입사 미지급금 / 대) 미수금` · **자금 이동 없음** · **계좌가 자기 차단 플래그를 재평가**(E4에 계좌가 있다) | BR-43 ①·45 |

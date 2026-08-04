@@ -144,7 +144,7 @@
 | 이벤트 | 코드명 | 언제 | 담는 정보 | 구독자 |
 |---|---|---|---|---|
 | 미수 발생 | `ReceivableIncurred` | `incur()` | 미수ID, **`origin`·`sourceRef`**, 계좌ID, 금액, 영업일 | **C5 원장** · 운영자 |
-| 미수 회수 | `ReceivableRecovered` | `recover()` | 미수ID, 회수액, 잔여 | **C5 원장** |
+| 미수 회수 | `ReceivableRecovered` | `recover()` | 미수ID, 회수액, 잔여 | ⚠️ **원장 아님** — 회수 분개는 유입 이벤트가 소유한다 (ACL 소유 규칙) |
 | **미수 소멸** | `ReceivableWrittenOff` | `writeOff()` | 미수ID, 소멸액, 잔여, **원인 = 환불** | **C5 원장** |
 | 보류 / 해제 | `ReceivableFrozen` · `ReceivableUnfrozen` | | 미수ID, 운영자 | 운영자 |
 
