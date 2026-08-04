@@ -42,7 +42,7 @@
 
 | 조작 | 코드명 | 사전조건 | 사후조건 | 이벤트 |
 |---|---|---|---|---|
-| **예약 기록** | `record(correlationId, at, ttl)` | 같은 `correlationId`의 예약이 없음 | 예약 생성 | `ReversalTombstoneRecorded` |
+| **예약 기록** | `record(correlationId, at, ttl)` | 같은 `correlationId`의 예약이 없음 | 예약 생성. ★ **재요청은 기존 예약을 찾아 같은 응답**(*"이미 예약됨"*)을 낸다 — 예약 자신이 멱등 레코드다 | `ReversalTombstoneRecorded` |
 | **소비** | `consume(now)` | `consumed = false` **AND `now < expiresAt`** — 시각을 직접 판정한다(정리 배치를 믿지 않는다) | `consumed = true` | `ReversalTombstoneConsumed` |
 | **보관 정리** | `purge()` | `consumed = true` AND 보관 기간 경과 (RT2) | 레코드 삭제 | `ReversalTombstonePurged` |
 | **만료 정리** | `expire(now)` | `consumed = false` AND `now ≥ expiresAt` | **레코드 삭제** — 이후 같은 상관 식별자는 "예약 없음"과 동치가 된다 | `ReversalTombstoneExpired` |
@@ -53,6 +53,15 @@
 망취소 1차 → 원승인 없음 → 예약 기록
 망취소 2차 → 원승인 없음 → 이미 예약 있음 → 무시 (멱등)
 ```
+
+---
+
+> ★ **예약 선행 기록에는 별도 멱등 레코드가 없다** (R9 M3). `correlationId` 유일성(INV-1)이
+> 재전송을 막고, 두 번째 호출은 `find()`로 기존 예약을 찾아 같은 응답을 낸다.
+>
+> **멱등 레코드를 따로 두면 같은 사실을 두 곳이 소유**하게 되고, 그것이 다시 둘이 어긋나는
+> 지점이 된다 — DC-001이 합계 필드에서 내린 결론과 같다. 그래서 여섯 번째 트랜잭션 경계도
+> 만들지 않았다. **자금이 움직이지 않는 경로이므로 E1~E5의 분류 기준과도 다르다.**
 
 ---
 
