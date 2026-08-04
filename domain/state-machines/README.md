@@ -14,7 +14,7 @@
 
 | 상태 머신 | 상태 | 허용 전이 | 금지 | 종료 상태 | 문서 |
 |---|---|---|---|---|---|
-| **승인** `Authorization` | 8 | 16 | 23 | 4 | [authorization.md](authorization.md) ★ |
+| **승인** `Authorization` | 8 | 15 | 22 | 4 | [authorization.md](authorization.md) ★ |
 | 카드 `Card` | 3 | 6 | 8 | 1 | [card.md](card.md) |
 | 매입 배치 `CaptureBatch` | 4 | 8 | 11 | 1 | [capture-batch.md](capture-batch.md) |
 | 정산 `Settlement` | 4 | 6 | 11 | 1 | [settlement.md](settlement.md) |
@@ -23,7 +23,7 @@
 | 멱등 레코드 `IdempotencyRecord` | **2** | 3 | 5 | 0 | [idempotency-record.md](idempotency-record.md) |
 | **미수** `Receivable` | 3 | 6 | 8 | 1 | [receivable.md](receivable.md) **DC-001** |
 
-**합계: 상태 27 · 허용 전이 48 · 금지 71 · 매트릭스 195칸**
+**합계: 상태 30 · 허용 전이 53 · 금지 78 · 매트릭스 202칸**
 
 > **"없음"도 상태로 센다.** 취소 예약·멱등 레코드는 **레코드의 존재 자체가 상태**라, 만료(삭제)는 종료가 아니라 `ABSENT`로의 복귀다. 만료를 별도 종료 상태로 두면 `ABSENT`와 의미가 같은 행이 하나 더 생긴다 — **의미가 같은 두 상태는 하나다.**
 

@@ -80,13 +80,16 @@ stateDiagram-v2
 | T7 | `AUTHORIZED` | `expire` | `EXPIRED` | 기한 도래 **AND `frozen = false`** | 홀딩 해제 · **카드·계좌 한도** 복원. **채무 존속** | BR-03·24·28·44 |
 | T8 | `AUTHORIZED` | `capture` | `CAPTURED` | `매입액 ≤ 승인액 − 누적취소액` (INV-3) | 출금 또는 **미수 적재** · 홀딩 **전액** 해제 · 전표 기표 | BR-16·18·20 |
 | T9 | `EXPIRED` | `capture` | `CAPTURED` | `매입액 ≤ 승인액 − 누적취소액` (INV-3) | 출금 또는 미수 적재 · **홀딩 해제 없음**(만료가 이미 풀었다 — `holdingFunds = false`) · 전표 기표 · **한도도 복원된 채로 둔다** | BR-19·24 |
-| T10 | `CAPTURED` | `refund` (**잔여 채무 0이 됨**) | `REFUNDED` | **INV-7** (`refundedTotal + 요청액 ≤ capturedAmount`) | `refundedTotal` 증가 · **반환액 = `max(0, recovered − 잔여채무)` 파생** · `recoveredAmount` 감소 · 역분개 · 한도 복원 **없음** | BR-24·26·**43 ①** |
-| T11 | `CAPTURED` | `refund` (**잔여 채무 > 0**) | `CAPTURED` | **INV-7** | `refundedTotal` 증가 · 반환액 파생 · `recoveredAmount` 감소 · 역분개 · 한도 복원 **없음**. **T10과 산식이 같고 결과 상태만 다르다** | BR-11·26·**43 ①** |
+| T10 | `CAPTURED` | `refund` (**잔여 채무 0이 됨**) | `REFUNDED` | **INV-7** (`refundedTotal + 요청액 ≤ capturedAmount`) | `refundedTotal`·`returnedTotal` 증가 · **반환액 파생** · **그 승인의 미수 `writeOff()`**(E4) · 역분개 · 한도 복원 **없음** | BR-24·26·**43 ①** |
+| T11 | `CAPTURED` | `refund` (**잔여 채무 > 0**) | `CAPTURED` | **INV-7** | `refundedTotal`·`returnedTotal` 증가 · 반환액 파생 · **미수 `writeOff()`**(E4) · 역분개 · 한도 복원 **없음**. **T10과 산식이 같고 결과 상태만 다르다** | BR-11·26·**43 ①** |
 | T12 | `CAPTURED` | `markSettled` | `SETTLED` | 정산 순액 산출 완료 | — | BR-21 |
 | T13 | `EXPIRED` | `reverse` · `void`(전액) | `VOIDED` | — | **채무 소멸**. 홀딩·**두 층 한도** 모두 만료 시 이미 복원됐으므로 **재복원하지 않는다** | BR-49 |
 | T14 | `EXPIRED` | `void` (**부분**) | `EXPIRED` | INV-1 | `cancelledAmount`만 증가. **홀딩·한도 재복원 없음**(`holdingFunds = false`가 판정) | BR-11·26·49 |
-| T15 | `CAPTURED` · `SETTLED` | `recoverReceivable` | **상태 불변** | `recoveredAmount + 배분액 ≤ 잔여 채무` | `recoveredAmount` 증가 — 계좌 상계의 **FIFO 배분** 결과를 받는다 | BR-34·43 |
-| T16 | `REQUESTED` 외 모든 상태 | `freeze`(종료 아닐 때) / `unfreeze`(**종료 포함 전부**) | **상태 불변** | 운영자 조작 | **자동 만료**(BR-28)·**매입 반영**(BR-50)에서 제외. **정산은 막지 않는다** | BR-28·50 |
+| T15 | `REQUESTED` 외 모든 상태 | `freeze`(종료 아닐 때) / `unfreeze`(**종료 포함 전부**) | **상태 불변** | 운영자 조작 | **자동 만료**(BR-28)·**매입 반영**(BR-50)에서 제외. **정산은 막지 않는다** | BR-28·50 |
+
+> ★ **미수는 이 표에 없다.** 매입 시 부족분은 `Receivable` 한 건이 되고(BR-20), 그 회수·소멸·보류는 **미수 자신의 상태 머신**이 통제한다 (`receivable.md` · DC-001). 승인이 회수액을 필드로 들면 그것이 **다시 합계 필드**가 되어 미수와 어긋난다.
+>
+> **환불 시 미수 소멸만 승인이 촉발한다** — 잔여 채무가 줄면 그만큼 채권이 사라지고, 그것이 **E4 트랜잭션 예외**의 이유다(T10·T11).
 
 > ⚠️ **부수 효과 열에 `〃`(동일)를 쓰지 않는다.** 이 문서에서 `〃`가 **세 라운드 연속으로 결함을 만들었다** — T9가 T8의 홀딩 전액 해제를 복사했고(1차 치명), T11이 T10의 미수 소멸을 복사했다(3차). 앞 행과 정말 같아 보여도 **한 조건이 다르면 부수 효과도 다르다.** 위 표에서 `〃`를 전부 풀어 썼다.
 
@@ -123,7 +126,6 @@ stateDiagram-v2
 | **F9** | 종료 상태 (`DECLINED`·`VOIDED`·`REFUNDED`·`SETTLED`) | `freeze` | 조사할 진행 중 처리가 없다 | 운영자 목록에 죽은 건이 쌓인다 | `AUTH_TERMINAL` |
 | **F19** | `REQUESTED`·`DECLINED` 외 모든 상태 | `decline` | 거절은 **검증 단계의 결론**이다. 성립한 뒤에는 거절이 아니라 취소다 (`DECLINED`에서의 재수신은 ◎) | 성립한 승인이 거절로 뒤집혀 매입사와 상태가 갈린다 | `AUTH_ALREADY_DECIDED` |
 | **F20** | `AUTHORIZED` · `EXPIRED` · `DECLINED` · `VOIDED` · `REFUNDED` | `markSettled` | 정산은 **매입된 건만** 대상이다 (BR-21 — 순액 = 매입 − 취소). `SETTLED`에서의 재호출은 ◎ | 매입되지 않은 금액이 순액에 들어가 **매입사에 과다 지급** | `AUTH_NOT_CAPTURED` |
-| **F23** | `REQUESTED`·`AUTHORIZED`·`EXPIRED`·`DECLINED`·`VOIDED`·`REFUNDED` | `recoverReceivable` | 매입되지 않았거나 채무가 끝난 건에는 **회수할 미수가 없다** | 회수액이 근거 없이 늘어 **환불 반환액이 부풀어 오른다** | `AUTH_NO_RECEIVABLE` |
 | **F22** | `DECLINED` · `VOIDED` · `REFUNDED` | `refund` | 매입된 적이 없거나 이미 전액 환불됐다 | 반환할 자금이 없는데 잔액이 늘어난다 | `AUTH_NOT_CAPTURED` |
 | **F21** | `CAPTURED` · `VOIDED` · `REFUNDED` · `SETTLED` | `expire` | 홀딩이 이미 없다 | 없는 홀딩을 해제해 **다른 승인의 점유가 깎인다** (T9 함정과 같은 기전) | `AUTH_NO_HOLDING` |
 
@@ -177,16 +179,16 @@ stateDiagram-v2
 | **-** | 도달 불가 — 이 상태에 그 메시지가 올 수 없다 |
 | **O/X** | **조건부** — 같은 조작이 조건에 따라 갈린다 |
 
-| 현재 \ 조작 | `authorize` | `createVoidedByTombstone` | `decline` | `reverse` | `void` | `expire` | `capture` | `refund` | `markSettled` | `recoverReceivable` | `freeze` | `unfreeze` |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| **`REQUESTED`** | O (T1) | **O** (T3) | O (T2) | - | - | - | - | - | - | - | - | - |
-| **`AUTHORIZED`** | X (F8) | X (F8) | X (F19) | **O** (T4) | **O** (T5·T6) | **O** (T7) | **O/X** (T8 / F15) | ▲ (F7) | X (F20) | X (F23) | O (T16) | O (T16) |
-| **`EXPIRED`** | X (F8) | X (F8) | X (F19) | **O** (T13) | **O** (T13·T14) | ◎ | **O/X** (T9 / F15) | ▲ (F7) | X (F20) | X (F23) | O (T16) | O (T16) |
-| **`CAPTURED`** | X (F8) | X (F8) | X (F19) | X (F1) | ▲ (F6) | X (F21) | X (F10) | **O/X** (T10·T11 / F18) | **O** (T12) | **O** (T15) | O (T16) | O (T16) |
-| **`DECLINED`** | X (F8) | X (F8) | ◎ | **◎** | X (F5) | - | X (F13) | X (F22) | X (F20) | X (F23) | X (F9) | O (T16) |
-| **`VOIDED`** | X (F8) | X (F8) | X (F19) | ◎ | X (F3) | X (F21) | X (F12) | X (F22) | X (F20) | X (F23) | X (F9) | O (T16) |
-| **`REFUNDED`** | X (F8) | X (F8) | X (F19) | X (F4) | X (F4) | X (F21) | X (F14) | X (F22) | X (F20) | X (F23) | X (F9) | O (T16) |
-| **`SETTLED`** | X (F8) | X (F8) | X (F19) | X (F2) | X (F2) | X (F21) | X (F11) | ▲ (F16) | ◎ | **O** (T15) | X (F9) | O (T16) |
+| 현재 \ 조작 | `authorize` | `createVoidedByTombstone` | `decline` | `reverse` | `void` | `expire` | `capture` | `refund` | `markSettled` | `freeze` | `unfreeze` |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| **`REQUESTED`** | O (T1) | **O** (T3) | O (T2) | - | - | - | - | - | - | - | - |
+| **`AUTHORIZED`** | X (F8) | X (F8) | X (F19) | **O** (T4) | **O** (T5·T6) | **O** (T7) | **O/X** (T8 / F15) | ▲ (F7) | X (F20) | O (T15) | O (T15) |
+| **`EXPIRED`** | X (F8) | X (F8) | X (F19) | **O** (T13) | **O** (T13·T14) | ◎ | **O/X** (T9 / F15) | ▲ (F7) | X (F20) | O (T15) | O (T15) |
+| **`CAPTURED`** | X (F8) | X (F8) | X (F19) | X (F1) | ▲ (F6) | X (F21) | X (F10) | **O/X** (T10·T11 / F18) | **O** (T12) | O (T15) | O (T15) |
+| **`DECLINED`** | X (F8) | X (F8) | ◎ | **◎** | X (F5) | - | X (F13) | X (F22) | X (F20) | X (F9) | O (T15) |
+| **`VOIDED`** | X (F8) | X (F8) | X (F19) | ◎ | X (F3) | X (F21) | X (F12) | X (F22) | X (F20) | X (F9) | O (T15) |
+| **`REFUNDED`** | X (F8) | X (F8) | X (F19) | X (F4) | X (F4) | X (F21) | X (F14) | X (F22) | X (F20) | X (F9) | O (T15) |
+| **`SETTLED`** | X (F8) | X (F8) | X (F19) | X (F2) | X (F2) | X (F21) | X (F11) | ▲ (F16) | ◎ | X (F9) | O (T15) |
 
 > ⚠️ **이 표는 `frozen = false`를 전제한다.** 보류는 상태가 아니라 **모든 상태에 겹쳐지는 플래그**이며, 참이면 `expire`(BR-28)와 `capture`(BR-50)가 **상태와 무관하게** 막힌다(F17). 보류를 상태로 넣으면 8개 상태가 16개로 늘어나 표가 두 배가 된다 — 실제로는 **두 칸에만 영향을 주는 직교 축**이다.
 >
@@ -194,7 +196,7 @@ stateDiagram-v2
 
 ### 매트릭스를 읽는 법
 
-- **`O` 21 · `O/X` 3 · `X` 53 · `◎` 5 · `▲` 4 · `-` 10 = 96칸.** 금지가 허용의 **2배**인 것이 정상이다 — 결제 도메인은 "무엇을 못 하는가"가 안전을 만든다.
+- **`O` 19 · `O/X` 3 · `X` 48 · `◎` 5 · `▲` 4 · `-` 9 = 88칸.** 금지가 허용의 **2배**인 것이 정상이다 — 결제 도메인은 "무엇을 못 하는가"가 안전을 만든다.
 - **모든 `X`에 §4 행 번호가 붙어 있다.** 번호 없는 `X`가 하나라도 있으면 구현자가 **금지 이유·응답·처리 방식을 찾을 수 없다.**
 - **`O/X`(조건부) 3칸이 자금 사고의 급소다.** 상태는 정상인데 **금액이 금지를 만든다** — 초과 매입(F15) 둘, 초과 환불(F18) 하나.
 - **`◎`(멱등) 5곳은 전부 "외부가 같은 메시지를 두 번 보내는 것이 정상"인 경로다.** 중복 망취소 2곳(`DECLINED`·`VOIDED` — BR-13의 *"성립하지 않았다면 상태 변화가 없다"*) · 만료 배치 재실행 · 정산 배치 재실행 · 거절 재수신.
