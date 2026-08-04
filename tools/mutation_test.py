@@ -47,7 +47,7 @@ MUT = [
  ("열린 의문 유령 — 색인에 없는 ID 추가", "domain/state-machines/README.md",
   "| **RCS5** |", "| **XXS9** | 미수 | 유령 |\n| **RCS5** |", "R9 M4"),
  ("ACL 소유 규칙에서 E2 행 제거", "domain/aggregates/journal-entry.md",
-  "| **E2 매입** | `Withdrawn` (C1) | 출금분 |\n", "", "R9 T1"),
+  "AUTO:delrow:| **E2 매입**", None, "R9 T1"),
  ("없는 규칙 참조 — BR-99", "domain/aggregates/account.md",
   "(BR-34)", "(BR-99)", "상시"),
 ]
@@ -66,7 +66,13 @@ def main():
             tree = pathlib.Path(td)/"docs"
             shutil.copytree(ROOT, tree, ignore=shutil.ignore_patterns(".git", "__pycache__"))
             f = tree/rel; t = f.read_text()
-            if old == "AUTO:count":               # 선언 수를 문서에서 읽어 1 줄인다
+            if old and old.startswith("AUTO:delrow:"):   # 접두사로 행을 지운다 (앵커가 낡지 않게)
+                pre = old.split(":", 2)[2]
+                lines = [l for l in t.splitlines() if not l.startswith(pre)]
+                if len(lines) == len(t.splitlines()):
+                    print(f"  ⚠️  {name} — 지울 행이 없다 ({pre!r})"); continue
+                t = "\n".join(lines) + "\n"
+            elif old == "AUTO:count":               # 선언 수를 문서에서 읽어 1 줄인다
                 m = re.search(r"유효 유형 (\d+)종", t)
                 if not m: print(f"  ⚠️  {name} — 선언을 못 찾음"); continue
                 k = int(m.group(1))
