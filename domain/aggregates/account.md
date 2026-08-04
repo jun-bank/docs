@@ -64,7 +64,7 @@
 | **INV-2** | `holdTotal ≥ 0` | — | 음수 점유는 무의미 | 모든 조작 후 |
 | **INV-3** | `receivable ≥ 0` | BR-20 | 음수 미수는 무의미 | 모든 조작 후 |
 | **INV-4** | **`balance > 0` 이면 `receivable = 0`** | BR-34 | 미수가 있는데 잔액이 남아 있음 = 상계가 안 됨 | 자금 유입 후 |
-| **INV-7** | 미수 소멸액은 **현재 `receivable`을 넘지 않는다** | BR-43 ① | 합계에서 남의 몫까지 깎인다 — 홀딩 이중 해제와 같은 기전 | `refund()` |
+| **INV-7** | 상계액의 **승인별 배분 합계 = 상계액** | BR-34 | 배분이 새거나 부풀면 승인들의 회수액 합이 실제 회수와 어긋나 **환불 반환액이 틀어진다** | 상계 후 |
 | **INV-5** | `receivable = 0` 이면 `receivableBlockLifted = false` | BR-45 | 미수가 없는데 차단 해제 플래그가 남음 | 상계 후 |
 | **INV-6** | `dailyUsage.amount ≤ dailyLimit` | BR-44 | 계좌 한도 초과 | `useAccountLimit()` 후 |
 
@@ -98,7 +98,7 @@
 | **홀딩 해제** | `releaseHold(amount)` | `amount ≤ holdTotal` | `holdTotal` 감소 | `HoldReleased` |
 | **매입 출금** | `capture(captureAmount, heldAmount)` | `heldAmount ≤ holdTotal` | `holdTotal` **전액 해제**, `balance` 감소. 부족하면 `receivable` 증가 | `Withdrawn` 또는 `ReceivableIncurred` |
 | **입금** | `deposit(amount)` | `amount > 0` | 미수 우선 상계 후 잔여분만 `balance` 증가 | `Deposited` · `ReceivableOffset` |
-| **환불 입금** | `refund(amount, writeOff)` | `amount > 0`, **`writeOff ≤ receivable`** | ① `writeOff`만큼 **미수 소멸**(그 승인 몫 — BR-43 ①) ② 남은 미수에 `amount` 상계(BR-34) ③ 잔여를 `balance`에 반영 | `Refunded` · `ReceivableWrittenOff` · `ReceivableOffset` |
+| **환불 입금** | `refund(amount)` | `amount > 0` | **입금과 동일** — 미수 우선 상계 후 잔여만 `balance` 증가 (BR-34). 상계액은 **FIFO로 승인들에 배분**된다 | `Refunded` · `ReceivableOffset` |
 | **계좌 한도 사용** | `useAccountLimit(amount, at)` | PRE-3 | `dailyUsage` 증가 (기준일 리셋 포함) | `AccountLimitUsed` |
 | **계좌 한도 복원** | `restoreAccountLimit(amount, at)` | **`amount ≤ dailyUsage.amount`** (위반 시 거절) | `dailyUsage` 감소. **기준일이 다르면 아무 일도 하지 않는다**(오류 아님 — 카드와 동일) | `AccountLimitRestored` |
 | **미수 차단 해제** | `liftReceivableBlock(operator)` | `receivable > 0` | `receivableBlockLifted = true` | `ReceivableBlockLifted` |
@@ -132,22 +132,20 @@
 > 입금액이 미수보다 적으면 **잔액은 늘지 않고 미수만 감소**한다 (INV-4).
 > 상계 사실은 **조회에 표시**되어야 한다(BR-31 확장 대상).
 
-### 조작 상세 — `refund()` 는 소멸이 먼저다 (BR-43 ① + BR-34)
+### 조작 상세 — 상계액은 승인들에 **FIFO로 배분**된다 (BR-34)
 
 ```
-입력: 반환액(amount), 그 승인이 만든 미수 소멸액(writeOff)
-
-1) receivable -= writeOff             ← 자기 승인 몫 소멸 (BR-43 ①). 상계가 아니다
-2) if receivable > 0:                 ← 남은 것은 다른 승인 몫
-       상계액 = min(amount, receivable)
-       receivable -= 상계액
-       amount    -= 상계액            ← BR-34
-3) balance += amount
+상계액이 정해지면 (deposit·refund 공통)
+  미수를 만든 승인들을 매입 영업일 오래된 순으로 정렬
+  각 승인에 recoverReceivable(배분액) 호출     ← 승인의 recoveredAmount 증가
+  배분 합계 = 상계액                            ← 검증 대상
 ```
 
-> ⚠️ **순서를 뒤집으면 고객이 덜 돌려받는다.** 10만 매입 중 7만 출금·3만 미수인 건을 전액 환불할 때, 7만으로 미수 3만을 먼저 상계하면 `balance`가 4만만 는다. **정답은 7만** — 미수 3만은 매입사 환불로 이미 소멸했으므로 고객에게 청구할 근거가 없다.
+> ★ **배분이 없으면 환불 반환액을 계산할 수 없다.** 상계는 **계좌 합계**에서 일어나는데, BR-43의 반환액은 **승인별 회수액**을 필요로 한다. 어느 승인의 미수가 갚아졌는지 모르면 **미수를 먼저 갚은 고객이 환불받을 때 그만큼을 못 돌려받는다.**
 >
-> ⚠️ **`writeOff ≤ receivable` 이 사전조건인 이유.** 미수는 계좌 단위 **합계**다(홀딩과 같은 구조). 승인이 들고 있는 `receivableAmount`를 검사 없이 빼면, 그 사이 고객 입금으로 이미 상계된 경우 **다른 승인의 미수 채권이 깎인다** — 홀딩 이중 해제와 완전히 같은 기전이다.
+> ⚠️ **계좌는 미수를 합계로만 든다** — 홀딩과 같은 구조다. 그래서 **계좌가 승인 목록을 조회해 배분**하며, 이는 **의식적인 트랜잭션 예외**다(애그리게이트 README E3).
+>
+> **환불에는 미수 소멸 조작이 없다.** BR-43이 소멸을 **산식의 파생**으로 바꿨기 때문이다 — 승인의 잔여 채무가 회수액 아래로 내려가면 미수는 자연히 0이 된다. 계좌 합계에서 건별 금액을 빼는 조작은 **두지 않는다**(남의 몫이 깎인다).
 > **미수가 전액 상계되면 `receivableBlockLifted`를 false로 되돌린다** (INV-5) — 차단이 자동 해제된다.
 
 ---
@@ -163,7 +161,7 @@
 | 미수 발생 | `ReceivableIncurred` | 잔액 부족 매입 | 계좌ID, 부족액 | **C5 원장** · 운영자 |
 | 미수 상계됨 | `ReceivableOffset` | 입금 시 상계 | 계좌ID, 상계액 | **C5 원장** |
 | 환불 입금됨 | `Refunded` | `refund()` | 계좌ID, 금액, 원거래 | **C5 원장** |
-| **미수 소멸됨** | `ReceivableWrittenOff` | `refund()` 1단계 | 계좌ID, 소멸액, 원승인ID | **C5 원장** · 운영자 |
+| **미수 상환 배분됨** | `ReceivableRecoveryAllocated` | 상계 시 | 계좌ID, 상계액, **승인별 배분 내역** | **C3 결제** (승인 `recoverReceivable`) |
 | 입금 정정됨 | `DepositReversed` | `reverseDeposit()` | 계좌ID, 금액, 사유 | **C5 원장** |
 
 > 원장은 이 이벤트를 **전표 언어로 번역**한다 (컨텍스트 맵 R6, ACL).
@@ -200,7 +198,9 @@
 | ~~AC1~~ | 미수 계좌의 신규 승인 | **거절한다. 운영자가 계좌 단위로 차단 해제 가능. 전액 상계 시 자동 해제** → BR-45, PRE-2, INV-5 |
 | ~~AC2~~ | 환불 입금의 미수 상계 | **상계한다.** 계좌로 들어오는 돈은 출처와 무관 → BR-34 확장. **단 그 승인 자신의 미수는 소멸이 먼저다**(BR-43 ①) |
 
-| **AC3** | ★ **자기 미수가 이미 고객 입금으로 상계된 뒤 환불이 오면?** 고객은 `출금액 + 상환한 미수`를 냈는데 상한은 `withdrawnAmount`뿐이라 **덜 돌려받는다.** 미수 회수액을 승인별로 추적할 것인가 (→ 승인 AU9와 같은 뿌리) |
+| ~~AC3~~ | 이미 상계된 미수 뒤의 환불 | **승인이 `recoveredAmount`를 추적하고 상계를 FIFO로 배분한다** → BR-34 확장, BR-43 재작성 |
+
+**(현재 미해결 없음)**
 
 ---
 
@@ -208,6 +208,7 @@
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
-| v1.2 | 2026-08-04 | 재점검 반영 — ★ **`refund()`에 미수 소멸 단계 신설**. BR-34(상계)와 BR-43 ①(소멸)이 충돌해, 그대로 두면 전액 환불 시 **고객이 자기 미수만큼 덜 받고 은행이 소멸한 채권을 또 회수**했다. 소멸 → 상계 → 잔액 순서 확정, INV-7(합계 침범 방지) 신설, `ReceivableWrittenOff` 이벤트 추가, AC3 등재 |
+| v1.3 | 2026-08-04 | **AC3 확정 — 상계액의 FIFO 배분.** BR-43이 환불 모델을 "거래 축소 + 반환액 파생"으로 바꾸면서 **미수 소멸 조작이 불필요해졌다**(산식의 파생이 됐다). 대신 승인이 회수액을 알아야 하므로 상계 시 **승인별 배분 + 통지**를 명시하고 INV-7을 배분 합계 보존으로 교체 |
+| v1.2 | 2026-08-04 | 재점검 반영 — BR-34(상계)와 BR-43 ①(소멸) 충돌을 처음 식별 |
 | v1.1 | 2026-08-03 | AC1·AC2 확정 반영 — 미수 차단(BR-45)·계좌 한도(BR-44)·환불 상계(BR-34 확장). 불변식 6종, 사전조건 3종, 조작 9종 |
 | v1.0 | 2026-08-03 | 최초 작성 — 불변식 4종, 사전조건 1종(가용잔액을 불변식이 아닌 사전조건으로 구분), 조작 6종, 이벤트 8종 |

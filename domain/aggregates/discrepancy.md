@@ -24,7 +24,7 @@
 | `subject` | `SubjectRef` | 대상 (상관 식별자 · 파일·레코드 ID · 계정과목 등) |
 | `firstDetectedOn` | `BusinessDate` | **최초** 발견 영업일 |
 | `lastDetectedOn` | `BusinessDate` | **최근** 발견 영업일 |
-| `detectionCount` | `int` | 누적 발견 횟수 |
+| `detectionCount` | `int` | 누적 발견 횟수 — **영업일당 최대 1회 증가**(BR-48) |
 | `expected` · `actual` | `Money?` | 금액 불일치인 경우 |
 | `status` | `DiscrepancyStatus` | 미처리 / 조사중 / 처리완료 |
 | `resolution` | `String?` | 운영자가 남긴 처리 결과 |
@@ -36,7 +36,7 @@
 | # | 불변식 | 근거 | 위반 시 |
 |---|---|---|---|
 | **INV-1** | **자동 정정이 일어나지 않는다** — 이 애그리게이트는 상류 데이터를 바꾸는 조작을 갖지 않는다 | BR-09 | 틀린 값으로 덮어쓰기 |
-| **INV-2** | 같은 `(type, scope, subject)`은 **하나만** 존재한다. 재발견 시 새로 만들지 않고 `lastDetectedOn`·`detectionCount`를 갱신한다 | BR-48 | 같은 불일치가 매 대사마다 쌓여 목록이 노이즈가 된다 |
+| **INV-2** | 같은 `(type, scope, subject)`은 **하나만** 존재한다. 재발견 시 새로 만들지 않고 `lastDetectedOn`을 갱신하며, **`lastDetectedOn`이 이미 그 영업일이면 `detectionCount`는 올리지 않는다** | BR-48 | 같은 불일치가 매 대사마다 쌓여 목록이 노이즈가 된다 |
 | **INV-3** | `status = 처리완료` 이면 `resolution ≠ null` | — | 처리했는데 근거가 없음 |
 | **INV-4** | **`status = 처리완료` 인 건이 재발견되면 `미처리`로 되돌아간다** | BR-48 | "고쳤다는데 또 나온다"는 신호가 사라져 잘못된 처리가 은폐된다 |
 
@@ -69,7 +69,7 @@
 
 | 조작 | 코드명 | 사전조건 | 사후조건 | 이벤트 |
 |---|---|---|---|---|
-| **적재 또는 갱신** | `recordOrTouch(type, scope, subject, on, expected, actual)` | — (**호출 주체 = 대사 배치 탐지 또는 매입 배치 격리**) | 없으면 생성, 있으면 `lastDetectedOn`·`detectionCount` 갱신. **처리완료였다면 미처리로 복귀** (INV-4) | `DiscrepancyRecorded` 또는 `DiscrepancyRedetected` |
+| **적재 또는 갱신** | `recordOrTouch(type, scope, subject, on, expected, actual)` | — (**호출 주체 = 대사 배치 탐지 또는 매입 배치 격리**) | 없으면 생성. 있으면 `lastDetectedOn` 갱신하고 **그 값이 바뀐 경우에만 `detectionCount` +1**. **처리완료였다면 미처리로 복귀** (INV-4) | `DiscrepancyRecorded` 또는 `DiscrepancyRedetected` |
 | **조사 시작** | `investigate(operator)` | 상태 = 미처리 | 상태 = 조사중 | `DiscrepancyInvestigating` |
 | **처리 완료** | `resolve(operator, resolution)` | `resolution` 있음 (INV-3) | 상태 = 처리완료 | `DiscrepancyResolved` |
 
@@ -82,7 +82,7 @@
 
 > **격리를 즉시 적재하지 않으면 묻힌다.** 대사는 정산 완료에 딸려 시작되므로(BR-42), 정산이 실패·지연되면 격리 건이 `isolatedRecords` 안에만 남아 **아무도 못 본다.**
 >
-> **대신 같은 건을 대사가 또 탐지한다.** 이때 새 건이 되지 않는 것은 INV-2가 보장하지만, `detectionCount`가 "며칠째"가 아니라 "몇 번 탐지됐나"가 되지 않도록 **계수 단위를 대사 실행당 1회로 제한**해야 한다 → DC3.
+> **대신 같은 건을 대사가 또 탐지한다.** 그래서 `detectionCount`는 **영업일당 1회만** 오른다(BR-48) — 매입 격리와 대사가 같은 날 둘 다 탐지해도 1이고, 배치를 세 번 재실행해도 1이다. **`발견 횟수 ≈ 미해결 영업일 수`** 가 성립한다.
 
 ### 지속 지표
 
@@ -137,8 +137,13 @@ BR-09가 자동 정정을 금지한 이유는 **사람이 실제로 판단하게
 
 | # | 의문 |
 |---|---|
+| ~~DC3~~ | `detectionCount`의 계수 단위 | **영업일당 1회** → BR-48, INV-2 |
+
+### 열린 의문
+
+| # | 의문 |
+|---|---|
 | **DC2** | 내부 대사(BR-41) 불일치의 `subject`를 무엇으로 잡는가 — 계정과목 단위인가 계좌 단위인가 |
-| **DC3** | **`detectionCount`의 계수 단위** — 대사 실행당 1회인가 탐지 건마다 1인가. 후자면 배치 재실행이 횟수를 부풀려 지속 기간 지표로 못 쓴다 |
 | **DC4** | 재발견이 며칠 이상 지속되면 별도 통지할 것인가 (미확정 수치 — BR-48) |
 
 ---
@@ -147,6 +152,7 @@ BR-09가 자동 정정을 금지한 이유는 **사람이 실제로 판단하게
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v1.4 | 2026-08-04 | **DC3 확정 — 발견 횟수는 영업일당 1회**(BR-48). 매입 격리 즉시 적재와 대사 탐지가 겹쳐 하루 2회 이상 오를 수 있었고, 배치 재실행도 멱등하지 않았다 |
 | v1.3 | 2026-08-04 | 듀얼 리뷰 반영 — **`recordOrTouch()`의 호출 주체 명시**(매입 배치 격리 즉시 + 대사 배치). 격리와 불일치를 잇는 지점이 어느 문서에도 없던 단절 해소. `detectionCount` 계수 단위를 DC3로 격상 |
 | v1.2 | 2026-08-03 | **M8 무효 승인 매입 신설**(BR-51) — 유형 7종. 보류 격리는 불일치가 아님을 명시(BR-50) |
 | v1.1 | 2026-08-03 | **DC1 확정 — 재발견 추적**(BR-48). 필드 3종 교체(`detectedOn` → `firstDetectedOn`·`lastDetectedOn`·`detectionCount`) · INV-2 유일성 키 변경 · INV-4 신설(처리완료 후 재발견 시 미처리 복귀) · 조작 `record` → `recordOrTouch`. §7을 닫힌/열린 의문으로 재편하고 선택지·기각 이유를 남김 |

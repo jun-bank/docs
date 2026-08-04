@@ -52,8 +52,8 @@ stateDiagram-v2
 | D1 | — | `recordOrTouch` (최초) | `OPEN` | 같은 `(유형, 범위, 대상)` 없음. **호출 주체 = 대사 배치 탐지 또는 매입 배치 격리** | `firstDetectedOn` 설정 · `detectionCount = 1` | BR-09·48·51 |
 | D2 | `OPEN` | `investigate` | `INVESTIGATING` | 운영자 지정 | 담당자 기록 | BR-09 |
 | D3 | `OPEN`·`INVESTIGATING` | `resolve` | `RESOLVED` | **`resolution ≠ null`** (INV-3) | 처리 결과 기록 | BR-09 |
-| D4 | **`RESOLVED`** | `recordOrTouch` (재발견) | **`OPEN`** | — | `lastDetectedOn` 갱신 · `detectionCount` 증가 · **`resolution` 보존** | **BR-48** |
-| D5 | `OPEN`·`INVESTIGATING` | `recordOrTouch` (재발견) | 상태 불변 | — | `lastDetectedOn` 갱신 · `detectionCount` 증가. **상태만 그대로일 뿐 no-op이 아니다** | BR-48 |
+| D4 | **`RESOLVED`** | `recordOrTouch` (재발견) | **`OPEN`** | — | `lastDetectedOn` 갱신 · **영업일이 바뀐 경우에만** `detectionCount` +1 · **`resolution` 보존** | **BR-48** |
+| D5 | `OPEN`·`INVESTIGATING` | `recordOrTouch` (재발견) | 상태 불변 | — | `lastDetectedOn` 갱신 · **그 값이 바뀐 경우에만** `detectionCount` +1(영업일당 1회). **상태만 그대로일 뿐 no-op이 아니다** | BR-48 |
 
 > **D4에서 `resolution`을 지우지 않는다.** *"지난번엔 이렇게 처리했는데 또 나왔다"* 가 다음 조사의 가장 중요한 단서다. 지우면 운영자가 같은 오판을 반복한다.
 
@@ -99,8 +99,8 @@ stateDiagram-v2
 |---|---|
 | **대사 배치와 운영자 처리의 경합** | 배치가 `recordOrTouch`로 `OPEN` 복귀시키는 동안 운영자가 `resolve` 중이면, **애그리게이트 락에서 하나만 성공**한다. 운영자가 이기면 다음 대사에서 다시 잡히므로 손실이 없다 |
 | **두 운영자가 동시에 조사 착수** | DF4로 한쪽 거절 |
-| **같은 대사 실행에서 같은 불일치 중복 탐지** | `(유형, 범위, 대상)` 유니크 제약. 같은 배치 안이라도 `detectionCount`는 **대사 실행당 1회만** 증가해야 한다 → DCS2 |
-| 대사 배치 재실행 | `detectionCount`가 실행 횟수만큼 늘어난다. **"며칠째"가 아니라 "몇 번 돌렸나"를 세게 된다** → DCS2 |
+| **같은 대사 실행에서 같은 불일치 중복 탐지** | `(유형, 범위, 대상)` 유니크 제약 + **`lastDetectedOn` 비교**로 흡수. 같은 영업일이면 횟수가 오르지 않는다 (BR-48) |
+| 대사 배치 재실행 | **멱등** — 같은 영업일이면 `detectionCount`가 오르지 않는다 (BR-48) |
 
 ---
 
@@ -128,7 +128,6 @@ stateDiagram-v2
 | # | 의문 | 영향 |
 |---|---|---|
 | **DCS1** | `INVESTIGATING`에서 **오래 방치**되면? 담당자가 붙잡아 놓고 잊으면 `OPEN`보다 더 안 보인다. **현재 `INVESTIGATING → OPEN` 경로가 아예 없다** — 조사 포기·담당자 변경 조작을 명세에 추가할 것인가 | 애그리게이트 조작 표 · 운영 정책 |
-| **DCS2** | **`detectionCount`를 무엇 단위로 세는가.** 매입 배치 격리가 즉시 적재하고 대사가 같은 건을 또 탐지하므로 **한 건이 하루에 2회 이상 증가**할 수 있다. 대사 실행 1회당 1인가, 탐지 건마다 1인가. 후자면 배치 재실행이 횟수를 부풀려 **"며칠째"가 아니라 "몇 번 돌렸나"** 가 된다 | BR-48 의미 · 재실행 안전성 |
 | **DCS3** | 내부 대사(BR-41) 불일치의 `subject` 단위 — 계정과목인가 계좌인가 (애그리게이트 DC2) | INV-2 유일성 키 |
 
 ---
@@ -137,5 +136,6 @@ stateDiagram-v2
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v0.3 | 2026-08-04 | **DCS2 확정 — 발견 횟수는 영업일당 1회**(BR-48). D4·D5 부수 효과와 §6 동시성 2행 갱신, 배치 재실행이 멱등해졌다 |
 | v0.2 | 2026-08-04 | 듀얼 리뷰 반영 — **명세에 없던 `release()` 제거**(DCS1으로 이관) · **`recordOrTouch`의 `◎`를 `O`로 정정**(no-op이 아니라 발견 횟수를 바꾼다 — `◎`로 두면 BR-48 추적이 사라진다) · **DF7 신설**(`RESOLVED`에서 다른 내용으로 재처리하면 오판 흔적이 지워진다) · D1에 **호출 주체 명시** · 집계 정정(9칸) |
 | v0.1 | 2026-08-04 | 최초 작성 — 상태 3종(**종료 상태 없음**), 전이 6종, 금지 6종. `RESOLVED → OPEN` 재발견 복귀(BR-48)와 `resolution` 보존, 방어선이 금지가 아닌 조작 부재에 있다는 점 명시. `detectionCount` 계수 단위를 열린 의문으로 식별 |
