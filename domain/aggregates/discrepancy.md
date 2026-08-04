@@ -60,7 +60,7 @@
 | **M11** 계좌 한도 정합 상이 | **내부** | 계좌 `dailyUsage` ≠ Σ(승인 `limitContribution`) — `subject` = (계좌ID, 기준일) (BR-44·41) |
 | **M12** 잔액-원장 상이 | **내부** | 계좌 `balance` ≠ 그 계좌의 **고객예금 보조부 잔액** — `subject` = (계좌ID, 영업일) (BR-41) |
 
-| **M13** 입금 멱등 충돌 | **내부** | 같은 `(key, operation)`에 다른 요청 지문 — `subject` = (key, operation) (BR-29·38) |
+| **M13** 입금 멱등 충돌 | **내부** | 같은 `(key, operation)`에 다른 요청 지문 — `subject` = (key, operation). ★ **적재 주체가 대사 배치가 아니라 `DepositConflict` 이벤트다** (BR-29·38) |
 | **M14** 미수-원장 상이 | **내부** | Σ(그 계좌 미수 `outstanding()`) ≠ 미수금 보조부 잔액 — `subject` = (계좌ID, 영업일) (BR-41) |
 
 > ★ **M14가 없으면 `subjectId`를 들기만 하고 안 쓴다** — 비용은 치르고 보호는 없는 상태다.

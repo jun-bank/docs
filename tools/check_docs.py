@@ -253,6 +253,19 @@ if cov < COVERAGE_FLOOR:
     bad("⑯", f"배정 커버리지 {cov}% — 경계 배정 {len(e_assigned)}건 중 "
              f"독립 출처로 검사되는 것은 {len(verified & e_assigned)}건. 하한 {COVERAGE_FLOOR}%")
 
+# ── ⑰ 불일치 유형 집합 == BR-09 정본 (건수를 파생 문서가 따로 선언하지 않는다)
+brs_txt = BRS.read_text()
+m = re.search(r"## BR-09\..*?(?=\n## BR-)", brs_txt, re.S)
+canon_m = set(re.findall(r"^\| (M\d+) \|", m.group(0), re.M)) if m else set()
+if len(canon_m) < 5: bad("⑰", f"BR-09 유형 표 파싱 실패 ({len(canon_m)})")
+for p_ in sorted(ROOT.rglob("*.md")):
+    if ".git" in p_.parts or p_ == BRS or "project-workflow" in str(p_) or "design-changes" in str(p_): continue
+    for n, line in enumerate(body(p_).splitlines() if p_ in WIDE else p_.read_text().splitlines(), 1):
+        mm = re.search(r"유형[^|]{0,6}(\d+)종", line)
+        if mm and int(mm.group(1)) != len(canon_m):
+            bad("⑰", f"{p_.relative_to(ROOT)}:{n} 불일치 유형 {mm.group(1)}종 선언 "
+                     f"— BR-09 정본은 {len(canon_m)}종. 파생 문서는 건수를 적지 않는다")
+
 # ── ⑫ 열린 의문 색인 == 각 상태 머신 문서의 의문 ID (양방향)
 SM = ROOT/"domain/state-machines"
 docq = set()

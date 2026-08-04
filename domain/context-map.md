@@ -129,6 +129,11 @@
 | **홀딩 합계** | **C1 뱅킹** | 없음 | — | C1 |
 | **미수 (채권 한 건)** | **C1 뱅킹** — `Receivable` | 없음 | — | C1 |
 | **입금·정정의 멱등 판정** | **C1 뱅킹** — `DepositReceipt` | 없음 | — | C1 |
+| **홀딩 점유 합계** `holdTotal` | **C1 뱅킹** — `Account` | 없음 | — | C1 (등식 우변은 승인 `heldAmount`) |
+| **계좌 1일 한도 사용액** `dailyUsage` | **C1 뱅킹** — `Account` | 없음 | — | C1 (등식 우변은 승인 `limitContribution`) |
+| **카드 1일 한도 사용액** `usage` | **C2 카드** — `Card` | 없음 | — | C2 (등식 우변은 승인 `limitContribution`) |
+| **승인별 홀딩액·한도 몫** `heldAmount` · `limitContribution` | **C3 결제** — `Authorization` | 없음 | — | ★ **C3가 정본** — 위 세 합계 필드(③ 의식적 예외)의 **등식 우변**이다 |
+| **한도 버킷** `limitBasisDate` | **C3 결제** — `Authorization` | 없음 | — | C3 (DC-003) |
 | **미수의 회수액·소멸액·보류** | **C1 뱅킹** — `Receivable` | 없음 | — | C1 |
 | 카드 · 상태 · 유효기간 | **C2 카드** | 없음 (같은 트랜잭션 경계라 직접 조회) | — | C2 |
 | 한도 값 · **한도 사용액** | **C2 카드** | 없음 | — | C2 |

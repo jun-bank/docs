@@ -157,9 +157,14 @@ EXPIRED    → CAPTURED    지연 매입 (BR-19) — 만료는 채무 소멸이 
    if 소멸액 > 0 AND 미수.상태 = 미결:
        미수.writeOff(소멸액)                       ← ★ 반환액 입금보다 먼저
 6) returnedTotal += 반환액                         RC-1: ≤ withdrawnAmount + 미수회수
-   if 반환액 > 0: 계좌.refund(반환액, recoverable)     ← 자기 미수는 대상에서 제외 (BR-34 예외②)
+   계좌.refund(반환액, recoverable)                  ← ★ 반환액 0이어도 **반드시 부른다**
                                                        recoverable 도 E4 참여자다
 7) 잔여 채무 = 0 이면 상태 = 환불됨
+
+> ★ **반환액이 0이어도 계좌를 부른다** (R10). 미수만 소멸한 환불에서 계좌를 건너뛰면
+> 계좌 `INV-3`(*"미결 미수가 없으면 `receivableBlockLifted = false`"*)을 **재평가할 기회가 없다.**
+> 마지막 미수가 소멸로 사라졌는데 차단 해제 플래그가 남아, BR-45의 자동 해제가 일어나지 않는다.
+> `account.md`의 `refund()`도 이미 *"`amount = 0`도 정상"* 이라고 적고 있었다 — **부르는 쪽이 안 맞았다.**
 
 ── 1~7이 한 트랜잭션 (E4: 승인 + 자기 미수 + 계좌 + `recoverable` 미수들) ──
 ```
