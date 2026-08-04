@@ -127,7 +127,7 @@
 |---|---|---|---|---|
 | **홀딩 점유** | `hold(amount)` | `amount ≤ availableBalance()` (PRE-1) | `holdTotal` 증가. `balance` 불변 | `HoldPlaced` |
 | **홀딩 해제** | `releaseHold(amount)` | `amount ≤ holdTotal` | `holdTotal` 감소 | `HoldReleased` |
-| **매입 출금** | `capture(captureAmount, heldAmount, restoreLimit)` | `heldAmount ≤ holdTotal` | `holdTotal` **전액 해제** · `balance` 감소 · **미매입분만큼 `dailyUsage` 감액**(BR-24) · 부족분은 **`Receivable.incur(CAPTURE, …)`** — 전부 **같은 커밋**(E2) | `Withdrawn` |
+| **매입 출금** | `capture(captureAmount, heldAmount, restoreLimit)` | `heldAmount ≤ holdTotal` | `holdTotal` **전액 해제** · `balance` 감소 · **미매입분만큼 `Account.restoreAccountLimit(미매입분, at)` 호출**(BR-24 — 직접 감액하지 않는다. 기준일·하한 가드가 그 조작에 있다) · 부족분은 **`Receivable.incur(CAPTURE, …)`** — 전부 **같은 커밋**(E2) | `Withdrawn` |
 | **입금** | `deposit(depositId, amount, recoverable)` | `amount > 0`, ★ **`(depositId, 입금)` 수신 기록이 없음** (E3 — `DepositReceipt`) | **회수 대상 미수들을 FIFO로 회수**(`recoverable` — 보류 제외) 후 **잔여분만** `balance` 증가 (BR-34) | `Deposited` |
 | **환불 입금** | `refund(amount, recoverable)` | `amount ≥ 0` | **입금과 동일** — FIFO 회수 후 잔여만 `balance` 증가 (BR-34). **`amount = 0`도 정상**(미수만 소멸한 환불) | `Refunded` |
 | **계좌 한도 사용** | `useAccountLimit(amount, at)` | PRE-3 | `dailyUsage` 증가 (기준일 리셋 포함) | `AccountLimitUsed` |

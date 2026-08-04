@@ -7,7 +7,7 @@ import docs_model as d
 # 배정되지 않은 변경 조작은 생성 시 오류로 드러난다(빈 칸 = 결함).
 ASSIGN = {
  "Account.hold":"E1","Account.releaseHold":"E1","Account.useAccountLimit":"E1",
- "Account.restoreAccountLimit":"E1","Account.capture":"E2","Account.deposit":"E3",
+ "Account.restoreAccountLimit":"E1 E2","Account.capture":"E2","Account.deposit":"E3",
  "Account.refund":"E4","Account.reverseDeposit":"E5","Account.liftReceivableBlock":"—",
  "Receivable.incur":"E2 E5","Receivable.recover":"E3 E4","Receivable.writeOff":"E4",
  "Receivable.freeze":"—","Receivable.unfreeze":"—",
@@ -36,6 +36,7 @@ NOTE = {
  "Account.refund":"반환액 입금 — FIFO 회수 포함",
  "Account.reverseDeposit":"부족분 채권 + 정정 멱등",
  "Card.restoreLimit":"E2 = 부분 매입 한도 복원 (BR-24)",
+ "Account.restoreAccountLimit":"E2 = 부분 매입 한도 복원 (BR-24)",
  "Authorization.createVoidedByTombstone":"예약을 **소비**한다",
  "Authorization.refund":"소멸 먼저 → 계좌 입금",
  "CaptureBatch.markProcessed":"E4 = 매입 파일의 **취소 레코드**",

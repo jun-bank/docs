@@ -78,7 +78,7 @@ stateDiagram-v2
 | T5 | `AUTHORIZED` | `void`(전액) | `VOIDED` | `취소액 = 승인액 − 누적취소액` | 홀딩 해제 · **카드·계좌 한도** 복원 · **역분개 없음** | BR-26·44 |
 | T6 | `AUTHORIZED` | `void`(부분) | `AUTHORIZED` | INV-1 (`누적취소액 ≤ 승인액`) | 홀딩 부분 해제 · **카드·계좌 한도** 부분 복원 | BR-11·24·26·44 |
 | T7 | `AUTHORIZED` | `expire` | `EXPIRED` | 기한 도래 **AND `frozen = false`** | 홀딩 해제 · **카드·계좌 한도** 복원. **채무 존속** | BR-03·24·28·44 |
-| T8 | `AUTHORIZED` | `capture` | `CAPTURED` | `매입액 ≤ 승인액 − 누적취소액` (INV-3) | 출금 또는 **미수 적재** · 홀딩 **전액** 해제 · 전표 기표 | BR-16·18·20 |
+| T8 | `AUTHORIZED` | `capture` | `CAPTURED` | `매입액 ≤ 승인액 − 누적취소액` (INV-3) | 출금 또는 **미수 적재** · 홀딩 **전액** 해제 · ★ **미매입분만큼 `limitContribution` 감액 + `Card.restoreLimit` · `Account.restoreAccountLimit`**(BR-24) · 전표 기표 | BR-16·18·20·**24** |
 | T9 | `EXPIRED` | `capture` | `CAPTURED` | `매입액 ≤ 승인액 − 누적취소액` (INV-3) | 출금 또는 미수 적재 · **홀딩 해제 없음**(만료가 이미 풀었다 — `holdingFunds = false`) · 전표 기표 · **한도도 복원된 채로 둔다** | BR-19·24 |
 | T10 | `CAPTURED` | `refund` (**잔여 채무 0이 됨**) | `REFUNDED` | **INV-7** (`refundedTotal + 요청액 ≤ capturedAmount`) | `refundedTotal` 증가 → 반환액·소멸액 파생 → **① 미수 `writeOff()`(소멸액>0·미결일 때만) ② 계좌 `refund(반환액)` ③ `returnedTotal` 증가** · 역분개 · 한도 복원 **없음**. **승인·미수·계좌가 한 커밋**(E4) | BR-24·26·**43 ①** |
 | T11 | `CAPTURED` | `refund` (**잔여 채무 > 0**) | `CAPTURED` | **INV-7** | T10과 **같은 3단계**(소멸 → 계좌 입금 → `returnedTotal`) · 역분개 · 한도 복원 없음. **결과 상태만 다르다** | BR-11·26·**43 ①** |
@@ -87,7 +87,11 @@ stateDiagram-v2
 | T14 | `EXPIRED` | `void` (**부분**) | `EXPIRED` | INV-1 | `cancelledAmount`만 증가. **홀딩·한도 재복원 없음**(`holdingFunds = false`가 판정) | BR-11·26·49 |
 | T15 | `REQUESTED` 외 모든 상태 | `freeze`(종료 아닐 때) / `unfreeze`(**종료 포함 전부**) | **상태 불변** | 운영자 조작 | **자동 만료**(BR-28)·**매입 반영**(BR-50)에서 제외. **정산은 막지 않는다** | BR-28·50 |
 
-> ★ **`heldAmount`·`limitContribution`이 전이마다 함께 움직인다.** 이 둘은 계좌 `holdTotal`·카드 `usage` 등식의 **구성 요소**이므로(BR-04·05), 홀딩·한도를 바꾸는 모든 전이가 **같은 커밋에서**(E1) 이 필드도 갱신해야 한다. 갱신을 빠뜨리면 등식이 깨지고 **BR-41 대사가 M9·M10으로 잡는다.**
+> ★ **`heldAmount`·`limitContribution`이 전이마다 함께 움직인다.** 이 둘은 계좌 `holdTotal`·카드 `usage` 등식의 **구성 요소**이므로(BR-04·05), 홀딩·한도를 바꾸는 모든 전이가 **같은 커밋에서** 이 필드도 갱신해야 한다. 갱신을 빠뜨리면 등식이 깨지고 **BR-41 대사가 M9·M10으로 잡는다.**
+>
+> ⚠️ **경계는 전이마다 다르다** — 해제·복원 전이(T4·T5·T6·T7·T13)는 **E1**, **부분 매입(T8·T9)의 한도 복원은 E2**다. *"모든 전이가 E1"* 이라고 적었던 것이 R8 S3이 잡은 결함이다. 매입은 배치·미수와 함께 커밋되므로 E1일 수 없다.
+>
+> ★ **한도를 직접 감액하지 않는다.** `Card.restoreLimit`·`Account.restoreAccountLimit`을 부른다 — 기준일 불일치는 무시하고 `usage` 미만으로는 내려가지 않는 **가드가 그 조작에 있다**. 직접 감액하면 같은 가드가 두 자리에 생기고, 8/1 승인을 8/4에 부분 매입할 때 `dailyUsage`가 **음수**가 되어 한도가 부풀 수 있다 (R8 S8).
 
 > ★ **미수는 이 표에 없다.** 매입 시 부족분은 `Receivable` 한 건이 되고(BR-20), 그 회수·소멸·보류는 **미수 자신의 상태 머신**이 통제한다 (`receivable.md` · DC-001). 승인이 회수액을 필드로 들면 그것이 **다시 합계 필드**가 되어 미수와 어긋난다.
 >
