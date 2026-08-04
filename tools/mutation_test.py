@@ -31,7 +31,7 @@ MUT = [
  ("집계 선언 불일치 — 선언 수를 1 줄인다", "product/01-business-rules.md",
   "AUTO:count", None, "R7 U8"),
  ("종수 선언 불일치 — 8종을 7종으로", "domain/state-machines/README.md",
-  "**8종 작성**", "**7종 작성**", "R8 K13"),
+  "8종 작성", "7종 작성", "R8 K13"),
  ("부수 효과 `〃` 주입", "domain/aggregates/receivable.md",
   None, None, "R1 C1"),
  ("기준소스의 없는 불변식 참조 — 계좌 RC-9", "product/01-business-rules.md",
