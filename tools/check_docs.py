@@ -114,8 +114,7 @@ for p in sorted(d.AGG.glob("*.md")):
     t = body(p)
     DEFINED[p.stem] = set(re.findall(r"\| \*{0,2}(INV-\d+|RC-\d+|POST-\d+|PRE-\d+)\*{0,2} \|", t))
 stem_of = {ko: f[:-3] for c, (ko, f) in idx.items()}
-for p in TARGET:
-    if p.stem not in DEFINED: continue
+for p in WIDE:
     for n, line in enumerate(body(p).splitlines(), 1):
         for ko, num in re.findall(r"(계좌|카드|승인|미수|배치|정산|전표|불일치|멱등|예약)\s*((?:INV|RC)-\d+)", line):
             tgt = stem_of.get(ko) or {"배치":"capture-batch","예약":"reversal-tombstone","멱등":"idempotency-record"}.get(ko)
@@ -129,7 +128,7 @@ for p in TARGET:
                 if m2.group(1) in DEFINED and num not in DEFINED[m2.group(1)]:
                     bad("⑨", f"{p.relative_to(ROOT)}:{n} {m2.group(1)}.md {num} — 정의가 없다")
                 continue
-            if p.parent.name == "aggregates" and num not in DEFINED[p.stem]:
+            if p.parent.name == "aggregates" and p.stem in DEFINED and num not in DEFINED[p.stem]:
                 bad("⑨", f"{p.relative_to(ROOT)}:{n} {num} — 이 문서에 정의가 없다")
 
 # ── ⑩ 종수 선언 vs 실제 파일 수
