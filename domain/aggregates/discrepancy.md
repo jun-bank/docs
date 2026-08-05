@@ -19,7 +19,7 @@
 
 | 필드 | 타입 | 뜻 |
 |---|---|---|
-| `type` | `DiscrepancyType` | M1·M2·M4~**M15** (BR-09) |
+| `type` | `DiscrepancyType` | M1·M2·M4~**M16** (BR-09) |
 | `scope` | `ReconciliationScope` | **외부 대사**(BR-30) / **내부 대사**(BR-41) |
 | `subject` | `SubjectRef` | 대상 (상관 식별자 · 파일·레코드 ID · 계정과목 등) |
 | `firstDetectedOn` | `BusinessDate` | **최초** 발견 영업일 |
@@ -58,11 +58,12 @@
 | **M9** 홀딩 정합 상이 | **내부** | 계좌 `holdTotal` ≠ Σ(승인 `heldAmount`) — `subject` = 계좌ID (BR-04·41) |
 | **M10** 카드 한도 정합 상이 | **내부** | 카드 `usage` ≠ Σ(승인 `limitContribution`) — `subject` = (카드ID, 기준일) (BR-05·41) |
 | **M11** 계좌 한도 정합 상이 | **내부** | 계좌 `dailyUsage` ≠ Σ(승인 `limitContribution`) — `subject` = (계좌ID, 기준일) (BR-44·41) |
-| **M12** 잔액-원장 상이 | **내부** | 계좌 `balance` ≠ 그 계좌의 **고객예금 보조부 잔액** — `subject` = (계좌ID, 영업일) (BR-41) |
+| **M12** 잔액-원장 상이 | **내부** | ★ **마감 스냅샷** `balance` ≠ 그 계좌의 **고객예금 보조부 잔액** — `subject` = (계좌ID, 영업일) (BR-41·52) |
 
 | **M13** 입금 멱등 충돌 | **내부** | 같은 `(key, operation)`에 다른 요청 지문 — `subject` = (key, operation). ★ **적재 주체가 대사 배치가 아니라 `DepositConflict` 이벤트다** (BR-29·38) |
-| **M14** 미수-원장 상이 | **내부** | Σ(그 계좌 미수 `outstanding()`) ≠ 미수금 보조부 잔액 — `subject` = (계좌ID, 영업일) (BR-41) |
+| **M14** 미수-원장 상이 | **내부** | ★ **마감 스냅샷** `receivableOutstanding` ≠ 미수금 보조부 잔액 — `subject` = (계좌ID, 영업일) (BR-41·52) |
 | **M15** 정산 합계 상이 | **내부** | 정산 합계 ≠ Σ(그 영업일 `settledBusinessDate` 승인들) — `subject` = 영업일 (BR-21·41) |
+| **M16** 드레인 미완 | **내부** | 커트오프 상한 내 Outbox 전달 미완 — `subject` = 영업일 (BR-52). ★ **대사를 실행하지 못했다는 사실**이 적재된다 |
 
 > ★ **M14가 없으면 `subjectId`를 들기만 하고 안 쓴다** — 비용은 치르고 보호는 없는 상태다.
 > 잡는 것: 미수 **발생·회수·소멸 중 하나만 기표**된 경우 · **회수 이중 기표**(R9 T3 유형) ·
