@@ -91,7 +91,7 @@ calculate() 를 N회 실행 → netAmount 동일   ← 멱등
 | 이벤트 | 코드명 | 발생 | 담는 것 | 구독 |
 |---|---|---|---|---|
 | 영업일 마감됨 | `BusinessDateClosed` | `close()` | `businessDate` | C3 결제 |
-| 정산 완료됨 | `SettlementCompleted` | `calculate()` | `businessDate`, **`captureTotal`** · **`refundTotal`** · **`netAmount`** | **C5 원장** · C3 결제 |
+| 정산 완료됨 | `SettlementCompleted` | `calculate()` | `businessDate`, **`captureTotal`** · **`refundTotal`** · **`netAmount`** · ★ **`settledAuthorizationIds`**(그 영업일에 반영된 승인 목록) | **C5 원장** · ★ **C3 결제**(R11 — `markSettled(businessDate)` 호출용) |
 | 정산 실패됨 | `SettlementFailed` | `fail()` | `businessDate`, `retryCount`, 사유 | **C6 대사** · 운영 |
 
 > ⚠️ **이 절이 없었다** (R10 ⑮). 조작 표의 이벤트 열에 이름만 있고 **무엇을 싣는지가 어디에도 없어서**,

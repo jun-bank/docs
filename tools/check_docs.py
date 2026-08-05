@@ -281,6 +281,50 @@ for p_ in sorted(d.AGG.glob("*.md")):
                 bad("⑱", f"{p_.relative_to(ROOT)} ③ 예외의 `{k}`가 미완이다 — "
                          f"세 칸이 채워지지 않으면 ③을 고를 수 없다 (04 §4)")
 
+# ── ⑲ 컨텍스트 ↔ 배포 단위 커버리지 (ADR backstop)
+#    ADR-001·004가 C7 인증을 어디에도 배정하지 않았다 (Phase 3 리뷰 D8).
+ADRD = ROOT/"architecture/adr"
+if ADRD.exists():
+    cm = (ROOT/"domain/context-map.md").read_text()
+    ctxs = set(re.findall(r"^\| \*\*(C\d+)\*\* \|", cm, re.M))
+    live = [p_ for p_ in sorted(ADRD.glob("*.md"))
+            if not re.search(r"- 상태:.*대체됨", p_.read_text())]
+    dep = [p_ for p_ in live if "배포 단위" in p_.read_text().split("\n")[0]]
+    for p_ in dep:
+        t = p_.read_text()
+        # 배포 구조 블록만 본다 — 본문 어디든 언급되면 통과하던 약점을 막는다
+        blocks = [b for b in re.findall(r"```(.*?)```", t, re.S) if "[" in b]
+        if not blocks: bad("⑲", f"{p_.name} 에 배포 구조 블록이 없다"); continue
+        placed = set(re.findall(r"\b(C\d+)\b", "\n".join(blocks)))
+        for c in sorted(ctxs - placed):
+            bad("⑲", f"{p_.name} 배포 단위 ADR에 {c}가 배정돼 있지 않다 "
+                     f"(context-map에는 있다)")
+
+# ── ⑳ 이벤트 구독자 ↔ 관계 (ADR backstop)
+#    C4→C3 역방향이 컨텍스트 맵에 없어 Phase 3 치명 T1·T3이 났다.
+CTXOF = {"Account":"C1","Receivable":"C1","DepositReceipt":"C1","DailySnapshot":"C1",
+         "Card":"C2","Authorization":"C3","ReversalTombstone":"C3",
+         "IdempotencyRecord":"C3","CaptureBatch":"C3","Settlement":"C4",
+         "JournalEntry":"C5","Discrepancy":"C6"}
+KO2C = {"뱅킹":"C1","카드":"C2","결제":"C3","정산":"C4","원장":"C5","대사":"C6"}
+rel = set()
+for m in re.finditer(r"^\| \*\*R\d+\*\* \| \*{0,2}★? ?(C\d)[^|]*\| \*{0,2}★? ?(C\d)", 
+                     (ROOT/"domain/context-map.md").read_text(), re.M):
+    rel.add((m.group(1), m.group(2)))
+for p_ in sorted(d.AGG.glob("*.md")):
+    if p_.name == "README.md": continue
+    code = next((c for c,(ko,f) in idx.items() if f == p_.name), None)
+    src = CTXOF.get(code)
+    if not src: continue
+    for hdr, rows in d._rows(body(p_), lambda c: any("구독" in h for h in c)):
+        si = next(i for i,h in enumerate(hdr) if "구독" in h)
+        for r in rows:
+            if si >= len(r) or "아님" in r[si] or "없음" in r[si]: continue
+            for ko, dst in KO2C.items():
+                if ko in r[si] and dst != src and (src, dst) not in rel:
+                    bad("⑳", f"{p_.name} 이벤트가 {src}→{dst} 로 가는데 "
+                             f"context-map에 그 관계가 없다")
+
 # ── ⑫ 열린 의문 색인 == 각 상태 머신 문서의 의문 ID (양방향)
 SM = ROOT/"domain/state-machines"
 docq = set()
