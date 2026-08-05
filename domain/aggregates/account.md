@@ -120,11 +120,14 @@
 AccountDailyClose(accountId, businessDate, closingBalance, closingReceivable)
 
 거래 귀속 영업일 = B (BR-14)
-  행(accountId, B) 이 없으면
-      가장 최근 (businessDate ≤ B) 행의 값으로 만든다  (없으면 0)
-  조작 반영 후
-      closingBalance    ← balance
-      closingReceivable ← Σ(이 계좌 미수들의 outstanding())   ★ 정본에서 매번 파생
+  ① 행(accountId, B) 이 없으면
+        가장 최근 (businessDate ≤ B) 행의 값으로 만든다 (없으면 0)
+  ② 조작 반영 후
+        closingBalance    ← ★ 그 행 시점 잔액 (아래 ③이 보정한다)
+        closingReceivable ← ★ 그 행 시점 미수 합계
+  ③ ★ 소급 보정 — businessDate > B 인 이 계좌의 모든 행에 Δ를 더한다
+        closingBalance    += Δ잔액
+        closingReceivable += Δ미수
 ```
 
 > ★ **왜 이렇게 하나**: `balance`는 **귀속 영업일을 구분하지 않는 누적 현재값**이라
@@ -137,6 +140,10 @@ AccountDailyClose(accountId, businessDate, closingBalance, closingReceivable)
 > D일 마감값은 **D+1 첫 거래가 와야** 확정되는데 대사는 **D일 마감 직후** 돈다 —
 > ★ **구조적으로 못 맞춘다.** 행으로 두면 **D일 행과 D+1 행이 따로 서고**
 > D+1 거래가 D일 값을 덮지 않는다.
+>
+> ⚠️ **③ 소급 보정이 필요한 이유**: 늦게 도착한 과거 귀속 거래(BR-06 D+1 반영)는
+> **그 영업일 이후의 모든 마감 값을 바꾼다.** `closingBalance ← balance` 로 현재 잔액을
+> 복사하면 **그 행도 틀리고 뒤의 행도 안 고쳐진다** — 두 영업일이 동시에 오염된다.
 >
 > ⚠️ **거래가 없는 계좌는 행이 안 생긴다.** 대사가 *"가장 최근 (businessDate ≤ 대상 영업일)"* 을
 > 읽으므로 자동으로 맞는다.

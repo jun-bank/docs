@@ -127,6 +127,8 @@ settlement/  ledger/          ← 위성 2 (배포 2·3)
 core:banking      → core:shared 만 의존
 core:card         → core:shared 만 의존
 core:payment      → core:shared · core:banking(port) · core:card(port)
+core:auth         → core:shared · core:banking(port) · core:payment(port)      C7 (R4 동기)
+core:reconciliation → core:shared · 위 전부의 (port)  ★ 읽기만 — 쓰기 의존 없음  C6 (M-6)
 ```
 
 **`port/`를 별도 빌드 모듈로 뺀다.** 그러면 `core:payment`가 `core:banking:port`에는 의존하되

@@ -60,6 +60,8 @@ MUT = [
   "`AccountDailyClose.closingBalance`**(가장 최근", "`closedBalance`**(가장 최근", "㉓"),
  ("★ 대체된 ADR을 정본처럼 참조", "architecture/adr/ADR-002-module-structure.md",
   "★ **ADR-010**이 **실시간 코어**", "★ **ADR-004**가 **실시간 코어**", "㉒"),
+ ("★ 규칙 ID 중복 정의", "architecture/adr/ADR-013-timeout-hierarchy.md",
+  "| **T-13** |", "| **T-12** |", "㉔"),
 ]
 
 def run(tree):

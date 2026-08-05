@@ -385,6 +385,15 @@ for p_ in sorted(ROOT.rglob("*.md")):
             if f_ in line and "초안" not in line and "구 표현" not in line and "~~" not in line:
                 bad("㉓", f"{rel}:{ln} 폐기된 필드 `{f_}` 잔존 → {repl}")
 
+# ── ㉔ 규칙 ID 유일성 (Phase 3 마감 재리뷰 #10 — S-19가 본문에 두 번 들어갔다)
+for p_ in sorted((ROOT/"architecture/adr").glob("ADR-*.md")):
+    body = p_.read_text().split("## 변경 이력")[0]
+    ids = re.findall(r"^\| \*\*([A-Z]{1,3}-\d+[a-z]?)\*\* \|", body, re.M)
+    seen = {}
+    for i_ in ids: seen[i_] = seen.get(i_, 0) + 1
+    for i_, n_ in sorted(seen.items()):
+        if n_ > 1: bad("㉔", f"{p_.name} 규칙 ID {i_} 가 {n_}번 정의됐다")
+
 if FAIL:
     print(f"실패 {len(FAIL)}건\n" + "\n".join("  " + x for x in FAIL)); sys.exit(1)
 print(f"통과 — 애그리게이트 {len(idx)} · 조작 {len(canon)} · 경계 {len(decl)}")

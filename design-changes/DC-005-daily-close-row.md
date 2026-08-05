@@ -103,12 +103,35 @@ AccountDailyClose            Account 애그리게이트 안의 엔티티 (C1 소
 
 ```
 거래 귀속 영업일 = B (BR-14)
-  행(accountId, B) 이 없으면
-      가장 최근 (businessDate ≤ B) 행의 값으로 만들고 (없으면 0)
-  조작 반영 후
-      closingBalance    ← balance
-      closingReceivable ← Σ(이 계좌 미수들의 outstanding())   ★ 정본에서 매번 파생
+  ① 행(accountId, B) 이 없으면
+        가장 최근 (businessDate ≤ B) 행의 값으로 만든다 (없으면 0)
+  ② 조작 반영 후
+        closingBalance    ← ★ 그 행 시점 잔액 (아래 ③이 보정한다)
+        closingReceivable ← ★ 그 행 시점 미수 합계
+  ③ ★ 소급 보정 — businessDate > B 인 이 계좌의 모든 행에 Δ를 더한다
+        closingBalance    += Δ잔액
+        closingReceivable += Δ미수
 ```
+
+> ★ **③이 없으면 늦게 도착한 거래가 두 영업일을 동시에 오염시킨다** (Phase 3 마감 재리뷰 치명1):
+>
+> ```
+> D1 마감 잔액 100
+> D2 입금 +20        → 현재 잔액 120 · D2 행 120
+> D3 에 늦은 D1 매입 −30 도착
+>
+> ★ closingBalance ← balance 로 하면 D1 행에 현재 잔액 90 을 복사한다
+>    올바른 값   D1 = 70 · D2 = 90
+>    실제 값     D1 = 90 · D2 = 120
+>    → D1 은 +20, D2 는 +30 틀린다
+> ```
+>
+> **늦은 거래는 그 영업일 이후 전부를 바꾼다** — 마감 잔액의 정의가 그렇다.
+> `closingReceivable`도 같다(D2 이후 발생·회수된 미수가 D1 값에 섞인다).
+>
+> ⚠️ **③은 Δ 누적이 아니다** — H-6이 걷어낸 것은 *"정본을 안 읽고 자기 값에 더하는 것"* 이고,
+> 이것은 **이미 확정된 과거 값에 뒤늦은 사실을 반영**하는 보정이다.
+> 대상 행 수는 **BR-06(D+1 반영)이 상한을 준다** — 보통 1~2행이다.
 
 ### 대사는 무엇을 읽나
 
@@ -165,7 +188,7 @@ M14 좌변  = 〃                                          closingReceivable
 | **N-1** | `account.md` | `closedBalance`·`lastClosedBusinessDate` **폐기** → `AccountDailyClose` 엔티티 |
 | **N-2** | `receivable.md` | 회수·소멸이 **계좌의 그날 행**을 갱신한다 |
 | **N-3** | `discrepancy.md` | M12·M14 좌변을 **행 기준**으로 |
-| **N-4** | ADR-011 | v0.2 — §5의 *"미수는 `incurredBusinessDate`를 이미 든다"* **삭제** |
+| **N-4** | ADR-011 | v0.2 — §5의 *"미수는 `incurredBusinessDate`를 이미 든다"* 를 ★ **규범 문장에서 제거하고 반례 설명으로 보존** |
 | **N-5** | `aggregates/README.md` | 락 순서에 **그날 행**을 넣는다(계좌와 같은 자리) |
 
 ---

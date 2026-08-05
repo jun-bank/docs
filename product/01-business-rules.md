@@ -606,7 +606,7 @@
 | M12 | **잔액-원장 상이** | 계좌 `AccountDailyClose.closingBalance`(가장 최근 `businessDate ≤` 대상 영업일 · DC-005) ≠ 그 계좌의 **고객예금 보조부 잔액** — **내부 · 계좌 단위** (BR-41) |
 | M13 | **입금 멱등 충돌** | 같은 `(key, operation)`에 **다른 요청 지문** — 외부 입금원·운영자 지시가 어긋났다. ★ **대사 배치가 아니라 `DepositConflict` 이벤트가 적재한다** (BR-29 · BR-38) |
 | M14 | **미수-원장 상이** | 계좌 `AccountDailyClose.closingReceivable`(〃 · DC-005) ≠ 그 계좌의 **미수금 보조부 잔액** — **내부 · 계좌 단위** (BR-41) |
-| M15 | **정산 합계 상이** | 정산 `captureTotal` ≠ Σ(그 영업일 `settledBusinessDate` 승인의 `capturedAmount`), 또는 `refundTotal` ≠ Σ(그 영업일 `refundedTotal` 증가분) — **내부** (BR-21 · BR-41) |
+| M15 | **정산 합계 상이** | 정산 `captureTotal` ≠ Σ(그 영업일 `settledBusinessDate` 승인의 `capturedAmount`), 또는 `refundTotal` ≠ Σ(그 영업일 `refundedTotal` 증가분) — **내부** (BR-21 · BR-41) · ★ **AND** 그 영업일에 매입 반영된 승인 중 `settledBusinessDate = null` 인 건수 = 0 (누락 축 — 이 좌변은 **E2 커밋이 직접 쓴 사실**이라 C3 집계 패스를 안 거친다) |
 | M16 | **드레인 미완** | 커트오프 상한 내에 Outbox 전달이 완료되지 않았다 **또는 `DLQ_UNRESOLVED`가 남아 있다** — **내부** (BR-52). ★ 대사를 **실행하지 못했다**는 사실 자체가 적재된다 |
 | M17 | **이벤트 전달 실패(DLQ)** | Outbox 릴레이 재시도 상한 초과로 격리됐다 — `subject` = **(영업일, 계좌ID, 이벤트 타입, outbox 순번)**. 계좌ID 없는 이벤트는 계좌ID 자리에 **"파티션 0"** — **내부** (ADR-014 O-13). ★ **유실이 아니라 정체**이며, 사람이 원인을 봐야 재투입된다 |
 | M11 | **계좌 한도 정합 상이** | 계좌 `dailyUsage` ≠ Σ(승인 `limitContribution`) — **내부** (BR-44 · BR-41) |
