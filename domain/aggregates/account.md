@@ -266,7 +266,7 @@ M14 좌변 = anchor.receivableOutstanding + Σ(receivableDelta[anchor < bd ≤ D
 | 출금됨 | `Withdrawn` | `capture()` | **`accountId`**, ★ **`withdrawnAmount`(계좌에서 실제 나간 돈 — 매입액이 아니다)**, 영업일 | **C5 원장** |
 | 입금됨 | `Deposited` | `deposit()` | **`accountId`**, **`receivedAmount`(총 유입액)**, **`recoveredAmount`(미수 회수분)**, **`creditedAmount`(잔액 증가분)**, 입금식별자, 영업일 | **C5 원장** |
 | 환불 입금됨 | **`RefundCredited`** | `refund()` | **`accountId`**, 회수분, 잔액 증가분, 원거래 | ⚠️ **원장 아님** — 승인 `Refunded`가 이미 기표한다 (이름도 C3 `Refunded`와 충돌했다) |
-| 입금 정정됨 | `DepositReversed` | `reverseDeposit()` | **`accountId`**, **`amount`(정정 총액)** · **`recoveredFromBalance`(잔액에서 회수한 몫)** · **`receivableIncurred`(부족분)**, `sourceRef`, 사유, **운영자**(BR-57) | **C5 원장** |
+| 입금 정정됨 | `DepositReversed` | `reverseDeposit()` | **`accountId`**, **`amount`(정정 총액)** · **`recoveredFromBalance`(잔액에서 회수한 몫)** · **`receivableIncurred`(부족분)**, `sourceRef`, 사유 — ★ **행위자는 싣지 않는다**(자금 이벤트 = 원장 언어. 행위자는 감사 수집 AD-2가 나른다 — 리뷰 L-03) | **C5 원장** |
 | 계좌 한도 사용됨 | `AccountLimitUsed` | `useAccountLimit()` | **`accountId`**, 금액, 기준일 | — (같은 트랜잭션) |
 | 계좌 한도 복원됨 | `AccountLimitRestored` | `restoreAccountLimit()` | **`accountId`**, 금액, 기준일 | — (같은 트랜잭션) |
 | 미수 차단 해제됨 | `ReceivableBlockLifted` | `liftReceivableBlock()` | **`accountId`**, **운영자** | 운영자 |
