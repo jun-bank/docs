@@ -11,22 +11,22 @@
 | UC-02 | [잘못 반영된 입금을 정정한다](UC-02-reverse-deposit.md) | 운영자 2인 (BR-56 ①) | E5 | 검토대기 |
 | UC-03 | [내 잔액·거래를 조회한다](UC-03-view-balance-transactions.md) | 고객 | 조회 | 검토대기 |
 | UC-04 | [카드 분실을 신고한다](UC-04-report-lost-card.md) | 고객 ∪ 운영자 담당자 | — (상태 전이) | 확정 |
-| UC-05 | 카드를 해지한다 | 고객 | — | 작성중 |
-| UC-06 | 한도를 변경한다 | 고객 ∪ 운영자 담당자 | — | 작성중 |
-| UC-07 | 타행 이체로 입금받는다 | 입금원(시스템 — 고객 대리) | E3 | 작성중 |
-| UC-08 | 결제를 취소한다 | 매입사(시스템) | E1 계열 | 작성중 |
-| UC-09 | 응답 유실 승인을 망취소한다 | 매입사(시스템) | E1 계열 | 작성중 |
-| UC-10 | 매입 파일로 청산받는다 | 매입사(시스템) | E2 | 작성중 |
-| UC-11 | 취소 레코드로 환불을 확정한다 | 매입사(시스템 — 소지자 대리) | E4 | 작성중 |
-| UC-12 | 조사 대상을 보류/해제한다 | 운영자 담당자 | — | 작성중 |
-| UC-13 | 미수 계좌의 승인 차단을 해제한다 | 운영자 2인 (BR-56 ②) | — | 작성중 |
-| UC-14 | 보류 격리 매입을 재처리로 승격한다 | 운영자 2인 (BR-56 ③) | E2 | 작성중 |
-| UC-15 | 실패한 정산을 강제 재개한다 | 운영자 2인 (BR-56 ④ — R15) | — | 작성중 |
-| UC-16 | 원장 오기표를 역분개로 정정한다 | 운영자 2인 (BR-56 ⑤ — R15) | — | 작성중 |
-| UC-17 | 불일치를 조사하고 처리한다 | 운영자 담당자 | — | 작성중 |
-| UC-18 | 대사를 수동 실행한다 | 운영자 담당자 (전사) | — | 작성중 |
-| UC-19 | DLQ 이벤트를 재투입한다 | 운영자 담당자 (전사) | — | 작성중 |
-| UC-20 | 감사 기록을 조회한다 | 운영자 책임자 | 조회 | 작성중 |
+| UC-05 | [카드를 해지한다](UC-05-terminate-card.md) | 고객 | — | 초안 (계약 블록 후속) |
+| UC-06 | [한도를 변경한다](UC-06-change-limit.md) | 고객 ∪ 운영자 담당자 | — | 초안 (계약 블록 후속) |
+| UC-07 | [타행 이체로 입금받는다](UC-07-receive-deposit.md) | 입금원(시스템 — 고객 대리) | E3 | 초안 (계약 블록 후속) |
+| UC-08 | [결제를 취소한다](UC-08-void-payment.md) | 매입사(시스템) | E1 | 초안 (계약 블록 후속) |
+| UC-09 | [응답 유실 승인을 망취소한다](UC-09-network-cancel.md) | 매입사(시스템) | E1 / 예약 기록은 경계 없음 | 초안 (계약 블록 후속) |
+| UC-10 | [매입 파일로 청산받는다](UC-10-capture-settlement-file.md) | 매입사(시스템) | E2 | 초안 (계약 블록 후속) |
+| UC-11 | [취소 레코드로 환불을 확정한다](UC-11-refund-via-cancel-record.md) | 매입사(시스템 — 소지자 대리) | E4 | 초안 (계약 블록 후속) |
+| UC-12 | [조사 대상을 보류/해제한다](UC-12-freeze-for-investigation.md) | 운영자 담당자 | — | 초안 (계약 블록 후속) |
+| UC-13 | [미수 계좌의 승인 차단을 해제한다](UC-13-lift-receivable-block.md) | 운영자 2인 (BR-56 ②) | — | 초안 (계약 블록 후속) |
+| UC-14 | [보류 격리 매입을 재처리로 승격한다](UC-14-promote-isolated-capture.md) | 운영자 2인 (BR-56 ③) | E2 | 초안 (계약 블록 후속) |
+| UC-15 | [실패한 정산을 강제 재개한다](UC-15-resume-settlement.md) | 운영자 2인 (BR-56 ④ — R15) | — | 초안 (계약 블록 후속) |
+| UC-16 | [원장 오기표를 역분개로 정정한다](UC-16-reverse-journal-entry.md) | 운영자 2인 (BR-56 ⑤ — R15) | — | 초안 (계약 블록 후속) |
+| UC-17 | [불일치를 조사하고 처리한다](UC-17-investigate-discrepancy.md) | 운영자 담당자 | — | 초안 (계약 블록 후속) |
+| UC-18 | [대사를 수동 실행한다](UC-18-run-reconciliation.md) | 운영자 담당자 (전사) | — | 초안 (계약 블록 후속) |
+| UC-19 | [DLQ 이벤트를 재투입한다](UC-19-requeue-dlq.md) | 운영자 담당자 (전사) | — | 초안 (계약 블록 후속) |
+| UC-20 | [감사 기록을 조회한다](UC-20-view-audit-records.md) | 운영자 책임자 | 조회 | 초안 (계약 블록 후속) |
 
 ## 2. 엔드포인트 색인 ★ (BR-58 전수 시험의 입력 — 사람이 세면 빠진다)
 
@@ -43,6 +43,21 @@
 | `GET /me/accounts/{accountId}/transactions` | UC-03 | 고객(본인) | ✅ 목록·페이징 포함 |
 | `POST·DELETE /me/cards/{cardId}/suspension` | UC-04 | 고객(본인) | ✅ |
 | `POST·DELETE /ops/cards/{cardId}/suspension` | UC-04 | 운영자 담당자 | ✅ 스코프 밖 동일 |
+| `POST /me/cards/{cardId}/termination` | UC-05 | 고객(본인) | ✅ · 운영자 경로 없음(BR-55 각주) |
+| `PUT /me·/ops/cards/{cardId}/limits` | UC-06 | 고객(본인) / 담당자 | ✅ |
+| `PUT /me·/ops/accounts/{accountId}/daily-limit` | UC-06 | 〃 | ✅ ⚠️ 조작 정본 부재(UC6-1) |
+| 전문 `DEPOSIT-ADV` [미정] | UC-07 | 시스템(입금원 경로) | ✕ 시스템 채널(C-2) · 거절 형태 UC7-3 |
+| 전문 `CANCEL-REQ` [미정] | UC-08 | 시스템(매입사 경로) | ✕ 사유 구분(C-2 특칙) |
+| 전문 `REVERSAL-REQ` [미정] | UC-09 | 시스템(매입사 경로) | ✕ 〃 · 원승인 없음 = 예약(존재 비누설) |
+| 파일 `CAPTURE-FILE` [미정] | UC-10·11 | 시스템(배치 — 예외 ②) | 해당 없음(응답 상대 없음 — 격리+불일치) |
+| `POST·DELETE /ops/authorizations/{id}/freeze` | UC-12 | 담당자(개설 조직) | ✅ |
+| `POST·DELETE /ops/receivables/{id}/freeze` | UC-12 | 담당자(accountId 귀속) | ✅ |
+| `POST /ops/accounts/{accountId}/receivable-block-lifts` | UC-13 | 담당자(=maker) — BR-56 ② | ✅ |
+| `POST /ops/capture-batches/{fileId}/isolated-records/{recordId}/promotion` | UC-14 | 담당자(=maker) · 전사 — BR-56 ③ | △ 부재만 NOT_FOUND(축 없음 — BR-55 특칙) |
+| (승인 요청 — ④·⑤는 공통 계약 `POST /ops/approval-requests` 사용 · ★ 실행 엔드포인트 없음 — R15 지시 이벤트) | UC-15·16 | 담당자·전사(⑤ 스코프는 UC16-1) | ④ ✕ 영업일 축 / ⑤ ✅ 원전표 |
+| `POST /ops/reconciliations` · `GET /ops/reconciliations/{runId}` | UC-18 | 담당자·전사 / 조회+ | ✕ 영업일 축 |
+| `GET /ops/dlq` · `POST /ops/dlq/{outboxRecordId}/replay` | UC-19 | 조회+ / 담당자 · 전사 | ✕ · ⚠️ payload 노출 범위 [미정] |
+| `GET /ops/audit-records` · `/{recordId}` | UC-20 | **책임자** · 조직 스코프 | ✅ 목록·집계 포함(BR-58 전 형태) |
 
 ## 3. 이벤트 색인 ★ (리뷰 Q-6 — 이벤트도 전수 대상: 축·행위자·S-9)
 
@@ -51,6 +66,9 @@
 | `HoldPlaced` | UC-01 | 자금 — 비포함 ✓ | 불요(내부 이벤트 — 발행 안 됨) | [미정 — 전수 시] |
 | `DepositReversed` | UC-02 | 자금 — 비포함 ✓ (감사 outbox가 나름) | Phase 4 전수 시 (IS-5) | [미정] |
 | `CardSuspended` | UC-04 | **비포함 확정** ✓ (AD-7 ② 확장 — 주체 혼합, 2026-08-05 판정) | 〃 | [미정] |
+| `CardTerminated`(UC-05) · `LimitChanged`(UC-06) · `Voided`·`Reversed`·tombstone 2종(UC-08·09) · 배치 5종·`Captured`·`Withdrawn`(UC-10) · `Refunded`·`RefundCredited`(UC-11) · `Deposited`·`ReceivableRecovered`·`DepositConflict`(UC-07) | 각 UC | **비포함**(자금/시스템/주체 혼합 — AD-7 ②) · ⚠️ `CardTerminated`·`JournalReversed`는 [판정 대기 — 보수 비포함] | 〃 | [미정] |
+| `Frozen`·`Unfrozen`·`ReceivableFrozen/Unfrozen`(UC-12) · `ReceivableBlockLifted`(UC-13) · `IsolatedRecordPromoted`(UC-14) · `DiscrepancyInvestigating/Resolved`(UC-17) · `SettlementResumedByOperator`(UC-15) | 각 UC | **포함 ✓**(AD-7 ① 운영자 전용 — 정본 일치) | 〃 | [미정] |
+| R15 지시 이벤트 2종 (C8→C4·C5 — 이름·payload [미정]) | UC-15·16 | 포함(운영 — maker·checker 실림, AD-6) | 지시 ID | [미정] |
 
 ## 4. 도출표 ★ (전수성의 근거 — 조작 62 · 운영자 규칙 · SM 전이 → 판정)
 
@@ -94,6 +112,7 @@
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v0.4 | 2026-08-05 | **전수 통합 (U-3)** — 대장 16행 확정·엔드포인트 15행·이벤트 3묶음 행 추가(워커 4군 packet 통합 — 같은 커밋 등재 C-6). 전문·파일 인터페이스 명칭은 전부 [미정 — 계약 전수에서 일괄] |
 | v0.3 | 2026-08-05 | **듀얼 1패스 반영** — 이벤트 색인 신설(Q-6) · BR-56 공통 계약 정본 위치 표시(U-7) · 상태줄 정합(F-5) · ★ v0.1 이력의 "UC-01 등재"는 그 시점 사실이고 v0.2 갱신(UC-02~04·엔드포인트 7행)이 이력 없이 지나갔다(F-7) — 이 행이 그 정정이다 |
 | v0.2 | 2026-08-05 | (이력 누락분 소급 — F-7) UC-02~04 등재 · 엔드포인트 7행 추가 |
 | v0.1 | 2026-08-05 | 색인 신설 — UC-01 등재. 엔드포인트 색인이 QS-08 전수 시험의 입력임을 명시 |
