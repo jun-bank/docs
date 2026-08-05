@@ -78,7 +78,7 @@
 | 조작 | 코드명 | 사전조건 | 사후조건 | 이벤트 |
 |---|---|---|---|---|
 | **기표** | `post(lines, businessDate, sourceEvent)` | INV-1·INV-3·INV-4 · ★ **INV-8**(같은 `sourceEvent` 없음) | 전표 생성. **이미 있으면 아무 일도 하지 않고 기존 전표를 반환**한다 | `JournalPosted` |
-| **역분개** | `reverse(originalId, at, operator)` | 원전표 존재 · 주체 = **운영자** · ★ **승인된 요청 존재**(BR-56 ⑤ — C8 동기 확인, R14. JE3 확정) | **새 전표** 생성 (원전표 불변). `businessDate` = **정정 시점의 영업일** (INV-6) | `JournalReversed` |
+| **역분개** | `reverse(originalId, at, operator)` | 원전표 존재 · 주체 = **운영자** · ★ **승인된 정정 지시 이벤트로만 트리거된다**(BR-56 ⑤ — C8이 승인 완료 시 outbox로 전달, R15. **멱등 키 = 지시 ID**. 원장은 별도 배포라 동기 확인 불가 — ADR-010) | **새 전표** 생성 (원전표 불변). `businessDate` = **정정 시점의 영업일** (INV-6) | `JournalReversed` |
 
 > **수정·삭제 조작이 없다.** append-only가 조작 목록으로 강제된다 (BR-10).
 
