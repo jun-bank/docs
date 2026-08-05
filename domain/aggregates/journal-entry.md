@@ -69,6 +69,7 @@
 | **INV-5** | `reversalOf`가 있으면 원전표와 **차대가 반대**이고 금액이 같다 | BR-10 | 역분개가 상쇄하지 못함 |
 | **INV-6** | **역분개의 `businessDate`는 정정 시점의 영업일**이며, 원전표의 영업일을 따르지 않는다 | BR-47 | 마감된 영업일의 순액이 바뀐다 |
 | **INV-7** | **고객예금·미수금 항목은 `subjectId`가 반드시 있다** | BR-41 | 계좌별 대사(**M12**·**M14**)가 불가능해지고 **상계가 불일치를 은폐**한다 |
+| **INV-8** | ★ **같은 `sourceEvent`로 두 번 기표하지 않는다** (유일) | BR-40 · ADR-005 O-2 | ★ **중복 전달이 그대로 이중 기표**가 된다. Outbox는 **at-least-once**(O-1)이므로 재전달이 정상 동작인데, 이 불변식이 없으면 `Withdrawn(40,000)` 재전달 시 고객예금 −40,000·미지급금 +40,000이 **더 생기고 미지급금 과다는 어떤 M 유형도 안 잡는다** | `post()` |
 
 ---
 
@@ -76,7 +77,7 @@
 
 | 조작 | 코드명 | 사전조건 | 사후조건 | 이벤트 |
 |---|---|---|---|---|
-| **기표** | `post(lines, businessDate, sourceEvent)` | INV-1·INV-3·INV-4 | 전표 생성 | `JournalPosted` |
+| **기표** | `post(lines, businessDate, sourceEvent)` | INV-1·INV-3·INV-4 · ★ **INV-8**(같은 `sourceEvent` 없음) | 전표 생성. **이미 있으면 아무 일도 하지 않고 기존 전표를 반환**한다 | `JournalPosted` |
 | **역분개** | `reverse(originalId, at)` | 원전표 존재 | **새 전표** 생성 (원전표 불변). `businessDate` = **정정 시점의 영업일** (INV-6) | `JournalReversed` |
 
 > **수정·삭제 조작이 없다.** append-only가 조작 목록으로 강제된다 (BR-10).
