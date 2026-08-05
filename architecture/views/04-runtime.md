@@ -48,7 +48,7 @@
     │    ★ at.영업일 == limitBasisDate 일 때만 (DC-003)          │
     │ ④ 계좌 출금 — 부족분은 Receivable.incur                    │
     │ ⑤ CaptureBatch.markProcessed / promoteIsolated             │
-    │ ⑤'★ AccountDailyClose(귀속 영업일) upsert (DC-005)         │
+    │ ⑤'★ AccountDailyMovement(귀속 영업일) upsert (DC-005)         │
     │ ⑥ outbox INSERT — Withdrawn · ReceivableIncurred · Captured│
     └────────────────────── COMMIT ─────────────────────────────┘
                 │
@@ -69,7 +69,7 @@
     │ ④ 계좌 refund — 반환액 입금 + FIFO 회수     │
     │    ★ 반환액 0이어도 부른다 (INV-3 재평가)   │
     │ ⑤ returnedTotal 증가                        │
-    │ ⑤'★ AccountDailyClose upsert (DC-005)       │
+    │ ⑤'★ AccountDailyMovement upsert (DC-005)       │
     │ ⑥ markProcessed (취소 레코드)               │
     │ ⑦ outbox — Refunded · ReceivableWrittenOff  │
     └──────────────── COMMIT ─────────────────────┘
@@ -91,7 +91,7 @@
   │
   └─ ④ 대사 (파티션 병렬 · 코어 안에서 읽기)
          M9·M10·M11        계좌·카드 ↔ 승인      (실시간 값)
-         M12·M14           AccountDailyClose 행 ↔ 원장 보조부
+         M12·M14           AccountDailyMovement 행 ↔ 원장 보조부
          M15               정산 ↔ 승인
          M1~M8             승인 ↔ 매입 ↔ 원장
          → 불일치 적재. ★ 자동 정정 없음 (BR-09)

@@ -54,13 +54,13 @@ Phase 3 리뷰 **T2**: *"드레인은 이벤트를 멈추지 코어 쓰기를 �
 ```
 Account
   balance                  현재 잔액 (지금과 동일)
-  AccountDailyClose 행     ★ 신설 — 영업일별 마감 잔액·미수 (DC-005)
-                             (accountId, businessDate, closingBalance, closingReceivable)
+  AccountDailyMovement 행  ★ 신설 — 영업일별 이동 (DC-006)
+                             (accountId, businessDate, netAmount, receivableDelta)
 
 규칙
   자금을 바꾸는 조작이 들어올 때, 그 거래의 귀속 영업일(BR-14) 행을
     → 없으면 가장 최근 (businessDate ≤ B) 행의 값으로 만들고
-    → 조작 반영 후 closingBalance·closingReceivable 갱신   ← 같은 트랜잭션
+    → 조작 반영 후 netAmount·receivableDelta 에 더하기   ← 같은 트랜잭션
   (같은 트랜잭션 안에서)
 ```
 
@@ -103,7 +103,7 @@ Account
 ④ 두 번째 드레인            ← ★ N-2. 정산이 만든 이벤트를 전달
 ⑤ 대사
      M9·M10·M11·M15   코어 안 — 실시간 값으로 계산
-     M12·M14          AccountDailyClose 행 ↔ 원장 D일 보조부
+     M12·M14          AccountDailyMovement 행 ↔ 원장 D일 보조부
      M1~M8            승인·매입은 코어, 원장 부분만 D일 기준
 ```
 
@@ -117,8 +117,8 @@ Account
 
 | ADR-006의 스냅샷 | 지금 |
 |---|---|
-| `balance` | → ★ **`AccountDailyClose.closingBalance`**(DC-005) |
-| `receivableOutstanding` | → ★ **`AccountDailyClose.closingReceivable`**(DC-005). ⚠️ **초안은 *"실시간 값으로 한다"* 였고 근거를 *"미수는 `incurredBusinessDate`를 이미 든다"* 로 적었는데 — 그 문장이 틀렸다.** `incurredBusinessDate`는 **생긴 날**만 고정하고 `recoveredAmount`·`writtenOffAmount`는 그 뒤로도 변한다(INV-3). **T2가 미수 쪽에 그대로 남아 있었다**(C-2) |
+| `balance` | → ★ **anchor + Σ `netAmount`**(DC-005) |
+| `receivableOutstanding` | → ★ **anchor + Σ `receivableDelta`**(DC-005). ⚠️ **초안은 *"실시간 값으로 한다"* 였고 근거를 *"미수는 `incurredBusinessDate`를 이미 든다"* 로 적었는데 — 그 문장이 틀렸다.** `incurredBusinessDate`는 **생긴 날**만 고정하고 `recoveredAmount`·`writtenOffAmount`는 그 뒤로도 변한다(INV-3). **T2가 미수 쪽에 그대로 남아 있었다**(C-2) |
 | `holdTotal`·`dailyUsage` | → **불필요** (M9·M11이 코어 안) |
 
 > ★ **DS2(기준점은 자기 자신을 검증하지 못한다)가 사라진다.** 마감 행은
@@ -140,7 +140,7 @@ Account
 
 | # | 무엇 | 어디 |
 |---|---|---|
-| **Q-1** | 계좌에 ★ **`AccountDailyClose` 행** 신설 (DC-005 — 초안은 단일 필드였다) | `account.md` |
+| **Q-1** | 계좌에 ★ **`AccountDailyMovement` 행** 신설 (DC-005 — 초안은 단일 필드였다) | `account.md` |
 | **Q-2** | **BR-52 커트오프 순서 개정** — 스냅샷 단계 제거, **두 번째 드레인 추가** | `01-business-rules.md` |
 | **Q-3** | `DailySnapshot` **폐기** | 애그리게이트 12 → 11종 |
 | **Q-4** | M12·M14 비교 대상을 ★ **마감 행**으로 | BR-41 · `discrepancy.md` |

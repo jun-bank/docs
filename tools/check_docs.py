@@ -374,8 +374,11 @@ for num, t in sorted(adopted.items()):
             bad("㉒", f"ADR-{num}이 대체된 ADR-{sn}을 정본처럼 참조: …{ctx.strip()[:70]}…")
 
 # ── ㉓ 폐기된 필드명이 다른 문서에 살아남았나 (DC-005)
-RETIRED = {"closedBalance": "AccountDailyClose.closingBalance (DC-005)",
-           "lastClosedBusinessDate": "AccountDailyClose 행 (DC-005)"}
+RETIRED = {"closedBalance": "AccountDailyMovement (DC-006)",
+           "lastClosedBusinessDate": "AccountDailyMovement (DC-006)",
+           "closingBalance": "netAmount (DC-006)",
+           "closingReceivable": "receivableDelta (DC-006)",
+           "AccountDailyClose": "AccountDailyMovement (DC-006)"}
 for p_ in sorted(ROOT.rglob("*.md")):
     rel = str(p_.relative_to(ROOT))
     if rel.startswith(("design-changes/", "study/", "reference/")): continue

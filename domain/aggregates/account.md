@@ -43,7 +43,8 @@
 | `balance` | `Money` | **계좌잔액** — 확정된 자금 |
 | `holdTotal` | `Money` | **홀딩 합계** — 승인으로 점유된 금액의 총합 |
 | `receivableBlockLifted` | `boolean` | 운영자가 미수 차단을 해제했는가 (BR-45) |
-| **`dailyCloses`** | `AccountDailyClose[]` | ★ **영업일별 마감 행** (DC-005) — 원장 대사 **M12·M14**의 좌변. **자금 조작과 같은 트랜잭션에서 확정**되므로 별도 검증이 필요 없다 |
+| **`movements`** | `AccountDailyMovement[]` | ★ **영업일별 이동 행** (DC-006) — `(businessDate, netAmount, receivableDelta)`. 원장 대사 **M12·M14**의 좌변을 **구성**한다 |
+| **`anchors`** | `AccountBalanceAnchor[]` | ★ **기준점** (DC-006 A-1~A-4) — **성능 최적화일 뿐**이며 없어도 계산된다 |
 | `dailyLimit` | `Money` | **계좌 1일 한도** — 이 계좌의 모든 카드 사용액 합계에 적용 (BR-44) |
 | `dailyUsage` | `LimitUsage` | 계좌 단위 달력일 누적 사용액 (BR-44) |
 
@@ -112,41 +113,37 @@
 
 ---
 
-### 마감을 시각이 아니라 사건으로 — **영업일별 행** ★ (ADR-011 + DC-005)
+### 마감을 시각이 아니라 사건으로 — **이동을 적는다** ★ (ADR-011 + DC-006)
 
-자금을 바꾸는 모든 조작은 **그 거래의 귀속 영업일 행을 같은 트랜잭션에서 갱신한다.**
+자금을 바꾸는 모든 조작은 **그 거래의 귀속 영업일 행에 같은 트랜잭션에서 더한다.**
 
 ```
-AccountDailyClose(accountId, businessDate, closingBalance, closingReceivable)
+AccountDailyMovement(accountId, businessDate, netAmount, receivableDelta)
 
 거래 귀속 영업일 = B (BR-14)
-  ① 행(accountId, B) 이 없으면
-        가장 최근 (businessDate ≤ B) 행의 값으로 만든다 (없으면 0)
-  ② 조작 반영 후
-        closingBalance    ← ★ 그 행 시점 잔액 (아래 ③이 보정한다)
-        closingReceivable ← ★ 그 행 시점 미수 합계
-  ③ ★ 소급 보정 — businessDate > B 인 이 계좌의 모든 행에 Δ를 더한다
-        closingBalance    += Δ잔액
-        closingReceivable += Δ미수
+  netAmount[B]       += 조작 금액          (입금 + · 출금 −)
+  receivableDelta[B] += 미수 증감           (발생 + · 회수 − · 소멸 −)
 ```
 
-> ★ **왜 이렇게 하나**: `balance`는 **귀속 영업일을 구분하지 않는 누적 현재값**이라
-> *"D일까지의 잔액"* 을 사후에 알 수 없다. 마감 후 배치로 뜨면 그 사이 D+1 거래가 섞인다
-> (Phase 3 리뷰 T2 — 20분 창 × 80 TPS = **96,000건 허위 불일치**).
+**대사가 읽는 것**
+
+```
+M12 좌변 = anchor.balance               + Σ(netAmount      [anchor < bd ≤ D])
+M14 좌변 = anchor.receivableOutstanding + Σ(receivableDelta[anchor < bd ≤ D])
+```
+
+> ★ **왜 복사가 아니라 더하기인가** (DC-006): `balance`는 **귀속 영업일을 구분하지 않는
+> 누적 현재값**이라 *"D일까지의 잔액"* 을 사후에 알 수 없다. 그래서 **어딘가에 복사**해야 했는데,
+> **복사 시점을 정하려는 세 번의 시도가 세 번 다 깨졌다**
+> (구 표현 `DailySnapshot` T2 → `closedBalance` 하루 어긋남 → `AccountDailyClose` 역순 귀속 — DC-006 §1).
 >
-> **거래가 스스로 갱신을 트리거**하면 확정이 자금 조작과 같은 트랜잭션 안에서 일어나 시점이 정확하다.
+> **더하기는 순서가 무관하다.** 늦게 도착한 D-1 거래가 D+1에 와도 **그 행에 더하면 끝**이고,
+> 뒤의 행은 손댈 필요가 없다 — **누적합이 자동으로 맞는다.**
 >
-> ⚠️ **왜 필드가 아니라 행인가** (DC-005): 단일 필드는 **값을 하나만 든다.**
-> D일 마감값은 **D+1 첫 거래가 와야** 확정되는데 대사는 **D일 마감 직후** 돈다 —
-> ★ **구조적으로 못 맞춘다.** 행으로 두면 **D일 행과 D+1 행이 따로 서고**
-> D+1 거래가 D일 값을 덮지 않는다.
+> ★ **기준점이 없어도 계산된다**(A-2). 그래서 **T2·DS2가 구조적으로 못 생긴다** —
+> 기준점을 만들려다 깨진 것이 앞의 세 번이었다.
 >
-> ⚠️ **③ 소급 보정이 필요한 이유**: 늦게 도착한 과거 귀속 거래(BR-06 D+1 반영)는
-> **그 영업일 이후의 모든 마감 값을 바꾼다.** `closingBalance ← balance` 로 현재 잔액을
-> 복사하면 **그 행도 틀리고 뒤의 행도 안 고쳐진다** — 두 영업일이 동시에 오염된다.
->
-> ⚠️ **거래가 없는 계좌는 행이 안 생긴다.** 대사가 *"가장 최근 (businessDate ≤ 대상 영업일)"* 을
-> 읽으므로 자동으로 맞는다.
+> ⚠️ **거래가 없는 계좌는 행이 안 생긴다.** Σ 가 0이므로 anchor 값 그대로다.
 
 ---
 
@@ -166,13 +163,13 @@ AccountDailyClose(accountId, businessDate, closingBalance, closingReceivable)
 |---|---|---|---|---|
 | **홀딩 점유** | `hold(amount)` | `amount ≤ availableBalance()` (PRE-1) | `holdTotal` 증가. `balance` 불변 | `HoldPlaced` |
 | **홀딩 해제** | `releaseHold(amount)` | `amount ≤ holdTotal` | `holdTotal` 감소 | `HoldReleased` |
-| **매입 출금** | `capture(captureAmount, heldAmount, restoreLimit)` | `heldAmount ≤ holdTotal` | `holdTotal` **전액 해제** · `balance` 감소 · **미매입분만큼 `Account.restoreAccountLimit(미매입분, at)` 호출**(BR-24 — 직접 감액하지 않는다. 기준일·하한 가드가 그 조작에 있다) · 부족분은 **`Receivable.incur(CAPTURE, …)`** — 전부 **같은 커밋**(E2) · ★ **`AccountDailyClose`(귀속 영업일) `closingBalance ← balance`**(DC-005) | `Withdrawn` |
-| **입금** | `deposit(depositId, amount, recoverable)` | `amount > 0` · ★ **`(depositId, 입금)` 수신 기록이 없음** (E3 — `DepositReceipt`) | **회수 대상 미수들을 FIFO로 회수**(`recoverable` — 보류 제외) 후 **잔여분만** `balance` 증가 (BR-34) · ★ **`AccountDailyClose`(귀속 영업일) `closingBalance ← balance`**(DC-005) | `Deposited` |
-| **환불 입금** | `refund(amount, recoverable)` | `amount ≥ 0` | **입금과 동일** — FIFO 회수 후 잔여만 `balance` 증가 (BR-34). **`amount = 0`도 정상**(미수만 소멸한 환불) · ★ **`AccountDailyClose`(귀속 영업일) `closingBalance ← balance`**(DC-005) | `RefundCredited` |
+| **매입 출금** | `capture(captureAmount, heldAmount, restoreLimit)` | `heldAmount ≤ holdTotal` | `holdTotal` **전액 해제** · `balance` 감소 · **미매입분만큼 `Account.restoreAccountLimit(미매입분, at)` 호출**(BR-24 — 직접 감액하지 않는다. 기준일·하한 가드가 그 조작에 있다) · 부족분은 **`Receivable.incur(CAPTURE, …)`** — 전부 **같은 커밋**(E2) · ★ **`AccountDailyMovement`(귀속 영업일) `netAmount += 조작 금액`**(DC-006) | `Withdrawn` |
+| **입금** | `deposit(depositId, amount, recoverable)` | `amount > 0` · ★ **`(depositId, 입금)` 수신 기록이 없음** (E3 — `DepositReceipt`) | **회수 대상 미수들을 FIFO로 회수**(`recoverable` — 보류 제외) 후 **잔여분만** `balance` 증가 (BR-34) · ★ **`AccountDailyMovement`(귀속 영업일) `netAmount += 조작 금액`**(DC-006) | `Deposited` |
+| **환불 입금** | `refund(amount, recoverable)` | `amount ≥ 0` | **입금과 동일** — FIFO 회수 후 잔여만 `balance` 증가 (BR-34). **`amount = 0`도 정상**(미수만 소멸한 환불) · ★ **`AccountDailyMovement`(귀속 영업일) `netAmount += 조작 금액`**(DC-006) | `RefundCredited` |
 | **계좌 한도 사용** | `useAccountLimit(amount, at)` | PRE-3 | `dailyUsage` 증가 (기준일 리셋 포함) | `AccountLimitUsed` |
 | **계좌 한도 복원** | `restoreAccountLimit(amount, at)` | **`amount ≤ dailyUsage.amount`** (위반 시 거절) | `dailyUsage` 감소. **기준일이 다르면 아무 일도 하지 않는다**(오류 아님 — 카드와 동일) | `AccountLimitRestored` |
 | **미수 차단 해제** | `liftReceivableBlock(operator)` | **미결 미수 존재** | `receivableBlockLifted = true` | `ReceivableBlockLifted` |
-| **입금 정정** | `reverseDeposit(reversalId, originalDepositId, amount)` | ★ **`(reversalId, 정정)` 수신 기록이 없음** · **원입금 레코드 존재**(E5 — `DepositReceipt` INV-1·INV-4) | `balance` 감소. 부족분은 **`Receivable.incur(origin=DEPOSIT_REVERSAL, sourceRef)`** — 원거래 승인이 없으므로 **입금 식별자를 출처로 쓴다**. **멱등 레코드 기록도 같은 커밋**(E5) · ★ **`AccountDailyClose`(귀속 영업일) `closingBalance ← balance`**(DC-005) | `DepositReversed` |
+| **입금 정정** | `reverseDeposit(reversalId, originalDepositId, amount)` | ★ **`(reversalId, 정정)` 수신 기록이 없음** · **원입금 레코드 존재**(E5 — `DepositReceipt` INV-1·INV-4) | `balance` 감소. 부족분은 **`Receivable.incur(origin=DEPOSIT_REVERSAL, sourceRef)`** — 원거래 승인이 없으므로 **입금 식별자를 출처로 쓴다**. **멱등 레코드 기록도 같은 커밋**(E5) · ★ **`AccountDailyMovement`(귀속 영업일) `netAmount += 조작 금액`**(DC-006) | `DepositReversed` |
 
 ### 조작 상세 — `capture()` (BR-18 + BR-20)
 

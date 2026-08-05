@@ -58,10 +58,10 @@
 | **M9** 홀딩 정합 상이 | **내부** | 계좌 `holdTotal` ≠ Σ(승인 `heldAmount`) — `subject` = 계좌ID (BR-04·41) |
 | **M10** 카드 한도 정합 상이 | **내부** | 카드 `usage` ≠ Σ(승인 `limitContribution`) — `subject` = (카드ID, 기준일) (BR-05·41) |
 | **M11** 계좌 한도 정합 상이 | **내부** | 계좌 `dailyUsage` ≠ Σ(승인 `limitContribution`) — `subject` = (계좌ID, 기준일) (BR-44·41) |
-| **M12** 잔액-원장 상이 | **내부** | ★ 계좌 **`AccountDailyClose.closingBalance`**(가장 최근 `businessDate ≤` 대상 영업일 · DC-005) ≠ 그 계좌의 **고객예금 보조부 잔액** — `subject` = (계좌ID, 영업일) (BR-41·52 · ADR-011) |
+| **M12** 잔액-원장 상이 | **내부** | ★ 계좌 **anchor + Σ `netAmount`**(가장 최근 `businessDate ≤` 대상 영업일 · DC-005) ≠ 그 계좌의 **고객예금 보조부 잔액** — `subject` = (계좌ID, 영업일) (BR-41·52 · ADR-011) |
 
 | **M13** 입금 멱등 충돌 | **내부** | 같은 `(key, operation)`에 다른 요청 지문 — `subject` = (key, operation). ★ **적재 주체가 대사 배치가 아니라 `DepositConflict` 이벤트다** (BR-29·38) |
-| **M14** 미수-원장 상이 | **내부** | ★ 계좌 **`AccountDailyClose.closingReceivable`**(〃 · DC-005) ≠ 미수금 보조부 잔액 — `subject` = (계좌ID, 영업일) (BR-41·52) |
+| **M14** 미수-원장 상이 | **내부** | ★ 계좌 **anchor + Σ `receivableDelta`**(〃 · DC-005) ≠ 미수금 보조부 잔액 — `subject` = (계좌ID, 영업일) (BR-41·52) |
 | **M15** 정산 합계 상이 | **내부** | 정산 합계 ≠ Σ(그 영업일 `settledBusinessDate` 승인들) — `subject` = 영업일 (BR-21·41) |
 
 > ★ **M15에 누락 축이 하나 더 있다** (Phase 3 마감 리뷰 M-8): 좌변(정산 합계)과 우변의 선택 키(`settledBusinessDate`)가 **둘 다 C3의 같은 집계 패스에서 나온다** — BR-21이 *정산은 개별 매입을 안 읽는다*고 정했기 때문이다. 그래서 **C3가 승인 한 건을 빠뜨리면 좌·우변에서 동시에 빠져 통과**한다. **AND 조건을 하나 더 둔다**: ★ *그 영업일에 매입 반영된 승인 중 `settledBusinessDate = null` 인 건수 = 0*. 이 좌변은 **E2 커밋이 직접 쓴 사실**이라 집계 패스를 안 거친다.

@@ -88,7 +88,7 @@ graph LR
 | **ADR-010** | C6를 코어에 둔 이유 = §2 |
 | **ADR-009** | 파티션 축 |
 | **ADR-003** | 상태 저장 + 원장 append-only |
-| **ADR-011 · DC-005** | `AccountDailyClose` 영업일별 마감 행 |
+| **ADR-011 · DC-005** | `AccountDailyMovement` 영업일별 이동 행 |
 
 ## 변경 이력
 
