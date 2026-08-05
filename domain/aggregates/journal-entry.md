@@ -79,7 +79,7 @@
 | 조작 | 코드명 | 사전조건 | 사후조건 | 이벤트 |
 |---|---|---|---|---|
 | **기표** | `post(lines, businessDate, sourceEvent)` | INV-1·INV-3·INV-4 · ★ **INV-8**(같은 `sourceEvent` 없음) | 전표 생성. **이미 있으면 아무 일도 하지 않고 기존 전표를 반환**한다 | `JournalPosted` |
-| **역분개** | `reverse(instructionId, originalId, at, operator)` | 원전표 존재 · 주체 = **운영자**(업무 귀속 — 지시 이벤트에 실려 온다) · ★ **승인된 정정 지시 이벤트로만 트리거된다**(BR-56 ⑤ — R15) · ★ **INV-9**(같은 `instructionId` 없음) | **새 전표** 생성 (원전표 불변, ★ **`instructionId` 저장** — INV-9의 유일 키). `businessDate` = **정정 시점의 영업일** (INV-6) | `JournalReversed` |
+| **역분개** | `reverse(instructionId, originalId, at, operator)` | 원전표 존재 · 주체 = **운영자**(업무 귀속 — 지시 이벤트에 실려 온다) · ★ **승인된 정정 지시 이벤트로만 트리거된다**(BR-56 ⑤ — R15) · ★ **INV-9**(같은 `instructionId` 없음) | **새 전표** 생성 (원전표 불변, ★ **`instructionId` 저장** — INV-9의 유일 키). `businessDate` = **정정 시점의 영업일** (INV-6) | `JournalReversed` — ★ **행위자 포함**(AD-7 ①·② 겹침의 ① 우선 — 발생 경로가 운영자 전용. payload = 원전표 ID·새 전표 ID·`instructionId`·**행위자(업무 귀속 maker)** — 2026-08-06 확정) |
 
 > **수정·삭제 조작이 없다.** append-only가 조작 목록으로 강제된다 (BR-10).
 
@@ -277,6 +277,7 @@ Refunded(returned=1)      차) 매입사 미지급금 1 / 대) 고객예금 1   
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v1.5 | 2026-08-06 | `JournalReversed` **행위자 포함 확정**(AD-7 ① 우선 — ADR-017 v0.2. 자금 이벤트지만 발생 경로가 운영자 전용) |
 | v1.5 | 2026-08-05 | **JE3 확정 — 원장 역분개 = BR-56 ⑤ (2인 승인).** `reverse()` 사전조건에 승인된 요청 존재 추가 |
 | v1.4 | 2026-08-05 | **멀티테넌시 B-4** — `reverse`에 **`operator` 인자**(행위자 불명이던 유일한 원장 조작) + ★ **JE3 등재**: 원장 역분개가 BR-56(2인 승인) 대상인가 — 감독규정 제28조 ②가 근거인데 합의된 4조작에 없다. 사용자 확인 대상 |
 | v1.1 | 2026-08-03 | **JE2 확정 — 역분개는 정정 시점 영업일에 귀속**(BR-47) · INV-6 신설 · `reverse()` 인자 정정. §7을 닫힌/열린 의문으로 재편하고 선택지·기각 이유를 남김 |
