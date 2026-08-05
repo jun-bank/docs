@@ -5,7 +5,7 @@
 - 액터: **운영자 2인** — 요청 = 담당자(maker) · 승인 = 책임자(checker) (BR-55 · 같은 사람 불가)
 - 권한 요건: **BR-56 ④** (책임자 승인 조작) · 스코프 = ★ **전사 스코프만** (BR-55 특칙 — 대상이 영업일이라 고객·조직 귀속 축이 없다)
 - 트랜잭션 경계: ★ **E1~E5 아님 — 자금 무이동** (커밋은 둘: ① C8 `consume` + 재개 지시 이벤트 outbox INSERT가 같은 커밋 ② C4 수신측 `resumeByOperator` 커밋 — **R15**, 원자적으로 묶이지 않는다)
-- 관련 규칙: BR-37·52·53·54·55·56·57·58 · Settlement INV-4 · 정산 SM S6·SF1·SF6·SF8·SF10 · ApprovalRequest INV-1~4·A1~A5 · ADR-014 O-13·O-16 · ADR-017 AD-2·5·6·8 (참조만)
+- 관련 규칙: BR-37·52·53·54·55·56·57·58 · Settlement INV-4 · 정산 SM S6·SF1·SF6·SF8·SF10 · ApprovalRequest INV-1~4·A1~A5 · ADR-014 O-13·O-16 · ADR-017 AD-2·5·6·8 (참조만 — F-24)
 
 ## 1. 목표 (한 문장)
 
@@ -22,7 +22,7 @@
 ## 3. 주요 성공 시나리오
 
 1. 담당자 A가 `escalate`로 운영자 목록에 오른 미결 정산을 확인한다 [S5 · BR-53 ④ 통지]
-2. A → C8 `request(정산 강제 재개, businessDate · 사유)` — `PENDING` [A1 · 감사 직접 append]
+2. A → C8 `request(정산 강제 재개, **지시 ID** · businessDate · 사유)` — ★ 지시 ID는 maker가 생성해 요청 인자에 싣는다(UC-16과 통일 — INV-3 검사 대상이 되고, EXPIRED 후 재요청은 새 ID) — `PENDING` [A1 · 감사 직접 append]
 3. 책임자 B → C8 `approve(B)` — **B ≠ A** 검사 → `APPROVED` [A2 · INV-1]
 4. ★ 승인 시점에 C8이 **`consume` + 재개 지시 이벤트 outbox INSERT를 같은 커밋**으로 수행 [A4 ④ 경로 · **R15** · AD-6] — **실행 엔드포인트는 없다**
 5. 릴레이가 지시 이벤트를 C4로 전달 — 계좌ID 없는 이벤트라 **파티션 0** [ADR-014 O-6·O-8]

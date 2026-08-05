@@ -35,14 +35,7 @@
 9. `returnedTotal` 증가 + `CaptureBatch.markProcessed` — **전부 한 커밋**(E4) [RC-1·RC-2 검사]
 10. `Refunded` 발행 → C5 원장이 역분개로 번역(귀속 영업일 = **파일 표기 영업일** — BR-14) · C4 정산이 `refundTotal`에 집계 [BR-21·43]
 
-### 산식 (BR-43 ①이 정본 — 여기서는 단계 순서만 고정한다)
-
-```
-잔여 채무 = capturedAmount − refundedTotal
-회수액    = withdrawnAmount + 미수.recoveredAmount − returnedTotal     ← 저장하지 않고 매번 계산
-반환액    = max(0, 회수액 − 잔여 채무)                                  ← 초과 회수분만
-소멸액    = max(0, 미수.outstanding() − max(0, 잔여 채무 − 회수액))
-```
+### 산식 — ★ **BR-43 ①이 유일 정본이다. 복사하지 않는다**(U-5 — 리뷰가 복사본을 제거했다). 이 UC가 고정하는 것은 §3의 **단계 순서**뿐이며, 네 값(잔여 채무·회수액·반환액·소멸액)의 산식은 BR-43 ①에서 읽는다.
 
 ## 4. 예외 시나리오 ★
 

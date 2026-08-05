@@ -5,7 +5,7 @@
 - 액터: **외부 입금원(시스템 주체 — 고객 대리)** — 목표의 주인은 계좌 소유 고객, 요청의 주체는 모의 외부 입금원 (UC-01의 대리 구도 선례)
 - 권한 요건: 시스템 주체 — **경로 식별자 필수**(BR-54 ③ · AU-2). BR-54 예외 목록 **밖**(횡단 아님 — 단건 계좌 지목, UC-01 선례). 고객·운영자 단계 무관
 - 트랜잭션 경계: **E3** (계좌 · 회수 대상 미수들 · 입금 수신 — 한 커밋)
-- 관련 규칙: BR-02·07·08·14·20·28·29·34·40·41·45·54·57·58 · DepositReceipt INV-1·2·3 · Receivable INV-1·4·5 · 계좌 POST-1·RC-2·RC-4·RC-5 (참조만 — U-5)
+- 관련 규칙: BR-02·07·08·14·20·28·29·34·40·41·45·54·57·58 · DepositReceipt INV-1·2·3 · Receivable INV-1·4·5 · 계좌 POST-1·RC-2·RC-4·RC-5 (참조만 — F-24)
 
 ## 1. 목표 (한 문장)
 
@@ -26,7 +26,7 @@
 3. `assertSameRequest(fingerprint)` — 지문이 다르면 §4-B로 [INV-3 · BR-02]
 4. **회수 대상 선정** — 그 계좌의 미결 ∧ `frozen = false` 미수, 정렬 `(발생 영업일, 미수 식별자)` **전순서** [BR-34·28 · Receivable INV-5 · 미수 SM VF3]
 5. `deposit(depositId, amount, recoverable)` — 회수액 = `min(유입, Σ outstanding)` → FIFO 배분 `recover()` → **잔여만** `balance` 증가 [BR-34 · POST-1 · 미수 SM V2·V3 · RC-2]
-6. 이동 행 갱신 — 귀속 영업일(BR-14) 행에 `netAmount`·`receivableDelta -= 회수분` 더하기 [DC-006 · RC-4·RC-5] ⚠️ **`netAmount`의 피연산자가 정본 안에서 충돌한다** → §9 UC7-1
+6. 이동 행 갱신 — 귀속 영업일(BR-14) 행에 `netAmount`·`receivableDelta -= 회수분` 더하기 [DC-006 · RC-4·RC-5] (피연산자 = **balance 변화량** — DC-006 §3. ~~정본 충돌~~은 정정 완료 `1dff628`)
 7. 미수가 전부 종결되면 **계좌가 자기 `receivableBlockLifted`를 재평가** [계좌 INV-3 · BR-45 · 미수 SM V3]
 8. `record(depositId, 입금, …)` 수신 기록 — **같은 커밋** [E3 · INV-1]
 9. `Deposited` 발행 — `receivedAmount = recoveredAmount + creditedAmount` **3분해**가 예치금 차변 이중 계상을 막는다 [BR-29·08 · account.md §5 "이벤트 금액을 셋으로 나눈 이유"] · `ReceivableRecovered` 발행(**원장 아님** — 회수 분개는 유입 이벤트가 소유)
@@ -81,7 +81,7 @@
 | §3-2·3 / §4-A·B·I | BR-29·02 · `find`·`assertSameRequest`·`record` · DepositReceipt INV-1·2·3 · **M13** · DR1 |
 | §3-4 / §4-D·K | BR-34·28 · 미수 SM **VF3** · Receivable INV-5 · RV3 |
 | §3-5 / §4-C·E·F·G | BR-34 · `Account.deposit`·`Receivable.recover` · POST-1 · **RC-2** · 미수 SM V2·V3·VF1·VF4 |
-| §3-6 / §4-M | BR-14·40·41 · DC-006 · **RC-4·RC-5** · M12·M14 (★ UC7-1) |
+| §3-6 / §4-M | BR-14·40·41 · DC-006 · **RC-4·RC-5** · M12·M14 (UC7-1 ✅ 정정 완료) |
 | §3-7 | BR-45 · 계좌 INV-3 · 미수 SM V3 |
 | §3-8 | **E3** · DepositReceipt INV-1 |
 | §3-9 | BR-08·29 · R6 · account.md §5 (3분해) · AD-7 ② |
