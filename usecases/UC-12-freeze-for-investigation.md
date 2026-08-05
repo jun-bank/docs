@@ -44,7 +44,7 @@
 | A | **종료 상태 승인에 `freeze`** (`DECLINED`·`VOIDED`·`REFUNDED`·`SETTLED`) | 거절 `AUTH_TERMINAL` — 조사할 진행 중 처리가 없다 | 승인 SM **F9** |
 | B | `REQUESTED` 승인에 `freeze`·`unfreeze` | 경로 부재 — 트랜잭션 안에만 존재해 운영자가 지목할 수 없다 | 매트릭스 `REQUESTED` 행 `-` |
 | C | **종결(`CLOSED`) 미수에 `freeze`** | 거절 `RECEIVABLE_CLOSED` — 진행 중 회수가 없다 | 미수 SM **VF7** |
-| D | **보류가 아닌 대상에 `unfreeze`** | 거절 — `frozen = true`가 사전조건이다. 이 거절이 멱등 경계다 (⚠️ 리뷰 정정: 처음 인용한 "UC-04 `NOT_SUSPENDED`"는 실재하지 않는 코드였다 — 카드의 대응 칸(`NORMAL × resume`)은 오히려 ◎ 무시라 **반대 판정**이다. 그 칸의 재검토는 정본 보고 목록으로) | `Authorization.unfreeze`·`Receivable.unfreeze` 사전조건 (⚠️ 상태 매트릭스는 `frozen` 축을 세지 않으므로 이 거절은 매트릭스에 안 보인다 — 애그리게이트 사전조건이 정본) |
+| D | **보류가 아닌 대상에 `unfreeze`** | 거절 — `frozen = true`가 사전조건이다. 이 거절이 멱등 경계다 (⚠️ 리뷰 정정: 처음 인용한 "UC-04 `NOT_SUSPENDED`"는 실재하지 않는 코드였다. 카드의 대응 칸(`NORMAL × resume`)은 당시 ◎ 무시였으나 **2026-08-06 CDS3 통일로 X `ALREADY_NORMAL`(CF10)** 이 되어 이 거절과 같은 판정이 됐다) | `Authorization.unfreeze`·`Receivable.unfreeze` 사전조건 (⚠️ 상태 매트릭스는 `frozen` 축을 세지 않으므로 이 거절은 매트릭스에 안 보인다 — 애그리게이트 사전조건이 정본) |
 | E | **보류 중 승인에 매입 레코드 도착** | 반영 안 함 → 격리. **불일치 아님 · M1도 아님** | **F17** · BR-50 · `CaptureBatch` 격리 사유 표 |
 | F | **보류 중 승인에 망취소·승인취소 도착** | ★ **통과한다** — 보류는 `expire`·`capture`만 막는다. `frozen = true`인 채 `VOIDED`에 도달한다 | T4·T13 · F9 주석 |
 | G | F의 뒤처리 — 종료 상태에 남은 보류 | `unfreeze`가 종료 상태에서도 허용되어 목록에서 내릴 수 있다 | T15 · F9 주석(비대칭의 이유) |
