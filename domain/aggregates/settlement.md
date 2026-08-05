@@ -93,6 +93,7 @@ calculate() 를 N회 실행 → netAmount 동일   ← 멱등
 | 영업일 마감됨 | `BusinessDateClosed` | `close()` | `businessDate` | C3 결제 |
 | 정산 완료됨 | `SettlementCompleted` | `calculate()` | `businessDate`, **`captureTotal`** · **`refundTotal`** · **`netAmount`** · ★ **`settledAuthorizationIds`**(그 영업일에 반영된 승인 목록) | **C5 원장** · ★ **C3 결제**(R11 — `markSettled(businessDate)` 호출용) |
 | 정산 실패됨 | `SettlementFailed` | `fail()` | `businessDate`, `retryCount`, 사유 | **C6 대사** · 운영 |
+| 운영자 강제 재개됨 | `SettlementResumedByOperator` | `resumeByOperator()` | `businessDate`, **운영자**, **사유** | 운영자 |
 
 > ⚠️ **이 절이 없었다** (R10 ⑮). 조작 표의 이벤트 열에 이름만 있고 **무엇을 싣는지가 어디에도 없어서**,
 > 원장 ACL이 `차) 매입사 미지급금 / 대) 예치금` 을 어느 금액으로 기표할지 계약이 없었다.
@@ -142,6 +143,7 @@ calculate() 를 N회 실행 → netAmount 동일   ← 멱등
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v1.6 | 2026-08-05 | 잔재 정정(MT 사전 점검 F2b) — §4.1에 **`SettlementResumedByOperator` payload 추가**. 조작 표(:73)가 이벤트 이름을 적고 "운영자 식별자 + 사유 기록 필수"라 했는데 §4.1에 payload 정의가 없었다 — §4.1 신설 사유("이름만 있고 무엇을 싣는지가 어디에도 없어서")와 같은 결함이 한 행 남아 있던 것 |
 | v1.5 | 2026-08-04 | **DC-001 단계 10** — `captureTotal`·`refundTotal`을 **의식적 예외 ③** 으로 정식 등재. "③으로 등재만 한다"고 적어 놓고 등식·경계·탐지가 하나도 없었다 — 양식이 금지한 형태였다 |
 | v1.4 | 2026-08-04 | **ST2 확정 — 집계 주체는 결제(C3)**(BR-21). 정산이 매입 데이터를 직접 읽으면 "합계만 안다"는 경계 근거가 무너지고 마감 스냅샷 보장이 새 문제가 된다 |
 | v1.3 | 2026-08-04 | 재점검 반영 — `resumeByOperator()`에 **`retryCount ≥ 임계` 사전조건 추가**. 없으면 임계 미만에서 카운트를 초기화해 재시도 임계를 우회할 수 있었다(상태 머신 SF10과 정합) |
