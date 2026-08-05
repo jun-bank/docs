@@ -321,6 +321,7 @@ M14 좌변 = anchor.receivableOutstanding + Σ(receivableDelta[anchor < bd ≤ D
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v1.9 | 2026-08-05 | **리뷰 루프 1·2 반영** — ★ v1.8이 선언한 "`DepositReversed` payload에 운영자"는 **뒤집혔다**(자금 이벤트 = 원장 언어, L-03) — 본문이 정본이다. `liftReceivableBlock`에 승인 사전조건(BR-56 ②) · 이동 행 `ownerId` · 개설 조직 `BranchId` 참조(IS-4) |
 | v1.8 | 2026-08-05 | **멀티테넌시 B-4** — `reverseDeposit`에 **`operator` 인자**(운영자 조작인데 행위자가 시그니처에 없던 유일한 자금 직접 조작) + 사전조건에 ★ **승인된 정정 요청 존재**(BR-56 ① — C8 동기 확인 R14). `DepositReversed` payload에 운영자(BR-57) |
 | v1.7 | 2026-08-05 | 잔재 정정(MT 사전 점검 F2) — §6 발행 이벤트 표에 **누락 3건 추가**: `AccountLimitUsed` · `AccountLimitRestored` · `ReceivableBlockLifted`. 조작 표(§5) 이벤트 열에는 있었는데 §6에 payload 정의가 없었다. `ReceivableBlockLifted`는 유일한 `operator` 인자 조작의 이벤트라 payload에 운영자를 싣는다(미수 보류 이벤트 선례) |
 | v1.6 | 2026-08-04 | **DC-001 단계 12** — **RC-3 신설**(`dailyUsage`도 합계 필드다. "계좌 자신의 누적"이라며 판정을 피했으나 승인 `limitContribution`의 합이다) · RC-2의 검증 위치를 E3·E4 커밋 안으로 정정 · AC3 잔재 정리 |
