@@ -36,6 +36,7 @@ BR-29가 *"입금은 입금 식별자 기준으로 멱등"* 이라고 선언했�
 | `operation` | `DepositOperation` | **입금 / 정정** |
 | `originalDepositId` | `DepositId?` | **정정일 때만** — 되돌릴 원입금 (BR-38) |
 | `accountId` | `AccountId` | 대상 계좌 (ID 참조) |
+| `ownerId` | `CustomerId` | ★ **소유 축** (ADR-018 IS-1 — 계좌로 유도 가능해도 저장). 조회 격리(BR-58)의 축 |
 | `amount` | `Money` | 전문 금액 |
 | `requestFingerprint` | `Fingerprint` | 전문 본문의 해시 |
 | `result` | `StoredResult` | 최초 처리 결과 |
@@ -177,5 +178,6 @@ BR-29가 *"입금은 입금 식별자 기준으로 멱등"* 이라고 선언했�
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v0.3 | 2026-08-05 | **멀티테넌시 B-4b** — `ownerId`(`CustomerId`) 필드 추가 — ★ **소유 축**(ADR-018 IS-1) |
 | v0.2 | 2026-08-04 | **R9 H3·H4** — 정정의 키를 `depositId`에서 **`reversalId`(운영자 지시)** 로 바꿨다. BR-38이 정정을 운영자 역분개로 규정하고 BR-29도 *"모의 입금원은 취소 전문을 보내지 않는다"* 고 예외를 두는데, 초판은 외부 전문을 전제했다. **같은 입금을 3만·4만으로 나눠 정정하면 둘째가 자기 키에 막히는** 문제도 함께 풀렸다. `originalDepositId` 신설 · **INV-4**(원입금 존재)로 **DR2 닫힘** |
 | v0.1 | 2026-08-04 | **R8 S5·S7로 신설.** BR-29가 선언한 입금 멱등을 소유하는 곳이 없었다 — `deposit()`에 식별자 인자가 없었고 `IdempotencyRecord`는 C3의 것이며 `operation`에 입금이 없었다. R7 U3은 E5 참여자에 `IdempotencyRecord`를 넣었으나 **그 애그리게이트 계약은 안 고쳤다** — 넣을 자리가 없는 곳에 참여자만 적었다 |
