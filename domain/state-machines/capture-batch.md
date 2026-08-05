@@ -47,6 +47,7 @@ stateDiagram-v2
 | B5 | `PROCESSING` | `isolate` | 상태 불변 | **두 집합 어디에도 없음** (INV-2) | 격리 목록에 추가 + **`Discrepancy.recordOrTouch()` 호출**(보류 격리는 제외 — BR-50) | BR-27·32·50·51 |
 | B6 | `PROCESSING` | `interrupt` | `INTERRUPTED` | — | **진행분 보존** | — |
 | B7 | `PROCESSING` | `complete` | `COMPLETED` | **`\|처리\| + \|격리\| = totalRecords`** (INV-3) | — | — |
+| B9 | `PROCESSING`·`INTERRUPTED`·`COMPLETED` | ★ **`reclassifyIsolated`** | **상태 불변** | 격리 사유 = 보류 **AND 원승인 종료 관측**(승인 종료 이벤트 — 시스템 조작) | 사유 → **M8 교체**(이력 보존) + `Discrepancy.recordOrTouch()` 호출(outbox — isolate와 같은 경로) | BR-49·50·51 |
 | B8 | `COMPLETED` | **`promoteIsolated`** | **상태 불변** | 격리 목록에 있음 **AND 사유 = 보류 AND 보류 해제됨** (INV-5) | 격리 → 처리 **원자 이동**(사유는 이력 보존). 합계 불변이므로 INV-3 유지 | BR-50 |
 
 > **B7의 조건이 이 문서에서 가장 중요하다.** 건수로 판정하지 않으면 **조용한 절단**을 못 잡는다. 파일 파서가 뒤쪽 1000건을 조용히 버려도 "에러 없이 돌았다"가 되고, 대사에서 M1(미매입) 1000건으로 뒤늦게 나타난다.
@@ -67,7 +68,7 @@ stateDiagram-v2
 | **BF9** | `INTERRUPTED` | `markProcessed` · `isolate` | 재개(`start`)를 거치지 않았다 | 상태가 `PROCESSING`이 아닌데 자금이 움직여 **중단 시점 추적이 깨진다** | `BATCH_NOT_PROCESSING` |
 | **BF4** | `RECEIVED`·`INTERRUPTED`·`COMPLETED` | `interrupt` | 처리 중이 아니다. `COMPLETED`는 특히 **끝난 것이 재처리 대상으로 되살아난다** | 중단 이력이 근거 없이 생기고, 완료가 취소된다 | `BATCH_NOT_PROCESSING` |
 | **BF11** | `RECEIVED`·`PROCESSING`·`INTERRUPTED` | `promoteIsolated` | 완료되지 않은 배치에서는 격리 자체가 아직 확정이 아니다 | 진행 중 배치의 건수가 흔들려 INV-3 판정이 불안정 | `BATCH_NOT_COMPLETED` |
-| **BF12** | `COMPLETED` | `promoteIsolated` (**보류 외 사유**) | M2·M4·M7·M8 격리는 **반영되면 안 되는 레코드**다 (INV-5) | ★ 반영 안 된 레코드가 **"처리됨"으로 표시**되고 건수 판정은 통과 — 격리 사유와 이력이 소멸한다. 대사는 여전히 불일치라 말하고 배치는 처리됐다고 말한다 | `PROMOTE_NOT_ALLOWED` |
+| **BF12** | `COMPLETED` | `promoteIsolated` (**보류 외 사유**) | M2·M4·M7·M8·M19 격리는 **반영되면 안 되는 레코드**다 (INV-5) | ★ 반영 안 된 레코드가 **"처리됨"으로 표시**되고 건수 판정은 통과 — 격리 사유와 이력이 소멸한다. 대사는 여전히 불일치라 말하고 배치는 처리됐다고 말한다 | `PROMOTE_NOT_ALLOWED` |
 
 > ★ **격리 쪽 중복 방지가 INV-3의 전제다.** 처리 집합만 막고 격리를 열어 두면 같은 레코드를 여러 번 격리해 **`|처리| + |격리|`를 인위적으로 채울 수 있고**, 그러면 파일 뒤쪽을 통째로 못 읽어도 완료 판정이 통과한다 — BF1이 막으려던 실패가 **다른 문으로 그대로 들어온다.**
 
@@ -80,14 +81,14 @@ stateDiagram-v2
 
 ## 5. 전이 매트릭스
 
-| 현재 \ 조작 | `receive` | `start` | `markProcessed` | `isolate` | `interrupt` | `complete` | `promoteIsolated` |
-|---|---|---|---|---|---|---|---|
-| **`RECEIVED`** | X (BF7) | **O** (B2) | X (BF5) | X (BF5) | X (BF4) | X (BF6) | X (BF11) |
-| **`PROCESSING`** | X (BF7) | ◎ | **O/◎** (B4 / BF8) | **O/◎** (B5 / BF8) | **O** (B6) | **O/X** (B7 / BF1) | X (BF11) |
-| **`INTERRUPTED`** | X (BF7) | **O** (B3) | X (BF9) | X (BF9) | X (BF4) | X (BF6) | X (BF11) |
-| **`COMPLETED`** | X (BF7) | X (BF3) | X (BF2) | X (BF2) | X (BF4) | ◎ | **O/X** (B8 / BF12) |
+| 현재 \ 조작 | `receive` | `start` | `markProcessed` | `isolate` | `interrupt` | `complete` | `promoteIsolated` | ★ `reclassifyIsolated` |
+|---|---|---|---|---|---|---|---|---|
+| **`RECEIVED`** | X (BF7) | **O** (B2) | X (BF5) | X (BF5) | X (BF4) | X (BF6) | X (BF11) | ◎ (격리 없음 — 무시) |
+| **`PROCESSING`** | X (BF7) | ◎ | **O/◎** (B4 / BF8) | **O/◎** (B5 / BF8) | **O** (B6) | **O/X** (B7 / BF1) | X (BF11) | **O/◎** (B9 / 대상 없음) |
+| **`INTERRUPTED`** | X (BF7) | **O** (B3) | X (BF9) | X (BF9) | X (BF4) | X (BF6) | X (BF11) | **O/◎** (B9 / 〃) |
+| **`COMPLETED`** | X (BF7) | X (BF3) | X (BF2) | X (BF2) | X (BF4) | ◎ | **O/X** (B8 / BF12) | **O/◎** (B9 / 〃) |
 
-**O 3 · O/◎ 2 · O/X 2 · X 19 · ◎ 2 = 28칸**
+**O 3 · O/◎ 5 · O/X 2 · X 19 · ◎ 3 = 32칸** (2026-08-06 `reclassifyIsolated` 열 신설 — B9)
 
 > **조건부 칸 3개가 이 배치의 안전장치 전부다.**
 > `markProcessed`·`isolate`는 **이미 다룬 레코드면 조용히 건너뛴다**(재개의 정상 경로) — 시끄럽게 막으면 재개가 불가능해진다.
@@ -165,6 +166,7 @@ stateDiagram-v2
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v1.1 | 2026-08-06 | ★ **B9 신설** — `reclassifyIsolated`(보류 격리 중 원승인 종료 → M8 자동 재분류, 상태 불변·시스템 조작 — UC14-2 확정) · BF12에 M19 포함(UC10-1) · 매트릭스 28→32칸 |
 | v0.4 | 2026-08-04 | 재점검 반영 — **B8에 보류 사유 제한 + BF12 신설**(사유를 안 가리면 반영 안 된 격리가 "처리됨"으로 승격돼 은폐) · 애그리게이트 §5 재처리 서술을 3단계로 교체(옛 "멱등 키 승계" 문장이 남아 모순이 그대로였다) |
 | v0.3 | 2026-08-04 | post-fix 반영 — ★ **B8 `promoteIsolated` 신설**(격리 → 처리 원자 승격). "멱등 집합 공유"만으로는 재처리 배치가 자기 대상을 건너뛰는 모순이 있었다 · BF11 신설 · `COMPLETED`에서 유일하게 허용되는 조작임과 INV-4를 깨지 않는 근거 명시 |
 | v0.2 | 2026-08-04 | 듀얼 리뷰 반영 — ★ **격리 중복 방지 추가**(INV-2를 두 집합 상호배타로. 없으면 격리 중복이 건수를 채워 INV-3이 무력화된다) · `isolate()`가 **불일치 적재를 호출**하는 지점 명시 · **BF9·BF10 신설**(미등재 X 보완) · 조건부 칸 `O/◎`·`O/X` 기호 도입 · **보류 격리 재처리를 멱등 승계 별도 배치로 확정**(§8) · 집계 정정 |

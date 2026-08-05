@@ -128,6 +128,7 @@ private Account account;       // ❌
 | `isolate` | 매입 배치 `CaptureBatch` | — | 배치만 변경 — 불일치 적재는 Outbox (BR-40) |
 | `interrupt` | 매입 배치 `CaptureBatch` | — |  |
 | `complete` | 매입 배치 `CaptureBatch` | — |  |
+| `reclassifyIsolated` | 매입 배치 `CaptureBatch` | — | 배치만 변경 — 불일치 적재는 Outbox (BR-50 재분류) |
 | `promoteIsolated` | 매입 배치 `CaptureBatch` | E2 | ★ 재처리 경로의 멱등 — 자금 반영과 같은 커밋 |
 | `close` | 정산 `Settlement` | — |  |
 | `calculate` | 정산 `Settlement` | — |  |

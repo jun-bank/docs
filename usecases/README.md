@@ -72,7 +72,7 @@
 | `HoldPlaced` | UC-01 | 자금 — 비포함 ✓ | 불요(내부 이벤트 — 발행 안 됨) | [미정 — 전수 시] |
 | `DepositReversed` | UC-02 | 자금 — 비포함 ✓ (감사 outbox가 나름) | Phase 4 전수 시 (IS-5) | [미정] |
 | `CardSuspended` | UC-04 | **비포함 확정** ✓ (AD-7 ② 확장 — 주체 혼합, 2026-08-05 판정) | 〃 | [미정] |
-| `LimitChanged`(UC-06) · `Voided`·`Reversed`·tombstone 2종(UC-08·09) · 배치 5종·`Captured`·`Withdrawn`(UC-10) · `Refunded`·`RefundCredited`(UC-11) · `Deposited`·`ReceivableRecovered`·`DepositConflict`(UC-07) · ★ `AccountDailyLimitChanged`(UC-06) | 각 UC | **비포함 확정**(자금/시스템/주체 혼합 — AD-7 ②) | 〃 | [미정] |
+| `LimitChanged`(UC-06) · `Voided`·`Reversed`·tombstone 2종(UC-08·09) · 배치 5종·`Captured`·`Withdrawn`(UC-10) · ★ `IsolatedRecordReclassified`(UC-14 — 시스템) · `Refunded`·`RefundCredited`(UC-11) · `Deposited`·`ReceivableRecovered`·`DepositConflict`(UC-07) · ★ `AccountDailyLimitChanged`(UC-06) | 각 UC | **비포함 확정**(자금/시스템/주체 혼합 — AD-7 ②) | 〃 | [미정] |
 | ★ `CardTerminated`(UC-05) · `JournalReversed`(UC-16) | UC-05·16 | **[판정 대기]** — 보수 기본값 비포함 적용 중 (정본 보고 목록 #9) | 〃 | [미정] |
 | `DiscrepancyRecorded`·`DiscrepancyRedetected` (정본 discrepancy §5.1 — 발생 = UC-18 대사 · **UC-10 격리 즉시 적재** · **C8 M18(R16)**) | UC-18·10·(C8) | 비포함(시스템 적재) ✓ | 〃 | [미정] |
 | `Frozen`·`Unfrozen`·`ReceivableFrozen/Unfrozen`(UC-12) · `ReceivableBlockLifted`(UC-13) · `IsolatedRecordPromoted`(UC-14) · `DiscrepancyInvestigating/Resolved`(UC-17) · `SettlementResumedByOperator`(UC-15) · ★ `ReceivableBlockReimposed`(UC-13) | 각 UC | **포함 ✓**(AD-7 ① 운영자 전용 — 정본 일치) | 〃 | [미정] |
@@ -106,6 +106,7 @@
 | 정산 `resumeByOperator` | **UC-15** 정산 강제 재개 (BR-56 ④ — R15) |
 | 배치 `promoteIsolated` | **UC-14** 격리 재처리 승격 (BR-56 ③) |
 | 배치 `isolate` | ★ 내부 — **UC-10의 단계 6**(격리는 매입 반영의 일부다 — 리뷰 F-5 정정: 처음 감시 배치로 오판) |
+| 배치 ★ `reclassifyIsolated` | 내부 — 시스템(승인 종료 이벤트 트리거, B9 — UC-14 §4-F·UC14-2 확정. 액터 목표 아님) |
 | 배치 `interrupt` | 운영 절차 — 감시 배치 (시스템, BR-54 예외 ②) |
 | 전표 `post` | 운영 절차 — 원장 ACL (이벤트 수신) |
 | 전표 `reverse` | **UC-16** 원장 역분개 (BR-56 ⑤ — R15) |
@@ -122,6 +123,7 @@
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v0.7 | 2026-08-06 | **정본 판정 반영 ②** — M19 신설(UC10-1)·자동 재분류(UC14-2) 착지: 도출표 +1행(`reclassifyIsolated` 내부) |
 | v0.6 | 2026-08-06 | **정본 판정 반영 ①** — 계좌 조작 2신설 착지(UC6-1·UC13-1 확정): 엔드포인트 +1(재부과)·이벤트 색인 2행·도출표 2행 갱신 |
 | v0.5 | 2026-08-05 | **듀얼 1패스 반영** — ★ UC-17 엔드포인트 2행 누락 복구 + 목록 조회 2건 신설(불일치 목록·승인 대기 — F-1·F-4) · 도출표에 **조회 표면(4번째 원천)** 추가·isolate 판정 정정(F-4·F-5) · 이벤트 색인 판정 대기 분리·누락 3행(F-6) · UC-06 주체별 행 분리(F-10) · 승인 요청 공통 행 ①~⑤ 정정(OQ1) |
 | v0.4 | 2026-08-05 | **전수 통합 (U-3)** — 대장 16행 확정·엔드포인트 15행·이벤트 3묶음 행 추가(워커 4군 packet 통합 — 같은 커밋 등재 C-6). 전문·파일 인터페이스 명칭은 전부 [미정 — 계약 전수에서 일괄] |

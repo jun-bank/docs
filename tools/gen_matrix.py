@@ -26,6 +26,7 @@ ASSIGN = {
  "IdempotencyRecord.assertSameRequest":"조회","IdempotencyRecord.expire":"—",
  "CaptureBatch.receive":"—","CaptureBatch.start":"—","CaptureBatch.markProcessed":"E2 E4",
  "CaptureBatch.isolate":"—","CaptureBatch.interrupt":"—","CaptureBatch.complete":"—",
+ "CaptureBatch.reclassifyIsolated":"—",
  "CaptureBatch.promoteIsolated":"E2",
  "Settlement.close":"—","Settlement.calculate":"—","Settlement.fail":"—",
  "Settlement.retry":"—","Settlement.escalate":"—","Settlement.resumeByOperator":"—",
@@ -33,6 +34,7 @@ ASSIGN = {
  "Discrepancy.recordOrTouch":"별도","Discrepancy.investigate":"—","Discrepancy.resolve":"—",
 }
 NOTE = {
+ "CaptureBatch.reclassifyIsolated":"배치만 변경 — 불일치 적재는 Outbox (BR-50 재분류)",
  "Account.capture":"부족분 `Receivable.incur` 포함",
  "Account.refund":"반환액 입금 — FIFO 회수 포함",
  "Account.reverseDeposit":"부족분 채권 + 정정 멱등",
