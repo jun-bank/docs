@@ -107,7 +107,7 @@ AccountDailyClose            Account 애그리게이트 안의 엔티티 (C1 소
       가장 최근 (businessDate ≤ B) 행의 값으로 만들고 (없으면 0)
   조작 반영 후
       closingBalance    ← balance
-      closingReceivable ← closingReceivable + Δ(발생 +amount · 회수 −recovered · 소멸 −writtenOff)
+      closingReceivable ← Σ(이 계좌 미수들의 outstanding())   ★ 정본에서 매번 파생
 ```
 
 ### 대사는 무엇을 읽나
@@ -142,10 +142,19 @@ M14 좌변  = 〃                                          closingReceivable
 
 | 칸 | |
 |---|---|
-| **등식** | `closingBalance[B]` = 귀속 영업일 ≤ B 인 마지막 조작 직후의 `balance` |
-| **정본** | 자금 조작 자체 (`Account.balance` · `Receivable.outstanding()`) |
+| **등식** | `closingBalance[B]` = 귀속 영업일 ≤ B 인 마지막 조작 직후의 `balance`<br/>★ `closingReceivable[B]` = 그 시점 `Σ(이 계좌 미수들의 outstanding())` |
+| **정본** | 자금 조작 자체 (`Account.balance` · `Receivable.outstanding()`) — ★ **둘 다 절대값 복사이지 Δ 누적이 아니다** |
 | **경계** | ★ **E1~E5와 같은 트랜잭션** — 조작과 갱신이 갈릴 수 없다 |
-| **탐지** | ★ **M12 · M14** — 이 값이 틀리면 원장과 어긋난다 |
+| **탐지** | ★ **M12 · M14** — 이 값이 틀리면 원장과 어긋난다. ⚠️ **정본은 조작 시점 값이라 사후 재현이 불가**하므로 탐지는 M12·M14가 전담한다 |
+
+> ★ **왜 Δ 누적이 아니라 절대값인가** (Phase 3 마감 리뷰 H-6): 초안은
+> `closingReceivable ← closingReceivable + Δ` 였다. 그러면 **정본을 읽지 않고 자기 값에 더하는
+> 합계 필드**가 되어 — **DC-001 · W-14 · O-15 · DC-005 자신이 네 번 걷어낸 형태** 그대로다.
+>
+> 그리고 실제 피해가 있다: 플래그 off 구간이나 재시작으로 **한 번이라도 갱신을 놓치면 영구 누락**된다.
+> `closingBalance`는 절대값이라 다음 조작이 통째로 흡수하는데 **`closingReceivable`만 못 한다.**
+>
+> 비용은 계좌당 미수 건수만큼의 합산 1회이고, **E3·E4는 이미 그 미수 집합을 같은 커밋에서 잠그고 읽는다**(락 순서 ①).
 
 ---
 

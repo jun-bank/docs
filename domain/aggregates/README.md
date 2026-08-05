@@ -1,7 +1,7 @@
 # 애그리게이트 명세
 
 - 작성일: 2026-08-03
-- 상태: **Phase 2 종료 후 Phase 3 반영** — 11종 (DC-001 미수 · R8 입금 수신 · ~~ADR-006 마감 스냅샷~~ **ADR-011로 폐기 — 계좌가 `closedBalance`를 직접 든다**). 인계: [`../handoff-to-phase3.md`](../handoff-to-phase3.md)
+- 상태: **Phase 2 종료 후 Phase 3 반영** — 11종 (DC-001 미수 · R8 입금 수신 · ~~ADR-006 마감 스냅샷~~ **ADR-011·DC-005로 폐기 — 계좌가 영업일별 마감 행을 든다** — 구 표현: `closedBalance`를 직접 든다**). 인계: [`../handoff-to-phase3.md`](../handoff-to-phase3.md)
 - 양식: `study/project-workflow/phase2/04-aggregate-format.md`
 - 입력: `domain/event-storming.md` ⑦ · `domain/context-map.md` §4 데이터 소유권
 

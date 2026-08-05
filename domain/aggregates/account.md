@@ -124,8 +124,7 @@ AccountDailyClose(accountId, businessDate, closingBalance, closingReceivable)
       가장 최근 (businessDate ≤ B) 행의 값으로 만든다  (없으면 0)
   조작 반영 후
       closingBalance    ← balance
-      closingReceivable ← closingReceivable + Δ
-                          (발생 +amount · 회수 −recovered · 소멸 −writtenOff)
+      closingReceivable ← Σ(이 계좌 미수들의 outstanding())   ★ 정본에서 매번 파생
 ```
 
 > ★ **왜 이렇게 하나**: `balance`는 **귀속 영업일을 구분하지 않는 누적 현재값**이라

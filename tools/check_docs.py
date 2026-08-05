@@ -382,7 +382,7 @@ for p_ in sorted(ROOT.rglob("*.md")):
     t = p_.read_text()
     for f_, repl in RETIRED.items():
         for ln, line in enumerate(t.splitlines(), 1):
-            if f_ in line and "초안" not in line and "폐기" not in line and "~~" not in line:
+            if f_ in line and "초안" not in line and "구 표현" not in line and "~~" not in line:
                 bad("㉓", f"{rel}:{ln} 폐기된 필드 `{f_}` 잔존 → {repl}")
 
 if FAIL:
