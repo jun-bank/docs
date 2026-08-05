@@ -73,6 +73,7 @@
 |---|---|---|---|
 | `POST /ops/discrepancies/{discrepancyId}/investigation` | `Discrepancy.investigate(operator)` | 운영자 · **담당자** · 스코프 축 = **유형별 상이**(§6 · UC17-1) | ✅ 부재·스코프 밖 동일 (축 확정 후) |
 | `POST /ops/discrepancies/{discrepancyId}/resolution` | `Discrepancy.resolve(operator, resolution)` | 〃 | ✅ |
+| ★ `GET /ops/discrepancies?status=&type=` (목록 — §3의 전제 조회. 재점검 반영: 색인만이 아니라 본문 계약에도) | 운영자 조회 이상 · 스코프(UC17-1) | ✅ | 상세는 계약 전수 패스 이월 |
 | 이벤트 `DiscrepancyInvestigating` · `DiscrepancyResolved` | 위 두 조작 | 발행자 = C6 대사 · 구독 = 운영 | — (**운영자 전용 이벤트 — 행위자 포함**, AD-7 ①) |
 | (참고) `DiscrepancyRecorded` · `DiscrepancyRedetected` | `recordOrTouch` — **이 UC의 조작이 아니다**(대사·매입 배치·C8이 호출) | 시스템(배치 경로) | ✕ — 시스템 주체는 소유자 조건 면제(BR-54 예외 · AU-2) |
 

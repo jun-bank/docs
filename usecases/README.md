@@ -73,7 +73,7 @@
 | `CardSuspended` | UC-04 | **비포함 확정** ✓ (AD-7 ② 확장 — 주체 혼합, 2026-08-05 판정) | 〃 | [미정] |
 | `LimitChanged`(UC-06) · `Voided`·`Reversed`·tombstone 2종(UC-08·09) · 배치 5종·`Captured`·`Withdrawn`(UC-10) · `Refunded`·`RefundCredited`(UC-11) · `Deposited`·`ReceivableRecovered`·`DepositConflict`(UC-07) | 각 UC | **비포함 확정**(자금/시스템/주체 혼합 — AD-7 ②) | 〃 | [미정] |
 | ★ `CardTerminated`(UC-05) · `JournalReversed`(UC-16) | UC-05·16 | **[판정 대기]** — 보수 기본값 비포함 적용 중 (정본 보고 목록 #9) | 〃 | [미정] |
-| `DiscrepancyRecorded`·`DiscrepancyRedetected` (UC-18 — 정본 discrepancy §5.1) | UC-18 | 비포함(시스템 적재) ✓ | 〃 | [미정] |
+| `DiscrepancyRecorded`·`DiscrepancyRedetected` (정본 discrepancy §5.1 — 발생 = UC-18 대사 · **UC-10 격리 즉시 적재** · **C8 M18(R16)**) | UC-18·10·(C8) | 비포함(시스템 적재) ✓ | 〃 | [미정] |
 | `Frozen`·`Unfrozen`·`ReceivableFrozen/Unfrozen`(UC-12) · `ReceivableBlockLifted`(UC-13) · `IsolatedRecordPromoted`(UC-14) · `DiscrepancyInvestigating/Resolved`(UC-17) · `SettlementResumedByOperator`(UC-15) | 각 UC | **포함 ✓**(AD-7 ① 운영자 전용 — 정본 일치) | 〃 | [미정] |
 | R15 지시 이벤트 2종 (C8→C4·C5 — 이름·payload [미정]) | UC-15·16 | 포함(운영 — maker·checker 실림, AD-6) | 지시 ID | [미정] |
 
@@ -115,7 +115,7 @@
 | BR-57 감사 기록 조회 (AD-5) | **UC-20** (책임자) |
 | ApprovalRequest `request`·`approve`·`reject`·`consume` | 내부 — BR-56 조작 UC들의 공통 단계 (정본 = UC-02 §7 · U-7) · `expire` = 운영 절차(예외 ⑨) |
 | 대사 3자 비교·anchor 생성·릴레이·커트오프 드레인·통지(BR-53) | 운영 절차 — 액터의 목표가 아니다 (U-2) |
-| ★ **조회 표면 (4번째 원천 — 리뷰 F-4 정정: 조작·전이 3원천은 조회를 구조적으로 못 잡는다)** | 고객 조회 = **UC-03**(BR-31·58) · 감사 조회 = **UC-20**(BR-57) · 불일치 목록 = **UC-17의 단계**(`GET /ops/discrepancies`) · 승인 대기/내 요청 목록 = **UC-02 공통 계약의 단계**(`GET /ops/approval-requests` — BR-56 워크플로 전제) · DLQ 목록 = UC-19 · 정산 상태 = UC-18. 조회 UC의 전수성은 **엔드포인트 색인**이 담보한다(도출표의 한계 명시 — 가정 1 부분 반증) |
+| ★ **조회 표면 (4번째 원천 — 리뷰 F-4 정정: 조작·전이 3원천은 조회를 구조적으로 못 잡는다)** | 고객 조회 = **UC-03**(BR-31·58) · 감사 조회 = **UC-20**(BR-57) · 불일치 목록 = **UC-17의 단계**(`GET /ops/discrepancies`) · 승인 대기/내 요청 목록 = **UC-02 공통 계약의 단계**(`GET /ops/approval-requests` — BR-56 워크플로 전제) · DLQ 목록 = UC-19 · 정산 상태 = UC-18. 조회 UC의 전수성은 **엔드포인트 색인**이 담보한다(도출표의 한계 명시 — 가정 1 부분 반증. ⚠️ 순환 위험 — **교차 검증(색인 ↔ 시나리오 전제 조회 대조)은 계약 전수 패스의 acceptance**) |
 
 ## 변경 이력
 

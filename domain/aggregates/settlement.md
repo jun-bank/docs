@@ -70,7 +70,7 @@
 | **산출 실패** | `fail(reason)` | 상태 = 산출중 | 상태 = 실패, `retryCount` 증가 | `SettlementFailed` |
 | **재시도** | `retry()` | **상태 = 실패** AND `retryCount < 임계` (BR-37) | 상태 = 산출중 | `SettlementRetried` |
 | **운영자 통지** | `escalate()` | 상태 = 실패 AND `retryCount ≥ 임계` | 운영자 목록에 오름 | `SettlementEscalated` |
-| **운영자 강제 재개** | `resumeByOperator(operator, reason)` | 상태 = 실패 **AND `retryCount ≥ 임계`** · ★ **승인된 재개 지시 이벤트로만 트리거된다**(BR-56 ④ — C4는 별도 배포라 동기 확인·원자 소비 불가. C8이 승인·소비 후 outbox로 전달, R15. **멱등 키 = 지시 ID**) | `retryCount = 0`, 상태 = 산출중. **사유 기록 필수** | `SettlementResumedByOperator` |
+| **운영자 강제 재개** | `resumeByOperator(instructionId, operator, reason)` | 상태 = 실패 **AND `retryCount ≥ 임계`** · ★ **승인된 재개 지시 이벤트로만 트리거된다**(BR-56 ④ — R15) · ★ **같은 `instructionId` 재수신 = 무연산**(수신 기록·유일 — 원장 INV-9와 같은 형태. 재점검이 소유 구현 부재를 잡았다) | `retryCount = 0`, 상태 = 산출중. **사유·`instructionId` 기록 필수** | `SettlementResumedByOperator` |
 
 ### 멱등한 재산출 (BR-37)
 
@@ -143,6 +143,7 @@ calculate() 를 N회 실행 → netAmount 동일   ← 멱등
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v1.8 | 2026-08-05 | **UC 전수 재점검 반영** — `resumeByOperator`에 `instructionId` 인자·저장·유일(무연산). "멱등 키 = 지시 ID" 선언의 소유 구현이 없었다(원장 INV-9 지적의 정산판) |
 | v1.7 | 2026-08-05 | **리뷰 루프 1·2 반영** — `resumeByOperator` 사전조건에 승인 결합: 처음 R14 동기 확인(루프 1)으로 넣었다가 ★ **C4가 별도 배포라 원자 소비 불가**(루프 2 F-03) → **승인된 재개 지시 이벤트(R15) 트리거**로 재설계 |
 | v1.6 | 2026-08-05 | 잔재 정정(MT 사전 점검 F2b) — §4.1에 **`SettlementResumedByOperator` payload 추가**. 조작 표(:73)가 이벤트 이름을 적고 "운영자 식별자 + 사유 기록 필수"라 했는데 §4.1에 payload 정의가 없었다 — §4.1 신설 사유("이름만 있고 무엇을 싣는지가 어디에도 없어서")와 같은 결함이 한 행 남아 있던 것 |
 | v1.5 | 2026-08-04 | **DC-001 단계 10** — `captureTotal`·`refundTotal`을 **의식적 예외 ③** 으로 정식 등재. "③으로 등재만 한다"고 적어 놓고 등식·경계·탐지가 하나도 없었다 — 양식이 금지한 형태였다 |
