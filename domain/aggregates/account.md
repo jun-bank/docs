@@ -43,7 +43,7 @@
 | `balance` | `Money` | **계좌잔액** — 확정된 자금 |
 | `holdTotal` | `Money` | **홀딩 합계** — 승인으로 점유된 금액의 총합 |
 | `receivableBlockLifted` | `boolean` | 운영자가 미수 차단을 해제했는가 (BR-45) |
-| **`movements`** | `AccountDailyMovement[]` | ★ **영업일별 이동 행** (DC-006) — `(businessDate, netAmount, receivableDelta)`. 원장 대사 **M12·M14**의 좌변을 **구성**한다 |
+| **`movements`** | `AccountDailyMovement[]` | ★ **영업일별 이동 행** (DC-006) — `(businessDate, netAmount, receivableDelta)` + ★ **`ownerId`**(소유 축 — ADR-018 IS-1. 그릇·키·산식은 DC-006 그대로, 컬럼만 는다). 원장 대사 **M12·M14**의 좌변을 **구성**한다 |
 | **`anchors`** | `AccountBalanceAnchor[]` | ★ **기준점** (DC-006 A-1~A-4) — **성능 최적화일 뿐**이며 없어도 계산된다 |
 | `dailyLimit` | `Money` | **계좌 1일 한도** — 이 계좌의 모든 카드 사용액 합계에 적용 (BR-44) |
 | `dailyUsage` | `LimitUsage` | 계좌 단위 달력일 누적 사용액 (BR-44) |
@@ -70,6 +70,7 @@
 | 참조 대상 | 참조 방식 | 왜 참조하는가 |
 |---|---|---|
 | 회원 | `CustomerId` | 소유자 식별 (C7 인증이 소유) |
+| 조직/지점 | `BranchId` | ★ **개설 조직** (ADR-018 IS-4 — 운영자 스코프 판정의 대상 축: "운영자가 어디 소속인가 × 이 계좌가 어디 것인가". 조직 마스터는 C7 소유) |
 
 ---
 
