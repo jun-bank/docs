@@ -34,6 +34,7 @@
 | **타임아웃** | 앱 2.5초 > 쿼리 1초 > 락 0.5초 (ADR-013) |
 | **실패하면** | 롤백. 부분 반영 없음 → 매입사가 재시도하면 ①이 흡수 |
 | **원장** | ❌ **전표 없음** — 홀딩은 자금 이동이 아니다(BR-39) |
+| ★ **마감 행** | ❌ **갱신 없음** — 홀딩은 `balance`를 안 바꾼다. ⚠️ *"모든 조작이 갱신"* 을 E1에도 적용하려는 오독을 막는다 |
 
 ## 2. E2 매입 반영
 
@@ -47,6 +48,7 @@
     │    ★ at.영업일 == limitBasisDate 일 때만 (DC-003)          │
     │ ④ 계좌 출금 — 부족분은 Receivable.incur                    │
     │ ⑤ CaptureBatch.markProcessed / promoteIsolated             │
+    │ ⑤'★ AccountDailyClose(귀속 영업일) upsert (DC-005)         │
     │ ⑥ outbox INSERT — Withdrawn · ReceivableIncurred · Captured│
     └────────────────────── COMMIT ─────────────────────────────┘
                 │
@@ -67,6 +69,7 @@
     │ ④ 계좌 refund — 반환액 입금 + FIFO 회수     │
     │    ★ 반환액 0이어도 부른다 (INV-3 재평가)   │
     │ ⑤ returnedTotal 증가                        │
+    │ ⑤'★ AccountDailyClose upsert (DC-005)       │
     │ ⑥ markProcessed (취소 레코드)               │
     │ ⑦ outbox — Refunded · ReceivableWrittenOff  │
     └──────────────── COMMIT ─────────────────────┘
