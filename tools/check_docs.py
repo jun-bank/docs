@@ -172,7 +172,7 @@ for d_, pat in ((d.AGG, "*.md"), (ROOT/"domain/state-machines", "*.md")):
 for p in sorted(ROOT.rglob("*.md")):
     if ".git" in p.parts or "project-workflow" in str(p): continue
     for n, line in enumerate(p.read_text().splitlines(), 1):
-        m = re.search(r"유효 유형 (\d+)종.*?(\d+)종 전부", line)
+        m = re.search(r"배치 탐지 대상 (\d+)종.*?(\d+)종 전부", line)
         if m and m.group(1) != m.group(2):
             bad("⑥", f"{p.relative_to(ROOT)}:{n} 선언 불일치 {m.group(1)}종 vs {m.group(2)}종")
 
@@ -259,9 +259,10 @@ m = re.search(r"## BR-09\..*?(?=\n## BR-)", brs_txt, re.S)
 canon_m = set(re.findall(r"^\| (M\d+) \|", m.group(0), re.M)) if m else set()
 if len(canon_m) < 5: bad("⑰", f"BR-09 유형 표 파싱 실패 ({len(canon_m)})")
 for p_ in sorted(ROOT.rglob("*.md")):
-    if ".git" in p_.parts or p_ == BRS or "project-workflow" in str(p_) or "design-changes" in str(p_): continue
+    if ".git" in p_.parts or "project-workflow" in str(p_) or "design-changes" in str(p_): continue
     for n, line in enumerate(body(p_).splitlines() if p_ in WIDE else p_.read_text().splitlines(), 1):
-        mm = re.search(r"유형[^|]{0,6}(\d+)종", line)
+        if re.match(r"> \*\*v\d", line.strip()): continue      # 버전 주석은 옛 건수를 인용한다
+        mm = re.search(r"유효 유형은? \*{0,2}(\d+)종", line) or (None if p_ == BRS else re.search(r"유형[^|\d]{0,6}(\d+)종", line))
         if mm and int(mm.group(1)) != len(canon_m):
             bad("⑰", f"{p_.relative_to(ROOT)}:{n} 불일치 유형 {mm.group(1)}종 선언 "
                      f"— BR-09 정본은 {len(canon_m)}종. 파생 문서는 건수를 적지 않는다")

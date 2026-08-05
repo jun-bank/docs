@@ -75,7 +75,7 @@ def main():
                     print(f"  ⚠️  {name} — 지울 행이 없다 ({pre!r})"); continue
                 t = "\n".join(lines) + "\n"
             elif old == "AUTO:count":               # 선언 수를 문서에서 읽어 1 줄인다
-                m = re.search(r"유효 유형 (\d+)종", t)
+                m = re.search(r"배치 탐지 대상 (\d+)종", t)
                 if not m: print(f"  ⚠️  {name} — 선언을 못 찾음"); continue
                 k = int(m.group(1))
                 t = t.replace(f"→ **{k}종 전부 탐지", f"→ **{k-1}종 전부 탐지", 1)
