@@ -11,3 +11,7 @@ Thumbs.db
 .vscode/
 *.swp
 *~
+
+# 파이썬 컴파일 산출물 — 추적 금지 (리뷰 M-02)
+__pycache__/
+*.pyc

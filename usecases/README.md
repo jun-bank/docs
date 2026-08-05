@@ -72,13 +72,15 @@
 | `HoldPlaced` | UC-01 | 자금 — 비포함 ✓ | 불요(내부 이벤트 — 발행 안 됨) | [미정 — 전수 시] |
 | `DepositReversed` | UC-02 | 자금 — 비포함 ✓ (감사 outbox가 나름) | Phase 4 전수 시 (IS-5) | [미정] |
 | `CardSuspended` | UC-04 | **비포함 확정** ✓ (AD-7 ② 확장 — 주체 혼합, 2026-08-05 판정) | 〃 | [미정] |
-| `LimitChanged`(UC-06) · `Voided`·`Reversed`·tombstone 2종(UC-08·09) · 배치 5종·`Captured`·`Withdrawn`(UC-10) · ★ `IsolatedRecordReclassified`(UC-14 — 시스템) · `Refunded`·`RefundCredited`(UC-11) · `Deposited`·`ReceivableRecovered`·`DepositConflict`(UC-07) · ★ `AccountDailyLimitChanged`(UC-06) | 각 UC | **비포함 확정**(자금/시스템/주체 혼합 — AD-7 ②) | 〃 | [미정] |
+| `LimitChanged`(UC-06) · `Voided`·`Reversed`·tombstone 2종(UC-08·09) · 배치 **수명주기** 5종·`Captured`·`Withdrawn`(UC-10) · ★ `IsolatedRecordReclassified`(UC-14 — 시스템) · `Refunded`·`RefundCredited`(UC-11) · `Deposited`·`ReceivableRecovered`·`DepositConflict`(UC-07) · ★ `AccountDailyLimitChanged`(UC-06) | 각 UC | **비포함 확정**(자금/시스템/주체 혼합 — AD-7 ②) | 〃 | [미정] |
 | ★ `CardTerminated`(UC-05) → **비포함 확정**(AD-7 ② 확장 — 소지자 전용 비자금) · ★ `JournalReversed`(UC-16) → **포함 확정**(①·② 겹침의 ① 우선 — 발생 경로 운영자 전용) | UC-05·16 | 2026-08-06 확정 — 판정 대기 해소(ADR-017 v0.2) | 〃 | [미정] |
 | `DiscrepancyRecorded`·`DiscrepancyRedetected` (정본 discrepancy §5.1 — 발생 = UC-18 대사 · **UC-10 격리 즉시 적재** · **C8 M18(R16)**) | UC-18·10·(C8) | 비포함(시스템 적재) ✓ | 〃 | [미정] |
 | `Frozen`·`Unfrozen`·`ReceivableFrozen/Unfrozen`(UC-12) · `ReceivableBlockLifted`(UC-13) · `IsolatedRecordPromoted`(UC-14) · `DiscrepancyInvestigating/Resolved`(UC-17) · `SettlementResumedByOperator`(UC-15) · ★ `ReceivableBlockReimposed`(UC-13) | 각 UC | **포함 ✓**(AD-7 ① 운영자 전용 — 정본 일치) | 〃 | [미정] |
 | R15 지시 이벤트 2종 (C8→C4·C5 — 이름·payload [미정]) | UC-15·16 | 포함(운영 — maker·checker 실림, AD-6) | 지시 ID | [미정] |
 
-## 4. 도출표 ★ (전수성의 근거 — 조작 62 · 운영자 규칙 · SM 전이 → 판정)
+## 4. 도출표 ★ (전수성의 근거 — 조작 **65** · 운영자 규칙 · SM 전이 → 판정)
+
+> 집계 이력: 62(2026-08-05) → **65**(2026-08-06 정본 판정 반영 — `changeDailyLimit`·`reimposeReceivableBlock`·`reclassifyIsolated` 신설. 리뷰 M-01이 헤더 미갱신을 잡았다)
 
 > 판정 = **기존 UC** / **신규 UC**(아래 대장에 추가) / **운영 절차**(U-2 — 액터의 목표가 아닌 순수 배치·자동 경로) / **내부**(다른 UC의 단계로만 존재).
 > 원천: `domain/aggregates/README.md` 조작 대장 · BR 운영자 조작 · 상태 머신 9종. **빈 칸 = 결함.**

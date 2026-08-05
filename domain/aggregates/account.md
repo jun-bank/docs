@@ -80,7 +80,7 @@
 |---|---|---|---|---|
 | **INV-1** | `balance ≥ 0` | BR-20 | 없는 돈이 나간 상태 | 모든 조작 후 |
 | **INV-2** | `holdTotal ≥ 0` | — | 음수 점유는 무의미 | 모든 조작 후 |
-| **INV-3** | 미결 미수가 없으면 `receivableBlockLifted = false` | BR-45 | 미수가 없는데 차단 해제 플래그가 남음 | **E3·E4 커밋 후** |
+| **INV-3** | 미결 미수가 없으면 `receivableBlockLifted = false` — ★ **함의(⇒)다, 동치가 아니다**: 미수가 남아도 `false`일 수 있다(기본 상태 · ★ 재부과 `reimposeReceivableBlock` — 2026-08-06 두 번째 false 경로. 리뷰 o-F2) | BR-45 | 미수가 없는데 차단 해제 플래그가 남음 | **E3·E4 커밋 후** |
 | **INV-4** | `dailyUsage.amount ≤ dailyLimit` | BR-44 | 계좌 한도 초과 | `useAccountLimit()` 후 |
 
 

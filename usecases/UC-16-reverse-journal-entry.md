@@ -68,7 +68,7 @@
 | 인터페이스 | 주체 (유형·단계·스코프) | L7 대상 |
 |---|---|---|
 | `POST /ops/approval-requests` — 대상 조작 = **원장 역분개**, 인자 = `instructionId` · 원전표 ID · 사유 (정본 = UC-02 §7) | 운영자 **담당자** · ★ **계좌 유도 스코프**(UC16-1 확정) | ✅ 원전표 부재·범위 밖 동일 |
-| `POST /ops/approval-requests/{id}/approve` · `/reject` (정본 = UC-02 §7) | 운영자 **책임자** · `checker ≠ maker` | ✅ |
+| `POST /ops/approval-requests/{id}/approve` · `/reject` (정본 = UC-02 §7) | 운영자 **책임자** · `checker ≠ maker` · ★ **유도 스코프 동일 적용**(BR-55 특칙 — 승인 단계에서 스코프 통제가 끊기지 않는다) | ✅ |
 | ★ **실행 엔드포인트 없음** (R15) — 승인 시 C8이 `consume` + 지시 이벤트를 같은 커밋으로 발행 | — | — |
 | 지시 이벤트 **C8 → C5** (이름·payload **[미정]** · 멱등 키 = **`instructionId`** → 수신측 **INV-9**가 소유 구현) | 시스템(릴레이 경로 — 파티션 0) | — |
 | 이벤트 `JournalReversed` (기존 — **정본 = journal-entry.md §4**) — ★ **행위자 포함 확정**(AD-7 ①·② 겹침의 ① 우선, 업무 귀속 maker — 2026-08-06) | 시스템(C5) | — |
