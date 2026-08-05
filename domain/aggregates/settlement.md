@@ -70,7 +70,7 @@
 | **산출 실패** | `fail(reason)` | 상태 = 산출중 | 상태 = 실패, `retryCount` 증가 | `SettlementFailed` |
 | **재시도** | `retry()` | **상태 = 실패** AND `retryCount < 임계` (BR-37) | 상태 = 산출중 | `SettlementRetried` |
 | **운영자 통지** | `escalate()` | 상태 = 실패 AND `retryCount ≥ 임계` | 운영자 목록에 오름 | `SettlementEscalated` |
-| **운영자 강제 재개** | `resumeByOperator(operator, reason)` | 상태 = 실패 **AND `retryCount ≥ 임계`** · ★ **승인된 요청 존재**(BR-56 ④ — C8 동기 확인, R14) | `retryCount = 0`, 상태 = 산출중. **사유 기록 필수** | `SettlementResumedByOperator` |
+| **운영자 강제 재개** | `resumeByOperator(operator, reason)` | 상태 = 실패 **AND `retryCount ≥ 임계`** · ★ **승인된 재개 지시 이벤트로만 트리거된다**(BR-56 ④ — C4는 별도 배포라 동기 확인·원자 소비 불가. C8이 승인·소비 후 outbox로 전달, R15. **멱등 키 = 지시 ID**) | `retryCount = 0`, 상태 = 산출중. **사유 기록 필수** | `SettlementResumedByOperator` |
 
 ### 멱등한 재산출 (BR-37)
 

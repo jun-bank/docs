@@ -119,10 +119,11 @@
 ① 운영자 A(담당자)  → C8: request(입금 역분개, reversalId·원입금·금액)   [PENDING · 감사 append]
 ② 운영자 B(책임자)  → C8: approve()          [B ≠ A — ApprovalRequest INV-1 · 감사 append]
 ③ 운영자 A          → C1: reverseDeposit(reversalId, 원입금, 금액, A)
-     C1 → C8: 승인된 요청 존재? (R14 — 동기, 코어 안)
+     C1 → C8: consume() 동기 호출 (R14 — ★ C8이 자기 상태를 바꾸는 관리 오퍼레이션.
+              타 컨텍스트의 직접 테이블 쓰기가 아니다 — 실행 인자 = 요청 인자, INV-3)
      [E5 트랜잭션] DepositReceipt 기록 · balance 감소 · 부족분 Receivable.incur
                   · AccountDailyMovement 갱신 · ★ 감사 outbox INSERT(AD-2)
-                  · ★ C8 consume() — 같은 커밋 (실행 인자 = 요청 인자, INV-3)
+                  · ★ C8 consume 참여 — 같은 트랜잭션 (커밋 실패 시 승인도 미소비)
 ④ 릴레이            → C8: 감사 이벤트 전달 (R13) → C5: DepositReversed 기표 (R6)
 ```
 
