@@ -1,7 +1,7 @@
 # 애그리게이트 명세
 
 - 작성일: 2026-08-03
-- 상태: **Phase 2 종료 후 Phase 3 반영** — 12종 (DC-001 미수 · R8 입금 수신 · **ADR-006 마감 스냅샷**). 인계: [`../handoff-to-phase3.md`](../handoff-to-phase3.md)
+- 상태: **Phase 2 종료 후 Phase 3 반영** — 11종 (DC-001 미수 · R8 입금 수신 · ~~ADR-006 마감 스냅샷~~ **ADR-011로 폐기 — 계좌가 `closedBalance`를 직접 든다**). 인계: [`../handoff-to-phase3.md`](../handoff-to-phase3.md)
 - 양식: `study/project-workflow/phase2/04-aggregate-format.md`
 - 입력: `domain/event-storming.md` ⑦ · `domain/context-map.md` §4 데이터 소유권
 
@@ -14,7 +14,6 @@
 | **계좌** `Account` | C1 뱅킹 | 실시간 | [account.md](account.md) | ✅ |
 | **미수** `Receivable` | C1 뱅킹 | 실시간 · 배치 | [receivable.md](receivable.md) | ✅ **DC-001** |
 | **입금 수신** `DepositReceipt` | C1 뱅킹 | 실시간 | [deposit-receipt.md](deposit-receipt.md) | ✅ **R8** |
-| **마감 스냅샷** `DailySnapshot` | C1 뱅킹 | 배치 | [daily-snapshot.md](daily-snapshot.md) | ✅ **ADR-006** |
 | **카드** `Card` | C2 카드 | 실시간 | [card.md](card.md) | ✅ |
 | **승인** `Authorization` | C3 결제 | 실시간 | [authorization.md](authorization.md) | ✅ |
 | **취소 예약** `ReversalTombstone` | C3 결제 | 실시간 | [reversal-tombstone.md](reversal-tombstone.md) | ✅ |
@@ -95,9 +94,6 @@ private Account account;       // ❌
 | `record` | 입금 수신 `DepositReceipt` | E3 E5 | ★ 입금·정정을 한 번만 반영시킨다 (BR-29) |
 | `assertSameRequest` | 입금 수신 `DepositReceipt` | 조회 |  |
 | `expire` | 입금 수신 `DepositReceipt` | — |  |
-| `capture` | 마감 스냅샷 `DailySnapshot` | — | ★ 시간을 멈춘 값 — 대사의 기준점 (ADR-006) |
-| `find` | 마감 스냅샷 `DailySnapshot` | 조회 |  |
-| `expire` | 마감 스냅샷 `DailySnapshot` | — |  |
 | `assertUsable` | 카드 `Card` | 조회 |  |
 | `useLimit` | 카드 `Card` | E1 |  |
 | `restoreLimit` | 카드 `Card` | E1 E2 | E2 = 부분 매입 한도 복원 (BR-24) |
