@@ -192,7 +192,7 @@ M14 좌변 = anchor.receivableOutstanding + Σ(receivableDelta[anchor < bd ≤ D
 | **환불 입금** | `refund(amount, recoverable)` | `amount ≥ 0` | **입금과 동일** — FIFO 회수 후 잔여만 `balance` 증가 (BR-34). **`amount = 0`도 정상**(미수만 소멸한 환불) · ★ **`AccountDailyMovement`(귀속 영업일) `netAmount += 조작 금액`**(DC-006) | `RefundCredited` |
 | **계좌 한도 사용** | `useAccountLimit(amount, at)` | PRE-3 | `dailyUsage` 증가 (기준일 리셋 포함) | `AccountLimitUsed` |
 | **계좌 한도 복원** | `restoreAccountLimit(amount, at)` | **`amount ≤ dailyUsage.amount`** (위반 시 거절) | `dailyUsage` 감소. **기준일이 다르면 아무 일도 하지 않는다**(오류 아님 — 카드와 동일) | `AccountLimitRestored` |
-| **미수 차단 해제** | `liftReceivableBlock(operator)` | **미결 미수 존재** | `receivableBlockLifted = true` | `ReceivableBlockLifted` |
+| **미수 차단 해제** | `liftReceivableBlock(operator)` | **미결 미수 존재** · ★ **승인된 요청 존재**(BR-56 ② — C8 동기 확인, R14) | `receivableBlockLifted = true` | `ReceivableBlockLifted` |
 | **입금 정정** | `reverseDeposit(reversalId, originalDepositId, amount, operator)` | ★ **`(reversalId, 정정)` 수신 기록이 없음** · **원입금 레코드 존재**(E5 — `DepositReceipt` INV-1·INV-4) · ★ **승인된 정정 요청 존재**(BR-56 ① — C8 동기 확인, R14) | `balance` 감소. 부족분은 **`Receivable.incur(origin=DEPOSIT_REVERSAL, sourceRef)`** — 원거래 승인이 없으므로 **입금 식별자를 출처로 쓴다**. **멱등 레코드 기록도 같은 커밋**(E5) · ★ **`AccountDailyMovement`(귀속 영업일) `netAmount += 조작 금액`**(DC-006) | `DepositReversed` |
 
 ### 조작 상세 — `capture()` (BR-18 + BR-20)

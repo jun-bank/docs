@@ -54,7 +54,7 @@
 | **레코드 격리** | `isolate(recordId, reason)` | **두 집합 어디에도 없음** (INV-2) | 격리 목록에 추가. **보류 격리(BR-50)를 제외**하고 `Discrepancy.recordOrTouch()` 호출 | `CaptureRecordIsolated` |
 | **중단** | `interrupt(reason)` | 상태 = 처리중 | 상태 = 중단됨 | `CaptureBatchInterrupted` |
 | **완료** | `complete()` | INV-3 | 상태 = 완료됨 | `CaptureBatchCompleted` |
-| **격리 승격** | `promoteIsolated(recordId)` | 격리 목록에 있음 **AND 격리 사유 = 보류(BR-50) AND 보류 해제됨**. `완료됨`에서도 허용 (INV-4 예외) | 격리 목록에서 제거 + 처리 집합에 추가(**격리 사유는 이력으로 보존**). 합계 불변 | `IsolatedRecordPromoted` |
+| **격리 승격** | `promoteIsolated(recordId)` | 격리 목록에 있음 **AND 격리 사유 = 보류(BR-50) AND 보류 해제됨** · ★ **승인된 요청 존재**(BR-56 ③ — C8 동기 확인, R14). `완료됨`에서도 허용 (INV-4 예외) | 격리 목록에서 제거 + 처리 집합에 추가(**격리 사유는 이력으로 보존**). 합계 불변 | `IsolatedRecordPromoted` |
 
 ### 재처리 (BR-23 · QS-09)
 
