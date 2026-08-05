@@ -43,8 +43,7 @@
 | `balance` | `Money` | **계좌잔액** — 확정된 자금 |
 | `holdTotal` | `Money` | **홀딩 합계** — 승인으로 점유된 금액의 총합 |
 | `receivableBlockLifted` | `boolean` | 운영자가 미수 차단을 해제했는가 (BR-45) |
-| **`lastClosedBusinessDate`** | `BusinessDate?` | ★ **마지막으로 확정한 영업일** (ADR-011 lazy close) |
-| **`closedBalance`** | `Money?` | ★ **그 영업일 마감 시점 잔액** — 원장 대사(M12)의 좌변. **자금 조작과 같은 트랜잭션에서 확정**되므로 별도 검증이 필요 없다 |
+| **`dailyCloses`** | `AccountDailyClose[]` | ★ **영업일별 마감 행** (DC-005) — 원장 대사 **M12·M14**의 좌변. **자금 조작과 같은 트랜잭션에서 확정**되므로 별도 검증이 필요 없다 |
 | `dailyLimit` | `Money` | **계좌 1일 한도** — 이 계좌의 모든 카드 사용액 합계에 적용 (BR-44) |
 | `dailyUsage` | `LimitUsage` | 계좌 단위 달력일 누적 사용액 (BR-44) |
 
@@ -113,26 +112,35 @@
 
 ---
 
-### lazy close — 마감을 시각이 아니라 사건으로 ★ (ADR-011)
+### 마감을 시각이 아니라 사건으로 — **영업일별 행** ★ (ADR-011 + DC-005)
 
-자금을 바꾸는 모든 조작은 **먼저 영업일을 비교한다.**
+자금을 바꾸는 모든 조작은 **그 거래의 귀속 영업일 행을 같은 트랜잭션에서 갱신한다.**
 
 ```
-거래의 귀속 영업일(BR-14) > lastClosedBusinessDate 이면
-    closedBalance ← balance          ← 직전 영업일을 확정
-    lastClosedBusinessDate ← 그 영업일
-그다음 거래를 반영한다                 ← 같은 트랜잭션
+AccountDailyClose(accountId, businessDate, closingBalance, closingReceivable)
+
+거래 귀속 영업일 = B (BR-14)
+  행(accountId, B) 이 없으면
+      가장 최근 (businessDate ≤ B) 행의 값으로 만든다  (없으면 0)
+  조작 반영 후
+      closingBalance    ← balance
+      closingReceivable ← closingReceivable + Δ
+                          (발생 +amount · 회수 −recovered · 소멸 −writtenOff)
 ```
 
 > ★ **왜 이렇게 하나**: `balance`는 **귀속 영업일을 구분하지 않는 누적 현재값**이라
 > *"D일까지의 잔액"* 을 사후에 알 수 없다. 마감 후 배치로 뜨면 그 사이 D+1 거래가 섞인다
 > (Phase 3 리뷰 T2 — 20분 창 × 80 TPS = **96,000건 허위 불일치**).
 >
-> **거래가 스스로 마감을 트리거**하면 확정이 자금 조작과 같은 트랜잭션 안에서 일어나 시점이 정확하다.
+> **거래가 스스로 갱신을 트리거**하면 확정이 자금 조작과 같은 트랜잭션 안에서 일어나 시점이 정확하다.
 >
-> ⚠️ **거래가 없는 계좌는 아무 일도 안 일어난다.** `balance`가 안 변했으므로
-> `closedBalance`가 오래돼도 값이 같다 — 대사는 `lastClosedBusinessDate < 대상 영업일`이면
-> `balance`를 쓴다.
+> ⚠️ **왜 필드가 아니라 행인가** (DC-005): 단일 필드는 **값을 하나만 든다.**
+> D일 마감값은 **D+1 첫 거래가 와야** 확정되는데 대사는 **D일 마감 직후** 돈다 —
+> ★ **구조적으로 못 맞춘다.** 행으로 두면 **D일 행과 D+1 행이 따로 서고**
+> D+1 거래가 D일 값을 덮지 않는다.
+>
+> ⚠️ **거래가 없는 계좌는 행이 안 생긴다.** 대사가 *"가장 최근 (businessDate ≤ 대상 영업일)"* 을
+> 읽으므로 자동으로 맞는다.
 
 ---
 

@@ -58,10 +58,10 @@
 | **M9** 홀딩 정합 상이 | **내부** | 계좌 `holdTotal` ≠ Σ(승인 `heldAmount`) — `subject` = 계좌ID (BR-04·41) |
 | **M10** 카드 한도 정합 상이 | **내부** | 카드 `usage` ≠ Σ(승인 `limitContribution`) — `subject` = (카드ID, 기준일) (BR-05·41) |
 | **M11** 계좌 한도 정합 상이 | **내부** | 계좌 `dailyUsage` ≠ Σ(승인 `limitContribution`) — `subject` = (계좌ID, 기준일) (BR-44·41) |
-| **M12** 잔액-원장 상이 | **내부** | ★ 계좌 **`closedBalance`** ≠ 그 계좌의 **고객예금 보조부 잔액** — `subject` = (계좌ID, 영업일) (BR-41·52 · ADR-011) |
+| **M12** 잔액-원장 상이 | **내부** | ★ 계좌 **`AccountDailyClose.closingBalance`**(가장 최근 `businessDate ≤` 대상 영업일 · DC-005) ≠ 그 계좌의 **고객예금 보조부 잔액** — `subject` = (계좌ID, 영업일) (BR-41·52 · ADR-011) |
 
 | **M13** 입금 멱등 충돌 | **내부** | 같은 `(key, operation)`에 다른 요청 지문 — `subject` = (key, operation). ★ **적재 주체가 대사 배치가 아니라 `DepositConflict` 이벤트다** (BR-29·38) |
-| **M14** 미수-원장 상이 | **내부** | ★ Σ(그 계좌 미수 `outstanding()`, `incurredBusinessDate ≤ 대상 영업일`) ≠ 미수금 보조부 잔액 — `subject` = (계좌ID, 영업일) (BR-41·52) |
+| **M14** 미수-원장 상이 | **내부** | ★ 계좌 **`AccountDailyClose.closingReceivable`**(〃 · DC-005) ≠ 미수금 보조부 잔액 — `subject` = (계좌ID, 영업일) (BR-41·52) |
 | **M15** 정산 합계 상이 | **내부** | 정산 합계 ≠ Σ(그 영업일 `settledBusinessDate` 승인들) — `subject` = 영업일 (BR-21·41) |
 | **M16** 드레인 미완 | **내부** | 커트오프 상한 내 Outbox 전달 미완 — `subject` = 영업일 (BR-52). ★ **대사를 실행하지 못했다는 사실**이 적재된다 |
 | **M17** 이벤트 전달 실패 | **내부** | 릴레이 재시도 상한 초과로 DLQ 격리 — `subject` = (outbox 순번, 파티션) (ADR-014). ★ **유실이 아니라 정체**다 |

@@ -56,6 +56,10 @@ MUT = [
   "AUTO:delrow:| **E2 매입**", None, "R9 T1"),
  ("없는 규칙 참조 — BR-99", "domain/aggregates/account.md",
   "(BR-34)", "(BR-99)", "상시"),
+ ("★ 폐기된 필드 부활 (DC-005)", "domain/aggregates/discrepancy.md",
+  "`AccountDailyClose.closingBalance`**(가장 최근", "`closedBalance`**(가장 최근", "㉓"),
+ ("★ 대체된 ADR을 정본처럼 참조", "architecture/adr/ADR-002-module-structure.md",
+  "★ **ADR-010**이 **실시간 코어**", "★ **ADR-004**가 **실시간 코어**", "㉒"),
 ]
 
 def run(tree):

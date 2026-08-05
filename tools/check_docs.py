@@ -355,6 +355,36 @@ m = re.search(r"## 열린 의문 \((\d+)건\)", rm)
 if m and int(m.group(1)) != len(idxq):
     bad("⑫", f"열린 의문 선언 {m.group(1)}건 vs 실제 {len(idxq)}건")
 
+# ── ㉒ 채택 ADR이 "대체됨" ADR을 정본처럼 참조하나 (Phase 3 마감 리뷰 결함9)
+#    ADR-002가 대체된 ADR-004의 배포 구조를 그대로 들고 있었는데 어떤 검사도 안 잡았다.
+ADRD = ROOT/"architecture/adr"
+superseded, adopted = set(), {}
+for p_ in sorted(ADRD.glob("ADR-*.md")):
+    t = p_.read_text(); num = re.match(r"ADR-(\d+)", p_.name).group(1)
+    st = re.search(r"^- 상태:[^*]*\*\*(.+?)\*\*", t, re.M)
+    if st and "대체" in st.group(1): superseded.add(num)
+    else: adopted[num] = t
+for num, t in sorted(adopted.items()):
+    body = t.split("## 변경 이력")[0]
+    for sn in sorted(superseded):
+        for mm in re.finditer(rf"ADR-{sn}\b", body):
+            ctx = body[max(0,mm.start()-40):mm.end()+40]
+            # "대체" / "~를 대체" 맥락이면 정상적인 이력 언급
+            if re.search(r"(대체|폐기|~~|을 대체|를 대체)", ctx[:40]) or "~~" in ctx: continue
+            bad("㉒", f"ADR-{num}이 대체된 ADR-{sn}을 정본처럼 참조: …{ctx.strip()[:70]}…")
+
+# ── ㉓ 폐기된 필드명이 다른 문서에 살아남았나 (DC-005)
+RETIRED = {"closedBalance": "AccountDailyClose.closingBalance (DC-005)",
+           "lastClosedBusinessDate": "AccountDailyClose 행 (DC-005)"}
+for p_ in sorted(ROOT.rglob("*.md")):
+    rel = str(p_.relative_to(ROOT))
+    if rel.startswith(("design-changes/", "study/", "reference/")): continue
+    t = p_.read_text()
+    for f_, repl in RETIRED.items():
+        for ln, line in enumerate(t.splitlines(), 1):
+            if f_ in line and "초안" not in line and "폐기" not in line and "~~" not in line:
+                bad("㉓", f"{rel}:{ln} 폐기된 필드 `{f_}` 잔존 → {repl}")
+
 if FAIL:
     print(f"실패 {len(FAIL)}건\n" + "\n".join("  " + x for x in FAIL)); sys.exit(1)
 print(f"통과 — 애그리게이트 {len(idx)} · 조작 {len(canon)} · 경계 {len(decl)}")

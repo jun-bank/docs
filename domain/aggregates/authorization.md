@@ -131,7 +131,7 @@
 | **환불** | `refund(amount, receivable, recoverable)` | 상태 ∈ {**매입됨, 정산완료**}, **INV-7** | `refundedTotal` 증가 → 반환액·소멸액 파생 → **소멸 먼저, 그다음 계좌 입금(`recoverable`이 회수 대상)** → `returnedTotal` 증가. 잔여 채무 0이면 상태 = 환불됨. **승인·자기 미수·계좌·회수 대상 미수들이 한 커밋**(E4) | `Refunded` |
 | **보류** | `freeze()` | 종료 상태 아님 | `frozen = true` | `Frozen` |
 | **보류 해제** | `unfreeze()` | `frozen = true`. **종료 상태에서도 허용** — 보류 목록에서 내릴 유일한 경로다 | `frozen = false` | `Unfrozen` |
-| **정산 확정** | `markSettled(businessDate)` | 상태 = 매입됨. **`frozen` 여부와 무관** (BR-28에 정산 제외가 없다) | 상태 = 정산완료 · ★ **`settledBusinessDate` 확정**(이후 불변 — 정산 등식의 부분집합 키, DC-002) | `Settled` |
+| **정산 확정** | `markSettled(businessDate)` | 상태 = 매입됨 **또는 (정산완료 ∧ `settledBusinessDate` == businessDate)** — ★ 후자는 **무연산**(멱등). **`frozen` 여부와 무관** (BR-28에 정산 제외가 없다) | 상태 = 정산완료 · ★ **`settledBusinessDate` 확정**(이후 불변 — 정산 등식의 부분집합 키, DC-002) | `Settled` |
 
 ### 조작 상세 — `capture()` 가 두 상태에서 허용되는 이유
 

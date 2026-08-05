@@ -134,7 +134,7 @@
 | **홀딩 합계** | **C1 뱅킹** | 없음 | — | C1 |
 | **미수 (채권 한 건)** | **C1 뱅킹** — `Receivable` | 없음 | — | C1 |
 | **입금·정정의 멱등 판정** | **C1 뱅킹** — `DepositReceipt` | 없음 | — | C1 |
-| **마감 시점 계좌 잔액** | **C1 뱅킹** — `Account.closedBalance` | 없음 | — | ★ C1 (ADR-011 lazy close) |
+| **마감 시점 계좌 잔액** | **C1 뱅킹** — `Account.`AccountDailyClose.closingBalance` | 없음 | — | ★ C1 (ADR-011 lazy close) |
 | **홀딩 점유 합계** `holdTotal` | **C1 뱅킹** — `Account` | 없음 | — | C1 (등식 우변은 승인 `heldAmount`) |
 | **계좌 1일 한도 사용액** `dailyUsage` | **C1 뱅킹** — `Account` | 없음 | — | C1 (등식 우변은 승인 `limitContribution`) |
 | **카드 1일 한도 사용액** `usage` | **C2 카드** — `Card` | 없음 | — | C2 (등식 우변은 승인 `limitContribution`) |
