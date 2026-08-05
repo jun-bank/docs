@@ -62,6 +62,10 @@ MUT = [
   "★ **ADR-010**이 **실시간 코어**", "★ **ADR-004**가 **실시간 코어**", "㉒"),
  ("★ 규칙 ID 중복 정의", "architecture/adr/ADR-013-timeout-hierarchy.md",
   "| **T-13** |", "| **T-12** |", "㉔"),
+ ("★ DC 반영 완료 주장 vs 본문", "design-changes/DC-006-daily-movement.md",
+  "| **P-2** | `receivable.md` |", "| **P-2** | `card.md` |", "㉕"),
+ ("★ 폐기된 개념어 부활 (마감 행)", "domain/aggregates/account.md",
+  "영업일별 이동 행", "영업일별 마감 행", "㉖"),
 ]
 
 def run(tree):

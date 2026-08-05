@@ -397,6 +397,30 @@ for p_ in sorted((ROOT/"architecture/adr").glob("ADR-*.md")):
     for i_, n_ in sorted(seen.items()):
         if n_ > 1: bad("㉔", f"{p_.name} 규칙 ID {i_} 가 {n_}번 정의됐다")
 
+# ── ㉕ DC 문서의 "반영 완료" 주장 대조 (패턴 B — 오늘만 5건)
+#    DC §4 표가 대상 파일을 지목하면 그 파일에 해당 DC 번호가 실제로 있어야 한다.
+for p_ in sorted((ROOT/"design-changes").glob("DC-*.md")):
+    dc = re.match(r"(DC-\d+)", p_.name).group(1)
+    t = p_.read_text()
+    if "반영 완료" not in t.split("---")[0]: continue
+    m = re.search(r"\n## \d+\. 무엇을 바꿨나.*?(?=\n## |\Z)", t, re.S)
+    if not m: continue
+    for tgt in set(re.findall(r"\|\s*`([a-zA-Z0-9_./-]+\.md)`\s*\|", m.group(0))):
+        cand = [q for q in ROOT.rglob(tgt.split('/')[-1]) if "plans" not in str(q)]
+        if not cand: bad("㉕", f"{p_.name} §4가 없는 파일을 지목: {tgt}"); continue
+        if not any(dc in q.read_text() for q in cand):
+            bad("㉕", f"{p_.name} 은 '반영 완료'인데 {tgt} 에 {dc} 언급이 없다 (선언만 하고 본문 미수정?)")
+
+# ── ㉖ 폐기된 개념어 (이름이 아니라 의미) — ㉓이 이름만 보는 것을 보완
+CONCEPT = {"마감 행": "이동 행 (DC-006)", "이월 복사": "0으로 시작 (DC-006)"}
+for p_ in sorted(ROOT.rglob("*.md")):
+    rel = str(p_.relative_to(ROOT))
+    if rel.startswith(("design-changes/", "study/", "reference/", "plans/")): continue
+    for ln, line in enumerate(p_.read_text().splitlines(), 1):
+        for c_, repl in CONCEPT.items():
+            if c_ in line and not any(k in line for k in ("초안", "구 표현", "~~", "하지 않는다", "금지")):
+                bad("㉖", f"{rel}:{ln} 폐기된 개념어 '{c_}' → {repl}")
+
 if FAIL:
     print(f"실패 {len(FAIL)}건\n" + "\n".join("  " + x for x in FAIL)); sys.exit(1)
 print(f"통과 — 애그리게이트 {len(idx)} · 조작 {len(canon)} · 경계 {len(decl)}")
