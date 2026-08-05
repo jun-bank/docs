@@ -83,7 +83,9 @@ private Account account;       // ❌
 | `refund` | 계좌 `Account` | E4 | 반환액 입금 — FIFO 회수 포함 |
 | `useAccountLimit` | 계좌 `Account` | E1 |  |
 | `restoreAccountLimit` | 계좌 `Account` | E1 E2 | E2 = 부분 매입 한도 복원 (BR-24) |
+| `changeDailyLimit` | 계좌 `Account` | — |  |
 | `liftReceivableBlock` | 계좌 `Account` | — |  |
+| `reimposeReceivableBlock` | 계좌 `Account` | — |  |
 | `reverseDeposit` | 계좌 `Account` | E5 | 부족분 채권 + 정정 멱등 |
 | `incur` | 미수 `Receivable` | E2 E5 |  |
 | `recover` | 미수 `Receivable` | E3 E4 | E4 = 반환액이 회수하는 다른 미수 |

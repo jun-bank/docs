@@ -193,7 +193,9 @@ M14 좌변 = anchor.receivableOutstanding + Σ(receivableDelta[anchor < bd ≤ D
 | **환불 입금** | `refund(amount, recoverable)` | `amount ≥ 0` | **입금과 동일** — FIFO 회수 후 잔여만 `balance` 증가 (BR-34). **`amount = 0`도 정상**(미수만 소멸한 환불) · ★ **`AccountDailyMovement`(귀속 영업일) `netAmount += balance 변화량`(조작 금액이 아니다 — DC-006 §3)**(DC-006) | `RefundCredited` |
 | **계좌 한도 사용** | `useAccountLimit(amount, at)` | PRE-3 | `dailyUsage` 증가 (기준일 리셋 포함) | `AccountLimitUsed` |
 | **계좌 한도 복원** | `restoreAccountLimit(amount, at)` | **`amount ≤ dailyUsage.amount`** (위반 시 거절) | `dailyUsage` 감소. **기준일이 다르면 아무 일도 하지 않는다**(오류 아님 — 카드와 동일) | `AccountLimitRestored` |
+| **계좌 한도 변경** | `changeDailyLimit(newLimit, requester)` | 유효 금액 표현(BR-07) — ★ 하한·0 허용은 미확정(UC6-4) | `dailyLimit` **교체**. ★ **`dailyUsage`는 건드리지 않는다** — 우변(승인 `limitContribution` 합)은 그대로인데 좌변만 움직이면 **RC-3이 깨져 M11이 발화**한다. 기존 승인 비무효(BR-46) — **새 한도 < 사용액 상태가 정상으로 존재**한다(PRE-3이 사전조건인 이유) | `AccountDailyLimitChanged` |
 | **미수 차단 해제** | `liftReceivableBlock(operator)` | **미결 미수 존재** · ★ **승인된 요청 존재**(BR-56 ② — C8 동기 확인, R14) | `receivableBlockLifted = true` | `ReceivableBlockLifted` |
+| **미수 차단 재부과** | `reimposeReceivableBlock(operator)` | **`receivableBlockLifted = true`** (아니면 거절 — 되돌릴 해제가 없다) | `receivableBlockLifted = false` — 신규 승인이 다시 **PRE-2**에 걸린다. **다시 풀려면 새 2인 승인**(BR-56 ② — 해제·재부과가 비대칭인 이유: 재부과는 안전 방향이라 담당자 단독, BR-45) | `ReceivableBlockReimposed` |
 | **입금 정정** | `reverseDeposit(reversalId, originalDepositId, amount, operator)` | ★ **`(reversalId, 정정)` 수신 기록이 없음** · **원입금 레코드 존재**(E5 — `DepositReceipt` INV-1·INV-4) · ★ **승인된 정정 요청 존재**(BR-56 ① — C8 동기 확인, R14) | `balance` 감소. 부족분은 **`Receivable.incur(origin=DEPOSIT_REVERSAL, sourceRef)`** — 원거래 승인이 없으므로 **입금 식별자를 출처로 쓴다**. **멱등 레코드 기록도 같은 커밋**(E5) · ★ **`AccountDailyMovement`(귀속 영업일) `netAmount += balance 변화량`(조작 금액이 아니다 — DC-006 §3)**(DC-006) | `DepositReversed` |
 
 ### 조작 상세 — `capture()` (BR-18 + BR-20)
@@ -268,9 +270,11 @@ M14 좌변 = anchor.receivableOutstanding + Σ(receivableDelta[anchor < bd ≤ D
 | 입금됨 | `Deposited` | `deposit()` | **`accountId`**, **`receivedAmount`(총 유입액)**, **`recoveredAmount`(미수 회수분)**, **`creditedAmount`(잔액 증가분)**, 입금식별자, 영업일 | **C5 원장** |
 | 환불 입금됨 | **`RefundCredited`** | `refund()` | **`accountId`**, 회수분, 잔액 증가분, 원거래 | ⚠️ **원장 아님** — 승인 `Refunded`가 이미 기표한다 (이름도 C3 `Refunded`와 충돌했다) |
 | 입금 정정됨 | `DepositReversed` | `reverseDeposit()` | **`accountId`**, **`amount`(정정 총액)** · **`recoveredFromBalance`(잔액에서 회수한 몫)** · **`receivableIncurred`(부족분)**, `sourceRef`, 사유 — ★ **행위자는 싣지 않는다**(자금 이벤트 = 원장 언어. 행위자는 감사 수집 AD-2가 나른다 — 리뷰 L-03) | **C5 원장** |
+| 계좌 한도 변경됨 | `AccountDailyLimitChanged` | `changeDailyLimit()` | **`accountId`**, 이전·이후 한도 — ★ **행위자 비포함**(주체 혼합: 소지자∪운영자, 비자금 — AD-7 ②. 카드 `LimitChanged` 판정 UC4-2와 동일. 행위자는 감사 AD-2가 나른다) | — (같은 트랜잭션) |
 | 계좌 한도 사용됨 | `AccountLimitUsed` | `useAccountLimit()` | **`accountId`**, 금액, 기준일 | — (같은 트랜잭션) |
 | 계좌 한도 복원됨 | `AccountLimitRestored` | `restoreAccountLimit()` | **`accountId`**, 금액, 기준일 | — (같은 트랜잭션) |
 | 미수 차단 해제됨 | `ReceivableBlockLifted` | `liftReceivableBlock()` | **`accountId`**, **운영자** | 운영자 |
+| 미수 차단 재부과됨 | `ReceivableBlockReimposed` | `reimposeReceivableBlock()` | **`accountId`**, **운영자** (AD-7 ① — 운영자 전용 이벤트, 행위자 포함) | 운영자 |
 
 > 원장은 이 이벤트를 **전표 언어로 번역**한다 (컨텍스트 맵 R6, ACL).
 >
@@ -321,6 +325,7 @@ M14 좌변 = anchor.receivableOutstanding + Σ(receivableDelta[anchor < bd ≤ D
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v2.1 | 2026-08-06 | ★ **정본 판정 반영 (유스케이스 전수 UC6-1·UC13-1 — 사용자 합의)** — 조작 2신설: `changeDailyLimit(newLimit, requester)`(BR-46이 선언만 하고 조작이 없던 공백. `dailyUsage` 불변 — RC-3) · `reimposeReceivableBlock(operator)`(해제 오판 복구 — 담당자 단독, 안전 방향. BR-45) + 이벤트 2종(`AccountDailyLimitChanged` 행위자 비포함 ② / `ReceivableBlockReimposed` 포함 ①) |
 | v2.0 | 2026-08-05 | ★ **정본 충돌 정정 (UC7-1 — 유스케이스 전수 워커 발견)** — 조작 표의 `netAmount += 조작 금액`이 **DC-006 §3 정본("balance 변화량 — 조작 금액이 아니다")과 반대**였다. 입금 6·회수 4면 좌변이 6 vs 2로 갈려 **M12가 허위 발화 또는 은폐**된다. 전 발생 위치를 정본대로 정정. 리뷰 3루프·검산이 못 잡은 것을 유스케이스 작성이 잡았다(교차 표면 검증의 가치) |
 | v1.9 | 2026-08-05 | **리뷰 루프 1·2 반영** — ★ v1.8이 선언한 "`DepositReversed` payload에 운영자"는 **뒤집혔다**(자금 이벤트 = 원장 언어, L-03) — 본문이 정본이다. `liftReceivableBlock`에 승인 사전조건(BR-56 ②) · 이동 행 `ownerId` · 개설 조직 `BranchId` 참조(IS-4) |
 | v1.8 | 2026-08-05 | **멀티테넌시 B-4** — `reverseDeposit`에 **`operator` 인자**(운영자 조작인데 행위자가 시그니처에 없던 유일한 자금 직접 조작) + 사전조건에 ★ **승인된 정정 요청 존재**(BR-56 ① — C8 동기 확인 R14). `DepositReversed` payload에 운영자(BR-57) |

@@ -9,6 +9,7 @@ ASSIGN = {
  "Account.hold":"E1","Account.releaseHold":"E1","Account.useAccountLimit":"E1",
  "Account.restoreAccountLimit":"E1 E2","Account.capture":"E2","Account.deposit":"E3",
  "Account.refund":"E4","Account.reverseDeposit":"E5","Account.liftReceivableBlock":"—",
+ "Account.changeDailyLimit":"—","Account.reimposeReceivableBlock":"—",
  "Receivable.incur":"E2 E5","Receivable.recover":"E3 E4","Receivable.writeOff":"E4",
  "Receivable.freeze":"—","Receivable.unfreeze":"—",
  "Card.assertUsable":"조회","Card.useLimit":"E1","Card.restoreLimit":"E1 E2",
