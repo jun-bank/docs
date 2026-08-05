@@ -127,10 +127,10 @@ usage = (기준일: 2026-08-03, 누적: 250만)
 | **사용 가능 확인** | `assertUsable(now)` | — | 불가 시 사유가 구분된 예외 (BR-15·BR-36) | — |
 | **한도 사용** | `useLimit(amount, at)` | PRE-1·PRE-2 | `usage.amount` 증가 (기준일 리셋 포함) | `LimitUsed` |
 | **한도 복원** | `restoreLimit(amount, at)` | **`amount ≤ usage.amount`** (위반 시 거절) | `usage.amount` 감소. **`at`의 기준일이 `usage.기준일`과 다르면 아무 일도 하지 않는다**(오류 아님) | `LimitRestored` |
-| **정지** | `suspend()` | 해지 상태가 아님 | `status = 정지` | `CardSuspended` |
-| **정지 해제** | `resume()` | 해지 상태가 아님 | `status = 정상` | `CardResumed` |
-| **해지** | `terminate()` | — | `status = 해지` (되돌릴 수 없음) | `CardTerminated` |
-| **한도 변경** | `changeLimit(newLimit)` | INV-3 (1회 ≤ 1일) | `limit` 교체. **기존 승인은 무효화되지 않는다** (BR-46) | `LimitChanged` |
+| **정지** | `suspend(requester)` | 해지 상태가 아님 · 주체 = **소지자 또는 운영자 담당자** (상태 머신 C1 · BR-55) | `status = 정지` | `CardSuspended` |
+| **정지 해제** | `resume(requester)` | 해지 상태가 아님 · 주체 = **소지자 또는 운영자 담당자** (★ C2의 주체 공백 확정 — 정지와 대칭, BR-55) | `status = 정상` | `CardResumed` |
+| **해지** | `terminate(requester)` | 주체 = **소지자** (상태 머신 C3) | `status = 해지` (되돌릴 수 없음) | `CardTerminated` |
+| **한도 변경** | `changeLimit(newLimit, requester)` | INV-3 (1회 ≤ 1일) · 주체 = **소지자(자기 카드) 또는 운영자 담당자** (BR-46·55 — 주어 공백 확정) | `limit` 교체. **기존 승인은 무효화되지 않는다** (BR-46) | `LimitChanged` |
 
 ### 조작 상세 — `restoreLimit()` (BR-24)
 
@@ -204,6 +204,7 @@ usage = (기준일: 2026-08-03, 누적: 250만)
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v1.5 | 2026-08-05 | **멀티테넌시 B-4** — 행위자 불명이던 4조작에 주체 확정: `suspend`·`resume` = 소지자 또는 담당자(★ resume은 주체 미규정 공백이었다 — 정지와 대칭으로) · `terminate` = 소지자 · `changeLimit` = 소지자 또는 담당자(BR-46·55). 시그니처에 `requester` |
 | v1.4 | 2026-08-04 | **DC-001 단계 10** — 등식 우변을 승인 `limitContribution`으로 명시(없으면 정상 매입과 지연 매입을 구분할 수 없어 **계산 불가**였다) · INV-5를 **대사 불변식 RC-1로 분리** · 경계를 해제·복원까지 확장하고 **부분 매입 복원이 E2**임을 명시 |
 | v1.3 | 2026-08-04 | **DC-001 단계 3** — `usage`를 **합계 필드·의식적 예외 ③** 로 등재하고 등식(INV-5 신설)·트랜잭션 경계(E1)·탐지(BR-41)를 명시. 복원 책임이 승인 전이에 흩어져 이중 복원이 반복 지적됐던 것을 등식으로 사후 검증 |
 | v1.2 | 2026-08-04 | 재점검 반영 — `restoreLimit`의 **두 실패 경로 분리**(기준일 불일치 = 무시 / 금액 초과 = 거절). 한 덩어리 사전조건이라 날짜를 넘긴 정상 취소까지 거절될 수 있었다 |
