@@ -3,7 +3,7 @@
 - 작성일: 2026-08-05
 - 상태: 검토대기
 - 양식: `study/project-workflow/phase3/03-quality-scenario-format.md`
-- 입력: `quality-attributes.md` · 리서치 `plans/2026-08-05/phase3-research/`
+- 입력: `quality-attributes.md` · **리서치 [`reference/research/`](../reference/research/README.md)**
 
 > **측정할 수 없는 품질은 선언일 뿐이다.** 그리고 **근거 없는 수치는 나중에 아무도 못 바꾼다.**
 
