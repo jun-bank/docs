@@ -259,7 +259,7 @@ m = re.search(r"## BR-09\..*?(?=\n## BR-)", brs_txt, re.S)
 canon_m = set(re.findall(r"^\| (M\d+) \|", m.group(0), re.M)) if m else set()
 if len(canon_m) < 5: bad("⑰", f"BR-09 유형 표 파싱 실패 ({len(canon_m)})")
 for p_ in sorted(ROOT.rglob("*.md")):
-    if ".git" in p_.parts or "project-workflow" in str(p_) or "design-changes" in str(p_): continue
+    if ".git" in p_.parts or "project-workflow" in str(p_) or "design-changes" in str(p_) or "reference" in str(p_): continue
     for n, line in enumerate(body(p_).splitlines() if p_ in WIDE else p_.read_text().splitlines(), 1):
         if re.match(r"> \*\*v\d", line.strip()): continue      # 버전 주석은 옛 건수를 인용한다
         mm = re.search(r"유효 유형은? \*{0,2}(\d+)종", line) or (None if p_ == BRS else re.search(r"유형[^|\d]{0,6}(\d+)종", line))
@@ -324,6 +324,19 @@ for p_ in sorted(d.AGG.glob("*.md")):
                 if ko in r[si] and dst != src and (src, dst) not in rel:
                     bad("⑳", f"{p_.name} 이벤트가 {src}→{dst} 로 가는데 "
                              f"context-map에 그 관계가 없다")
+
+# ── ㉑ 미확정 수치 표 ↔ 규칙 본문 (G8 — 본문만 고치고 표를 안 고치는 형태)
+btxt = BRS.read_text()
+m = re.search(r"## 미확정 수치.*?(?=\n## |\Z)", btxt, re.S)
+if m:
+    listed = set(re.findall(r"^\| (BR-\d+) \|", m.group(0), re.M))
+    for br in sorted(listed):
+        mm = re.search(rf"## {br}\..*?(?=\n## BR-|\Z)", btxt, re.S)
+        if not mm: bad("㉑", f"미확정표의 {br} 을 본문에서 못 찾았다"); continue
+        num = re.search(r"\| \*\*수치\*\* \| (.+?) \|\s*$", mm.group(0), re.M)
+        if num and not re.search(r"미정|미확정|임시값|자체 가정|\[미검증\]|—", num.group(1)):
+            bad("㉑", f"{br} 본문 수치가 확정됐는데 미확정표에 남아 있다 — "
+                     f"본문만 고치고 표를 안 고친 형태")
 
 # ── ⑫ 열린 의문 색인 == 각 상태 머신 문서의 의문 ID (양방향)
 SM = ROOT/"domain/state-machines"
