@@ -98,7 +98,7 @@
 | payload | accountId · amount · recoveredFromBalance · receivableIncurred · sourceRef · 사유 — ★ **행위자 없음(자금 이벤트 — AD-7 ②)**. 행위자는 E5 커밋의 감사 outbox가 나른다 ✓ 정본과 일치 |
 | 구독 | C5 원장 (R6 ACL 번역) |
 | 멱등 키 | 수신측 = 전표 INV-8(`sourceEvent`) |
-| 스키마 버전 | Phase 4 계약 전수 시 S-9 일괄 부여 — **[미정]** (파일럿 범위 밖 — 근거: 색인의 이벤트 표가 전수 시점의 입력) |
+| 스키마 버전 | ★ **`schemaVersion: 1`** (K-3 — 2026-08-06 계약 전수. 의미 필드 추가 = 새 타입, S-6a) |
 
 #### `GET /ops/approval-requests?state=&mine=` — 승인 대기·내 요청 목록 (★ 공통 계약의 전제 조회 — 재점검 반영. 상세는 계약 전수 패스 이월)
 
@@ -136,6 +136,7 @@
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v0.6 | 2026-08-06 | 계약 전수 — S-9 확정(`schemaVersion: 1` — K-3) |
 | v0.3 | 2026-08-05 | **재점검 정정** — 판정 순서를 ①단계→②스코프·존재→③상태로 (단계는 자기 속성 — 대상 조회 전에 판정해야 FORBIDDEN_LEVEL이 탐색 채널이 안 된다) |
 | v0.2 | 2026-08-05 | **듀얼 1패스 반영** — 판정 순서(스코프 먼저 — UC2-2 닫힘) · approve/reject 응답 칸·표 정리 · DepositReversed 계약 블록 · 공통 계약 정본 선언(U-7) · R15(④⑤ 실행 엔드포인트 없음) 명시 · "아므로" 오타 |
 | v0.1 | 2026-08-05 | 파일럿 — 멀티테넌시 설계(2인 승인·R14·감사·L7)의 첫 유스케이스 실증. 예외 11종 = ApprovalRequest 금지 7 + DepositReceipt INV + L7 |
