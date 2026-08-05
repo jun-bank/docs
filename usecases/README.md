@@ -9,8 +9,8 @@
 |---|---|---|---|---|
 | UC-01 | [카드 결제를 승인받는다](UC-01-authorize-payment.md) | 매입사(시스템 — 소지자 대리) | E1 | 검토대기 |
 | UC-02 | [잘못 반영된 입금을 정정한다](UC-02-reverse-deposit.md) | 운영자 2인 (BR-56 ①) | E5 | 검토대기 |
-| UC-03 | 내 잔액·거래를 조회한다 | 고객 | 조회 | 작성중 |
-| UC-04 | 카드 분실을 신고한다 | 고객 ∪ 운영자 담당자 | — (상태 전이) | 작성중 |
+| UC-03 | [내 잔액·거래를 조회한다](UC-03-view-balance-transactions.md) | 고객 | 조회 | 검토대기 |
+| UC-04 | [카드 분실을 신고한다](UC-04-report-lost-card.md) | 고객 ∪ 운영자 담당자 | — (상태 전이) | 검토대기 |
 
 ## 2. 엔드포인트 색인 ★ (BR-58 전수 시험의 입력 — 사람이 세면 빠진다)
 
@@ -23,6 +23,10 @@
 | `POST /ops/approval-requests` | UC-02 | 운영자 담당자+ | ✅ 대상 부재·스코프 밖 동일 |
 | `POST /ops/approval-requests/{id}/approve·reject` | UC-02 | 운영자 책임자 | ✅ (SELF_APPROVAL은 비노출 제외 — UC2-2) |
 | `POST /ops/accounts/{accountId}/deposit-reversals` | UC-02 | 운영자 담당자(=maker) | ✅ 계좌 부재·스코프 밖 동일 |
+| `GET /me/accounts/{accountId}/balance` | UC-03 | 고객(본인) | ✅ ★ QS-08 원형 |
+| `GET /me/accounts/{accountId}/transactions` | UC-03 | 고객(본인) | ✅ 목록·페이징 포함 |
+| `POST·DELETE /me/cards/{cardId}/suspension` | UC-04 | 고객(본인) | ✅ |
+| `POST·DELETE /ops/cards/{cardId}/suspension` | UC-04 | 운영자 담당자 | ✅ 스코프 밖 동일 |
 
 ## 변경 이력
 
