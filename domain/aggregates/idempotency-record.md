@@ -17,15 +17,22 @@
 
 ## 2. 구성
 
+### 애그리게이트 루트
+
+`IdempotencyRecord` — 식별자 ★ **`(발신 기관, correlationId, operation)`**(2026-08-06 개정 R-06 — 구 `(correlationId, operation)` 대체)
+
+### 상태 필드
+
 | 필드 | 타입 | 뜻 |
 |---|---|---|
-| `correlationId` | `CorrelationId` | 멱등 키 — **요청자(매입사)가 생성** (BR-17 ①) |
+| `institution` | `InstitutionCode` | ★ **발신 기관 — 키의 스코프 축**(2026-08-06 R-06). **기관 = ACL이 인증한 발신 기관**(전문 본문 X-6 기관 코드와 일치 검증 — 불일치 = `ARG_MISMATCH`) |
+| `correlationId` | `CorrelationId` | 멱등 키 — **요청자(매입사)가 생성** (BR-17 ①). ★ 매입사마다 자기 채번 체계를 쓰므로 **그 자체로는 전역 유일이 아니다** |
 | `operation` | `OperationType` | 승인 / 망취소 / 취소 — **키가 같아도 작업이 다르면 별개** |
 | `requestFingerprint` | `Fingerprint` | 요청 본문의 해시 (BR-02) |
 | `result` | `StoredResult` | 최초 처리 결과 (응답 전문) |
 | `recordedAt` · `expiresAt` | `Instant` | 보관 기간 (BR-02) |
 
-> **멱등 범위 = (요청 주체 + 작업 종류 + 키)** 다. 키만으로 판별하면 승인과 취소가 같은 키를 쓸 때 충돌한다.
+> **멱등 범위 = (발신 기관 + 작업 종류 + 키)** 다. 키만으로 판별하면 승인과 취소가 같은 키를 쓸 때 충돌하고, **기관을 빼면 다른 매입사의 우연히 같은 값이 남의 결과를 반환**한다(R-06).
 
 ---
 
@@ -43,16 +50,16 @@
 
 | 조작 | 코드명 | 사전조건 | 사후조건 | 이벤트 |
 |---|---|---|---|---|
-| **조회** | `find(correlationId, operation)` | — | 있으면 `result` 반환 | — |
-| **기록** | `record(key, operation, fingerprint, result)` | INV-1·INV-3 | 레코드 생성 | — |
-| **충돌 판정** | `assertSameRequest(fingerprint)` | — | 다르면 **충돌 오류** (BR-02) | `IdempotencyConflict` |
+| **조회** | `find(institution, correlationId, operation)` | — | 있으면 `result` 반환. ★ **기관이 다르면 "없음"** — 같은 상관 식별자라도 남의 결과를 보지 않는다(R-06) | — |
+| **기록** | `record(institution, key, operation, fingerprint, result)` | INV-1·INV-3 | 레코드 생성 | — |
+| **충돌 판정** | `assertSameRequest(institution, fingerprint)` | — | 다르면 **충돌 오류** (BR-02). ★ 기관은 **판정 대상 레코드를 지목하는 축**이다(키의 일부) | `IdempotencyConflict` |
 | **만료 정리** | `expire(now)` | `now ≥ expiresAt` | 삭제 대상 | — |
 
 ### 처리 순서 (BR-02)
 
 ```
-1) find(key, operation)
-   ├─ 있음 → assertSameRequest(fingerprint)
+1) find(institution, key, operation)          ← 기관 = ACL이 인증한 발신 기관 (R-06)
+   ├─ 있음 → assertSameRequest(institution, fingerprint)
    │          ├─ 같음 → 저장된 result 반환 (재처리 없음)
    │          └─ 다름 → 충돌 오류로 거절
    └─ 없음 → 처리 → record(...)   ← 처리와 같은 트랜잭션 (BR-02 ID-5)
@@ -60,7 +67,7 @@
 
 > ⚠️ **기록과 처리가 같은 트랜잭션이어야 한다.** 나누면 처리는 됐는데 기록이 없는 순간이 생기고, 그때 재요청이 오면 이중 처리된다.
 
-> ⚠️ **저장소에 유니크 제약이 필요하다** (BR-02 ID-4). 동시 요청 둘이 동시에 `find` → 둘 다 없음 → 둘 다 처리하는 경합을 애플리케이션 로직만으로는 못 막는다.
+> ⚠️ **저장소에 유니크 제약이 필요하다** (BR-02 ID-4). 동시 요청 둘이 동시에 `find` → 둘 다 없음 → 둘 다 처리하는 경합을 애플리케이션 로직만으로는 못 막는다. ★ **제약의 열은 `(발신 기관, correlationId, operation)` 세 개**다(R-06 — 기관을 빼면 제약이 남의 키 공간까지 막는다).
 
 ---
 
@@ -88,5 +95,6 @@
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v1.2 | 2026-08-06 | **재점검 정정 — 항목 4**: R-06 기관 축을 INV-1 밖의 **모델 표면 전수 착지** — 루트 식별자 `(발신 기관, correlationId, operation)` · `institution` 필드 신설(기관의 정의 = ACL이 인증한 발신 기관 · X-6 코드 일치 검증, 불일치 = `ARG_MISMATCH`) · `find`/`record`/`assertSameRequest` 인자 · 처리 순서 코드블록 · 유니크 제약 열 |
 | v1.1 | 2026-08-06 | **듀얼 리뷰 반영 — R-06**(인터페이스 규격서): INV-1의 키 유일성에 ★ **발신 기관 축** 추가 — 상관 식별자는 매입사가 채번하므로 전역 유일이 아니다. 물리 표현 = `interfaces/auth-message.md` §4 · `interfaces/cancel-message.md` §4 |
 | v1.0 | 2026-08-03 | 최초 작성 |

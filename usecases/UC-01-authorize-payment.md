@@ -62,8 +62,8 @@
 | 주체 | 시스템 — 매입사 전문 경로 (ACL이 경로 식별자 부여) |
 | 요청 | 카드번호 · 금액(BR-07) · 가맹점 ID · **상관 식별자**(매입사 생성 — BR-17. 유일성 범위는 Phase 4 계약 전수 시 확정 — 미확정 수치 표) |
 | 응답(성공) | 승인번호 · 승인 금액 |
-| 오류 표 ★ | `DECLINED_CARD`(정지/만료/해지 구분) · `DECLINED_UNREGISTERED`(BR-36) · `DECLINED_FUNDS` · `DECLINED_LIMIT` · `DECLINED_RECEIVABLE_BLOCK`(BR-45) · `IDEMPOTENCY_CONFLICT`(BR-02) · `TIMEOUT_RETRYABLE`(§4-H) — 전부 감사 기록 |
-| 멱등 | `(상관 식별자, 승인)` — 최초 결과 반환 (BR-02) |
+| 오류 표 ★ | ★ **카드 사용 불가 = SM 3코드**(`CARD_SUSPENDED`(**CF4**) · `CARD_EXPIRED`(**CF6**) · `CARD_TERMINATED`(**CF3**) — 구 단일 `DECLINED_CARD` 표기를 **대체**한다. BR-15의 사유 구분 요구를 **SM 응답 열 재사용**으로 충족하며 **신설이 아니다** — 색인 §5 K-1 코드 대장 v0.13 확정) · `DECLINED_UNREGISTERED`(BR-36) · `DECLINED_FUNDS` · `DECLINED_LIMIT` · `DECLINED_RECEIVABLE_BLOCK`(BR-45) · `IDEMPOTENCY_CONFLICT`(BR-02) · `TIMEOUT_RETRYABLE`(§4-H) — 전부 감사 기록. ★ **제3형태 `VOIDED_BY_RESERVATION`**(§4-B · 승인 T3 · 예약 R2 · 코드 대장 등재): 승인도 일반 거절도 아니며 응답은 **응답 코드 + 승인번호 발번 + 금액 0**이다(`interfaces/auth-message.md` §2와 동형) — 승인 레코드가 `VOIDED` 상태로 **실재**하므로 매입사가 대사·조회로 그 건을 지목할 연결 고리(BR-17 ②)가 필요하고, 홀딩이 잡히지 않아 성립한 자금은 없다 |
+| 멱등 | ★ **`(기관, 상관 식별자, 승인)`** — 상관 식별자는 **매입사가 채번**하므로 유일성 스코프는 **발신 기관**이다(2026-08-06 R-06 · 멱등 레코드 INV-1). **기관 = ACL이 인증한 발신 기관**(전문 본문 X-6 기관 코드와 일치 검증 — 불일치 = `ARG_MISMATCH`). 최초 결과 반환 (BR-02) |
 | 예산 | 외부 p99 3초 · 내부 deadline **2.5초** (T-11) |
 | 감사 | 주체(경로) · 카드/계좌 · 결과 · 거절 사유 (AD-8) |
 
@@ -99,6 +99,7 @@
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v0.6 | 2026-08-06 | **재점검 정정 — 항목 1·4**: §7 오류 표에 ★ **제3형태 `VOIDED_BY_RESERVATION`**(코드 + 승인번호 발번 + 금액 0 — 규격 §2와 동형) 등재 · 단일 `DECLINED_CARD` 표기를 **SM 3코드**(`CARD_SUSPENDED`(CF4)·`CARD_EXPIRED`(CF6)·`CARD_TERMINATED`(CF3) — 색인 v0.13 확정)로 교체 · 멱등 키에 **기관 축**(`(기관, 상관 식별자, 승인)` — R-06) |
 | v0.5 | 2026-08-06 | 계약 전수 — S-9 확정(`schemaVersion: 1` — K-3) · 전문명 `AUTH-REQ/RES` K-2 확정 승계 |
 | v0.2 | 2026-08-05 | **듀얼 1패스 반영** — L7 판정 확정(BR-36 정본 특칙 — UC1-1 닫힘) · HoldPlaced 축 필드 판정(내부 이벤트 — 불요) |
 | v0.1 | 2026-08-05 | 파일럿 최초 작성 — 양식 v0.1 검증 겸. 예외 8종 = 승인 SM 금지·BR 예외 전수 대응 |

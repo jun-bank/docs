@@ -26,13 +26,14 @@ BR-29가 *"입금은 입금 식별자 기준으로 멱등"* 이라고 선언했�
 
 ### 애그리게이트 루트
 
-`DepositReceipt` — 식별자 `(key, operation)`
+`DepositReceipt` — 식별자 ★ **`(발신 기관, key, operation)`**(2026-08-06 개정 R-06 — 구 `(key, operation)` 대체)
 
 ### 상태 필드
 
 | 필드 | 타입 | 뜻 |
 |---|---|---|
-| `key` | `ReceiptKey` | 멱등 키 — **`operation`마다 출처가 다르다** (아래 표) |
+| `institution` | `InstitutionCode` | ★ **발신 기관 — 키의 스코프 축**(2026-08-06 R-06). **기관 = ACL이 인증한 발신 기관**(전문 본문 X-6 기관 코드와 일치 검증 — 불일치 = `ARG_MISMATCH`). ★ **정정은 우리가 채번**하므로(운영자 지시) 기관 = 자행으로 고정되고 스코프가 자명하다 |
+| `key` | `ReceiptKey` | 멱등 키 — **`operation`마다 출처가 다르다** (아래 표). ★ 입금의 `depositId`는 **입금원이 자기 체계로 채번**하므로 그 자체로는 전역 유일이 아니다 |
 | `operation` | `DepositOperation` | **입금 / 정정** |
 | `originalDepositId` | `DepositId?` | **정정일 때만** — 되돌릴 원입금 (BR-38) |
 | `accountId` | `AccountId` | 대상 계좌 (ID 참조) |
@@ -110,9 +111,9 @@ BR-29가 *"입금은 입금 식별자 기준으로 멱등"* 이라고 선언했�
 
 | 조작 | 코드명 | 사전조건 | 사후조건 | 발행 이벤트 |
 |---|---|---|---|---|
-| **조회** | `find(key, operation)` | — | 있으면 `result` 반환 | — |
-| **기록** | `record(key, operation, accountId, amount, fingerprint, result, at, originalDepositId?)` | INV-1 · INV-3 · **INV-4** | 레코드 생성 | — |
-| **충돌 판정** | `assertSameRequest(fingerprint)` | — | 다르면 **충돌 오류** (BR-02) | `DepositConflict` |
+| **조회** | `find(institution, key, operation)` | — | 있으면 `result` 반환. ★ **기관이 다르면 "없음"** — 같은 `depositId`라도 남의 결과를 보지 않는다(R-06) | — |
+| **기록** | `record(institution, key, operation, accountId, amount, fingerprint, result, at, originalDepositId?)` | INV-1 · INV-3 · **INV-4** | 레코드 생성 | — |
+| **충돌 판정** | `assertSameRequest(institution, fingerprint)` | — | 다르면 **충돌 오류** (BR-02). ★ 기관은 **판정 대상 레코드를 지목하는 축**이다(키의 일부) | `DepositConflict` |
 | **만료 정리** | `expire(now)` | 보관 기간 경과 | 삭제 대상 | — |
 
 > ⚠️ **기록은 자금 반영과 같은 커밋이다** — 입금은 E3, 정정은 E5.
@@ -160,7 +161,7 @@ BR-29가 *"입금은 입금 식별자 기준으로 멱등"* 이라고 선언했�
 
 | 상황 | 처리 |
 |---|---|
-| 같은 `(key, operation)` 동시 2회 | INV-1의 유일 제약이 하나를 거절 → 거절된 쪽은 `find()`로 최초 결과 반환 |
+| 같은 `(발신 기관, key, operation)` 동시 2회 | INV-1의 유일 제약이 하나를 거절 → 거절된 쪽은 `find()`로 최초 결과 반환 |
 | 기록 후 프로세스 종료 | 자금 반영과 같은 커밋이므로 **둘 다 없거나 둘 다 있다** |
 
 ---
@@ -178,6 +179,7 @@ BR-29가 *"입금은 입금 식별자 기준으로 멱등"* 이라고 선언했�
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v0.5 | 2026-08-06 | **재점검 정정 — 항목 4**: R-06 기관 축을 INV-1 밖의 **모델 표면 전수 착지** — 루트 식별자 `(발신 기관, key, operation)` · `institution` 필드 신설(기관의 정의 = ACL이 인증한 발신 기관 · X-6 코드 일치 검증, 불일치 = `ARG_MISMATCH`. 정정은 우리 채번이라 자행 고정) · `find`/`record`/`assertSameRequest` 인자 · §8 동시성 표기 |
 | v0.4 | 2026-08-06 | **듀얼 리뷰 반영 — R-06**(인터페이스 규격서): INV-1의 키 유일성에 ★ **발신 기관 축** 추가 — 외부 채널 키(`depositId`)는 입금원이 채번하므로 전역 유일이 아니다(전역 유일 가정 = 다른 입금원의 같은 값이 남의 결과를 반환하고 그 입금이 조용히 사라진다). 물리 표현 = `interfaces/deposit-advice.md` §4 |
 | v0.3 | 2026-08-05 | **멀티테넌시 B-4b** — `ownerId`(`CustomerId`) 필드 추가 — ★ **소유 축**(ADR-018 IS-1) |
 | v0.2 | 2026-08-04 | **R9 H3·H4** — 정정의 키를 `depositId`에서 **`reversalId`(운영자 지시)** 로 바꿨다. BR-38이 정정을 운영자 역분개로 규정하고 BR-29도 *"모의 입금원은 취소 전문을 보내지 않는다"* 고 예외를 두는데, 초판은 외부 전문을 전제했다. **같은 입금을 3만·4만으로 나눠 정정하면 둘째가 자기 키에 막히는** 문제도 함께 풀렸다. `originalDepositId` 신설 · **INV-4**(원입금 존재)로 **DR2 닫힘** |

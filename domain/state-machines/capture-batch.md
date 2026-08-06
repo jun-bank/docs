@@ -40,7 +40,7 @@ stateDiagram-v2
 
 | # | 현재 | 전이 | 다음 | 조건 | 부수 효과 | 근거 |
 |---|---|---|---|---|---|---|
-| B1 | — | `receive` | `RECEIVED` | `fileId` 유일 (INV-1) | `totalRecords` 확정 | BR-23 |
+| B1 | — | `receive` | `RECEIVED` | ★ **`(발신 기관, fileId)` 유일** (INV-1 — R-06) | `totalRecords` 확정 | BR-23 |
 | B2 | `RECEIVED` | `start` | `PROCESSING` | — | — | — |
 | B3 | `INTERRUPTED` | `start` | `PROCESSING` | — | **처리된 레코드는 건너뛴다** | BR-23 |
 | B4 | `PROCESSING` | `markProcessed` | 상태 불변 | **두 집합 어디에도 없음** (INV-2) | 레코드 반영 + 처리 집합 추가. **레코드 단위 커밋** | BR-16·23 |
@@ -65,7 +65,7 @@ stateDiagram-v2
 | **BF3** | `COMPLETED` | `start` | 다 끝난 파일을 다시 연다 | **전 레코드 재처리 시도** — 멱등이 막아 주지만 무의미한 부하 | `BATCH_COMPLETED` |
 | **BF5** | `RECEIVED` | `markProcessed` · `isolate` | 시작하지 않은 배치 | **상태 없이 자금이 움직인다** — 중단 시 어디까지 했는지 모른다 | `BATCH_NOT_STARTED` |
 | **BF6** | `RECEIVED`·`INTERRUPTED` | `complete` | 처리 중이 아닌데 완료 선언 | 미처리 레코드를 남긴 채 완료 | `BATCH_NOT_PROCESSING` |
-| **BF7** | 모든 상태 | `receive` (**같은 `fileId`**) | INV-1 위반 | **파일 전체 이중 처리** | `BATCH_DUPLICATE_FILE` — 최초 배치를 반환 |
+| **BF7** | 모든 상태 | `receive` (★ **같은 기관의 같은 `fileId`** — 유일성 스코프는 **발신 기관**이다, R-06) | INV-1 위반 | **파일 전체 이중 처리** / ★ 반대로 기관을 빼면 **다른 매입사의 같은 `fileId`가 중복으로 판정되어 파일이 통째로 누락**된다 | `BATCH_DUPLICATE_FILE` — 최초 배치를 반환 |
 | **BF8** | `PROCESSING` | `markProcessed`·`isolate` (**이미 처리 또는 격리된 레코드**) | INV-2 위반 | **이중 출금**, 그리고 격리 중복이 **건수를 부풀려 INV-3을 무력화** | 오류가 아니라 **건너뛴다** (◎) — 재개 시 정상 경로다 |
 | **BF9** | `INTERRUPTED` | `markProcessed` · `isolate` | 재개(`start`)를 거치지 않았다 | 상태가 `PROCESSING`이 아닌데 자금이 움직여 **중단 시점 추적이 깨진다** | `BATCH_NOT_PROCESSING` |
 | **BF4** | `RECEIVED`·`INTERRUPTED`·`COMPLETED` | `interrupt` | 처리 중이 아니다. `COMPLETED`는 특히 **끝난 것이 재처리 대상으로 되살아난다** | 중단 이력이 근거 없이 생기고, 완료가 취소된다 | `BATCH_NOT_PROCESSING` |
@@ -168,6 +168,7 @@ stateDiagram-v2
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v0.8 | 2026-08-06 | **재점검 정정 — 항목 4**: B1 조건과 **BF7 멱등 문면**에 R-06 **기관 축** 반영(`(발신 기관, fileId)` 유일 — 기관을 빼면 다른 매입사의 같은 `fileId`가 중복 판정되어 파일이 통째로 누락) |
 | v0.7 | 2026-08-06 | BFS1 닫힘 — RECEIVED 거부·재전송(계약 전수 B-8의 정본 역반영 — 리뷰 F13) |
 | v0.6 | 2026-08-06 | B8′ 채널 주석 — API 재지시 = `ALREADY_PROMOTED` 명시 거절(BF8 무음은 배치 재개 전용 — CDS3 소급, 사용자 확정) |
 | v0.5 | 2026-08-06 | ★ **B9 신설** — `reclassifyIsolated`(보류 격리 중 원승인 종료 → M8 자동 재분류, 상태 불변·시스템 조작 — UC14-2 확정) · BF12에 M19 포함(UC10-1) · 매트릭스 28→32칸 |

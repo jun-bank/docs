@@ -19,7 +19,8 @@
 
 | 필드 | 타입 | 뜻 |
 |---|---|---|
-| `fileId` | `SettlementFileId` | 파일 식별자 — **유일 키** |
+| `institution` | `InstitutionCode` | ★ **발신 기관 — 파일 ID 유일성의 스코프 축**(2026-08-06 R-06). **기관 = ACL이 인증한 발신 기관**(파일 헤더의 X-6 기관 코드와 일치 검증 — 불일치 = `ARG_MISMATCH`) |
+| `fileId` | `SettlementFileId` | 파일 식별자 — ★ **유일 키는 `(institution, fileId)`** 다(R-06 — 매입사가 자기 체계로 채번하므로 `fileId` 단독은 전역 유일이 아니다) |
 | `businessDate` | `BusinessDate` | 이 파일이 귀속되는 영업일 (BR-14) |
 | `status` | `BatchStatus` | 수신됨 / 처리중 / 중단됨 / 완료됨 |
 | `totalRecords` | `int` | 파일의 전체 레코드 수 |
@@ -48,7 +49,7 @@
 
 | 조작 | 코드명 | 사전조건 | 사후조건 | 이벤트 |
 |---|---|---|---|---|
-| **수신** | `receive(fileId, totalRecords, businessDate)` | INV-1 | 상태 = 수신됨 | `CaptureFileReceived` |
+| **수신** | `receive(institution, fileId, totalRecords, businessDate)` | INV-1 | 상태 = 수신됨. ★ **재수신 판정은 `(institution, fileId)` 기준**(BF7 — 같은 기관의 같은 파일만 중복이며, 최초 배치를 반환한다) | `CaptureFileReceived` |
 | **처리 시작** | `start()` | 상태 ∈ {수신됨, 중단됨} | 상태 = 처리중 | `CaptureBatchStarted` |
 | **레코드 처리** | `markProcessed(recordId)` | **두 집합 어디에도 없음** (INV-2) | 집합에 추가 | — |
 | **레코드 격리** | `isolate(recordId, reason)` | **두 집합 어디에도 없음** (INV-2) | 격리 목록에 추가. **보류 격리(BR-50)를 제외**하고 `Discrepancy.recordOrTouch()` 호출 | `CaptureRecordIsolated` |
@@ -71,7 +72,7 @@
 
 ### 취소 레코드 (BR-33)
 
-파일에는 **매입 레코드와 취소 레코드가 섞여** 온다. 둘 다 `(fileId, recordId)` 멱등 대상이다(BR-33·HS8) — 적용하지 않으면 재처리 시 **환불이 두 번 반영**된다.
+파일에는 **매입 레코드와 취소 레코드가 섞여** 온다. 둘 다 `(기관, fileId, recordId)` 멱등 대상이다(BR-33·HS8 · R-06) — 적용하지 않으면 재처리 시 **환불이 두 번 반영**된다.
 
 ---
 
@@ -88,12 +89,12 @@
 
 ### 보류 격리의 재처리 (BR-50)
 
-원 배치는 `완료됨`으로 두고 **다시 열지 않는다.** 보류가 해제되면 **별도 재처리 배치**가 원 `(fileId, recordId)`를 **승계**해 반영한다.
+원 배치는 `완료됨`으로 두고 **다시 열지 않는다.** 보류가 해제되면 **별도 재처리 배치**가 원 `(기관, fileId, recordId)`를 **승계**해 반영한다.
 
 ```
 원 배치     : COMPLETED (불변) — INV-4 유지
 재처리 배치 : 입력 = 보류 해제된 격리 레코드
-              멱등 키 = 원 (fileId, recordId) 그대로
+              멱등 키 = 원 (기관, fileId, recordId) 그대로
 ```
 
 > **승계가 핵심이다.** 새 키를 발급하면 운영자가 두 번 지시하거나 매입사가 같은 파일을 재전송했을 때 BR-23 멱등이 적용되지 않아 **이중 출금**이 된다.
@@ -128,6 +129,7 @@
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v1.8 | 2026-08-06 | **재점검 정정 — 항목 4**: R-06 기관 축을 INV-1 밖의 **모델 표면 전수 착지** — `institution` 필드 신설(기관의 정의 = ACL이 인증한 발신 기관 · 파일 헤더 X-6 코드 일치 검증, 불일치 = `ARG_MISMATCH`) · `receive(institution, fileId, …)` + **BF7 재수신 판정 문면** · 레코드 멱등 키 `(기관, fileId, recordId)`(취소 레코드·보류 격리 승계 포함) |
 | v1.7 | 2026-08-06 | **듀얼 리뷰 반영 — R-06**(인터페이스 규격서): INV-1의 파일 ID 유일성에 ★ **발신 기관 축** 추가 — `fileId`는 매입사가 채번하므로 전역 유일이 아니다(전역 유일 가정 = 다른 매입사의 같은 값이 중복으로 판정돼 파일이 통째로 누락). 물리 표현 = `interfaces/capture-file.md` §1.1·§4 |
 | v1.6 | 2026-08-06 | ★ **정본 판정 반영 (UC10-1·UC14-2 — 사용자 합의)** — 격리 사유 **기한 초과(M19)** 추가(BR-19) · `reclassifyIsolated(recordId, at)` 신설(보류 격리 중 원승인 종료 → M8 자동 재분류·이력 보존·불일치 적재) · INV-5에 M19 포함 |
 | v1.5 | 2026-08-05 | **멀티테넌시 리뷰 루프 1·2 반영** — `promoteIsolated`에 ★ **승인 사전조건**(BR-56 ③ — R14 동기 확인·소비)과 **`operator` 인자**(5조작 중 유일하게 행위자 인자가 없었다 — 루프 2 F-07) |

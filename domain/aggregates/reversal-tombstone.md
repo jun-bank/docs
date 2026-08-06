@@ -19,7 +19,8 @@
 
 | 필드 | 타입 | 뜻 |
 |---|---|---|
-| `correlationId` | `CorrelationId` | 매입사가 보낸 상관 식별자 — **유일 키** |
+| `institution` | `InstitutionCode` | ★ **발신 기관 — 상관 식별자 유일성의 스코프 축**(2026-08-06 R-06). **기관 = ACL이 인증한 발신 기관**(전문 본문 X-6 기관 코드와 일치 검증 — 불일치 = `ARG_MISMATCH`) |
+| `correlationId` | `CorrelationId` | 매입사가 보낸 상관 식별자 — ★ **유일 키는 `(institution, correlationId)`** 다(R-06 — 매입사가 자기 체계로 채번하므로 단독으로는 전역 유일이 아니다) |
 | `recordedAt` | `Instant` | 기록 시각 |
 | `expiresAt` | `Instant` | 보관 만료 시각 (BR-22) |
 | `consumed` | `boolean` | 후도착 승인을 무효화하는 데 쓰였는가 |
@@ -32,7 +33,7 @@
 
 | # | 불변식 | 근거 | 위반 시 |
 |---|---|---|---|
-| **INV-1** | `correlationId`는 유일하다 | BR-22 | 같은 상관 식별자에 예약이 둘 → 중복 무효화 |
+| **INV-1** | ★ **`(발신 기관, correlationId)`은 유일하다** — 상관 식별자는 **매입사가 채번**하므로 유일성의 스코프는 **발신 기관**이다(2026-08-06 개정 R-06) | BR-22 | 같은 상관 식별자에 예약이 둘 → 중복 무효화 / ★ 전역 유일을 가정하면 **다른 매입사의 우연히 같은 값이 남의 승인을 무효화**한다 — 이 채널에서는 그것이 곧 **자금 무효화**다 |
 | **INV-2** | `expiresAt > recordedAt` | BR-22 | 즉시 만료되어 기능하지 않음 |
 | **INV-3** | `consumed = true` 이면 상태가 더 이상 바뀌지 않는다 | — | 한 예약이 여러 승인을 무효화 |
 
@@ -42,7 +43,7 @@
 
 | 조작 | 코드명 | 사전조건 | 사후조건 | 이벤트 |
 |---|---|---|---|---|
-| **예약 기록** | `record(correlationId, at, ttl)` | 같은 `correlationId`의 예약이 없음 | 예약 생성. ★ **재요청은 기존 예약을 찾아 같은 응답**(*"이미 예약됨"*)을 낸다 — 예약 자신이 멱등 레코드다 | `ReversalTombstoneRecorded` |
+| **예약 기록** | `record(institution, correlationId, at, ttl)` | ★ **같은 기관의 같은 `correlationId`** 예약이 없음(INV-1 — R-06) | 예약 생성. ★ **재요청은 기존 예약을 찾아 같은 응답**(*"이미 예약됨"*)을 낸다 — 예약 자신이 멱등 레코드다 | `ReversalTombstoneRecorded` |
 | **소비** | `consume(now)` | `consumed = false` **AND `now < expiresAt`** — 시각을 직접 판정한다(정리 배치를 믿지 않는다) | `consumed = true` | `ReversalTombstoneConsumed` |
 | **보관 정리** | `purge()` | `consumed = true` AND 보관 기간 경과 (RT2) | 레코드 삭제 | `ReversalTombstonePurged` |
 | **만료 정리** | `expire(now)` | `consumed = false` AND `now ≥ expiresAt` | **레코드 삭제** — 이후 같은 상관 식별자는 "예약 없음"과 동치가 된다 | `ReversalTombstoneExpired` |
@@ -56,7 +57,7 @@
 
 ---
 
-> ★ **예약 선행 기록에는 별도 멱등 레코드가 없다** (R9 M3). `correlationId` 유일성(INV-1)이
+> ★ **예약 선행 기록에는 별도 멱등 레코드가 없다** (R9 M3). `(발신 기관, correlationId)` 유일성(INV-1)이
 > 재전송을 막고, 두 번째 호출은 `find()`로 기존 예약을 찾아 같은 응답을 낸다.
 >
 > **멱등 레코드를 따로 두면 같은 사실을 두 곳이 소유**하게 되고, 그것이 다시 둘이 어긋나는
@@ -90,6 +91,7 @@
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v1.3 | 2026-08-06 | **재점검 정정 — 항목 4**: R-06 **기관 축 착지** — INV-1 = `(발신 기관, correlationId)` 유일(전역 유일 가정 = 다른 매입사의 같은 값이 남의 승인을 무효화 = 자금 무효화) · `institution` 필드 신설(기관의 정의 = ACL이 인증한 발신 기관 · X-6 코드 일치 검증, 불일치 = `ARG_MISMATCH`) · `record(institution, correlationId, at, ttl)` · §4 주석 |
 | v1.2 | 2026-08-04 | 재점검 반영 — `consume()`이 **시각을 인자로 받아 직접 판정**(만료 경과·미삭제 구간이 존재한다) · `purge()` 신설(소비된 예약의 삭제 주체가 없었다) |
 | v1.1 | 2026-08-04 | 듀얼 리뷰 반영 — `expire()`의 사후조건을 **레코드 삭제**로 명확화(만료 후 상태가 "존재하며 무시"인지 "부재"인지 문서마다 갈리던 모호성 해소) · TTL 경계 경합을 RT3로 등재 |
 | v1.0 | 2026-08-03 | 최초 작성 |
