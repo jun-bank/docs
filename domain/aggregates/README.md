@@ -1,7 +1,7 @@
 # 애그리게이트 명세
 
 - 작성일: 2026-08-03
-- 상태: **Phase 2 종료 후 Phase 3 반영** — 11종 (DC-001 미수 · R8 입금 수신 · ~~ADR-006 마감 스냅샷~~ **ADR-011·DC-005로 폐기 — 계좌가 영업일별 이동 행을 든다** — 구 표현: `closedBalance`를 직접 든다**). 인계: [`../handoff-to-phase3.md`](../handoff-to-phase3.md)
+- 상태: **Phase 2 종료 후 Phase 3·4 반영** — 15종 (★ 2026-08-06 C7 명세로 조직·운영자·권한 부여·회원 4종 편입) (DC-001 미수 · R8 입금 수신 · ~~ADR-006 마감 스냅샷~~ **ADR-011·DC-005로 폐기 — 계좌가 영업일별 이동 행을 든다** — 구 표현: `closedBalance`를 직접 든다**). 인계: [`../handoff-to-phase3.md`](../handoff-to-phase3.md)
 - 양식: `study/project-workflow/phase2/04-aggregate-format.md`
 - 입력: `domain/event-storming.md` ⑦ · `domain/context-map.md` §4 데이터 소유권
 
@@ -22,6 +22,10 @@
 | **정산** `Settlement` | C4 정산 | 배치 | [settlement.md](settlement.md) | ✅ |
 | **전표** `JournalEntry` | C5 원장 | 배치 | [journal-entry.md](journal-entry.md) | ✅ |
 | **불일치** `Discrepancy` | C6 대사 | 배치 | [discrepancy.md](discrepancy.md) | ✅ |
+| ★ **조직** `OrgUnit` | C7 인증 | 관리 | [org-unit.md](org-unit.md) | ✅ (2026-08-06 C7 명세) |
+| ★ **운영자** `Operator` | C7 인증 | 관리 | [operator.md](operator.md) | ✅ 〃 |
+| ★ **권한 부여** `RoleGrant` | C7 인증 | 관리 | [role-grant.md](role-grant.md) | ✅ 〃 |
+| ★ **회원** `Member` | C7 인증 | 관리 | [member.md](member.md) | ✅ 〃 |
 
 ---
 
@@ -141,6 +145,21 @@ private Account account;       // ❌
 | `recordOrTouch` | 불일치 `Discrepancy` | 별도 | `DiscrepancyRecorded` — 탐지 배치·격리가 Outbox로 넘긴다 |
 | `investigate` | 불일치 `Discrepancy` | — |  |
 | `resolve` | 불일치 `Discrepancy` | — |  |
+| `create` | 조직 `OrgUnit` | — |  |
+| `close` | 조직 `OrgUnit` | — |  |
+| `register` | 운영자 `Operator` | — |  |
+| `suspend` | 운영자 `Operator` | C7 |  |
+| `resume` | 운영자 `Operator` | C7 |  |
+| `terminate` | 운영자 `Operator` | C7 | ★ 전 grant 회수 동반 — 〃 |
+| `transfer` | 운영자 `Operator` | C7 | ★ grant 자동 회수 동반 — C7 내부 원자 갱신(자금 무이동, E 표 밖 의식적 예외) |
+| `issue` | 권한 부여 `RoleGrant` | C7 | authzVersion 증가 동반 — 〃 |
+| `revoke` | 권한 부여 `RoleGrant` | C7 | 〃 |
+| `recertify` | 권한 부여 `RoleGrant` | C7 | 〃 |
+| `register` | 회원 `Member` | — |  |
+| `deactivate` | 회원 `Member` | — |  |
+| `reactivate` | 회원 `Member` | — |  |
+| `requestClose` | 회원 `Member` | — |  |
+| `close` | 회원 `Member` | — |  |
 
 ### 무엇이 검사되는가
 

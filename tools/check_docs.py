@@ -94,7 +94,7 @@ for k, b in ASSIGN.items():
 # ── ⑧ 교차 호출 → 공유 경계 (배정의 정확성을 독립 출처로 검사한다)
 #    문서가 스스로 "남의 조작을 부른다"고 적었으면, 그 둘은 같은 트랜잭션에 있어야 한다.
 #    ASSIGN 은 사람 판단이므로 ASSIGN 끼리 비교해서는 오배정을 잡을 수 없다.
-REAL = lambda b: {e for e in b.split() if e.startswith("E")}
+REAL = lambda b: {e for e in b.split() if e.startswith("E") or e == "C7"}  # C7 = 자금 무이동 내부 원자 경계(2026-08-06 — E 표 밖, authzVersion 원자 갱신)
 owner_b = {}
 for k, b in ASSIGN.items():
     owner_b.setdefault(k.split(".")[0], set()).update(REAL(b))
