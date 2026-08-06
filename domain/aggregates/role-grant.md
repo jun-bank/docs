@@ -132,6 +132,8 @@ effective(operatorId, at) =
         ∧ status(g.scopeOrgId) == ACTIVE }        ← ★ CLOSED 조직 스코프 grant = 무효 (D-11 · L1-19)
 
   ★ 그리고 Operator.status = ACTIVE 가 아니면  effective = ∅   (INV-P1 — 상태 게이트가 먼저다)
+  ★ 소유자에게 lastResumedAt이 있으면, 그 이전 발급 grant는 lastResumedAt 이후의
+     GrantRecertified가 있어야 유효   (재인증 게이트 — 정지 해제가 권한을 자동 부활시키지 않는다. 2026-08-06 확정)
 ```
 
 > ★ **네 조건 전부가 판정 시점 계산이다** — 배치가 무효화하는 것이 하나도 없다. 만료·재인증 초과·조직 폐쇄 어느 것도 **레코드를 쓰지 않으므로**, 배치가 밀리는 동안 통하는 창이 생기지 않는다.
