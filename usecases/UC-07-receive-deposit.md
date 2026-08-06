@@ -14,7 +14,7 @@
 ## 2. 사전 조건 / 사후 조건
 
 - 사전: 대상 계좌가 존재한다. `depositId`는 **외부 입금원이 생성**한다(DepositReceipt 키 출처 표 — 정정의 `reversalId`와 출처가 다르다).
-- 사후(성공): `(depositId, 입금)` 수신 기록 · 회수 대상 미수들의 `recoveredAmount` 증가 · **잔여분만** `balance` 증가 · 이동 행 갱신(`netAmount`·`receivableDelta`) · 미수가 전부 종결되면 `receivableBlockLifted` 복귀 — **전부 한 커밋**(E3). 원장 기표는 비동기(R6 — `차) 예치금 / 대) 미수금·고객예금`).
+- 사후(성공): ★ **`(기관, depositId, 입금)`** 수신 기록(R-06 — `depositId`는 외부 입금원이 채번하므로 유일성 스코프는 **발신 기관**이다. **기관 = ACL이 인증한 발신 기관** — 전문 본문 X-6 기관 코드와 일치 검증) · 회수 대상 미수들의 `recoveredAmount` 증가 · **잔여분만** `balance` 증가 · 이동 행 갱신(`netAmount`·`receivableDelta`) · 미수가 전부 종결되면 `receivableBlockLifted` 복귀 — **전부 한 커밋**(E3). 원장 기표는 비동기(R6 — `차) 예치금 / 대) 미수금·고객예금`).
 - 사후(재수신): **무변화 — 최초 결과 반환**(DepositReceipt INV-1·INV-2).
 - 사후(커밋 실패): **전부 롤백** — 수신 기록도 남지 않으므로 재전송이 정상 처리된다(반영 후 기록 전 종료가 없다는 것이 E3의 존재 이유다).
 - ★ **부족분이라는 결말이 없다**: 회수액 = `min(유입액, Σ 회수 가능 미수)` 이므로 유입보다 많이 회수되지 않고, 잔액은 줄지 않는다. **미수가 남은 채 끝나는 것이 정상 결과**다(POST-1) — 매입(BR-20)·입금 정정(BR-38)과 달리 이 경로는 채권을 만들지 않는다.
@@ -22,20 +22,20 @@
 ## 3. 주요 성공 시나리오
 
 1. 입금 전문 수신 — 시스템 주체 + **경로 식별자** 부여, 도메인 언어로 번역 [BR-54 ③ · AU-2·3]
-2. `find(depositId, 입금)` — 기존 결과가 있으면 §4-A로 [DepositReceipt INV-1·2 · BR-29·02]
+2. `find(기관, depositId, 입금)` — 기존 결과가 있으면 §4-A로. ★ **기관 = ACL이 인증한 발신 기관**(X-6 일치 검증 — 불일치 = `ARG_MISMATCH`) · **기관이 다르면 "없음"** [DepositReceipt INV-1·2 · **R-06** · BR-29·02]
 3. `assertSameRequest(fingerprint)` — 지문이 다르면 §4-B로 [INV-3 · BR-02]
 4. **회수 대상 선정** — 그 계좌의 미결 ∧ `frozen = false` 미수, 정렬 `(발생 영업일, 미수 식별자)` **전순서** [BR-34·28 · Receivable INV-5 · 미수 SM VF3]
 5. `deposit(depositId, amount, recoverable)` — 회수액 = `min(유입, Σ outstanding)` → FIFO 배분 `recover()` → **잔여만** `balance` 증가 [BR-34 · POST-1 · 미수 SM V2·V3 · RC-2]
 6. 이동 행 갱신 — 귀속 영업일(BR-14) 행에 `netAmount`·`receivableDelta -= 회수분` 더하기 [DC-006 · RC-4·RC-5] (피연산자 = **balance 변화량** — DC-006 §3. ~~정본 충돌~~은 정정 완료 `1dff628`)
 7. 미수가 전부 종결되면 **계좌가 자기 `receivableBlockLifted`를 재평가** [계좌 INV-3 · BR-45 · 미수 SM V3]
-8. `record(depositId, 입금, …)` 수신 기록 — **같은 커밋** [E3 · INV-1]
+8. `record(기관, depositId, 입금, …)` 수신 기록 — **같은 커밋** [E3 · INV-1 · **R-06**]
 9. `Deposited` 발행 — `receivedAmount = recoveredAmount + creditedAmount` **3분해**가 예치금 차변 이중 계상을 막는다 [BR-29·08 · account.md §5 "이벤트 금액을 셋으로 나눈 이유"] · `ReceivableRecovered` 발행(**원장 아님** — 회수 분개는 유입 이벤트가 소유)
 
 ## 4. 예외 시나리오 ★
 
 | # | 트리거 | 시스템 반응 → 종결 | 근거 |
 |---|---|---|---|
-| A | **같은 `depositId` 재수신** | 무변화 — 최초 결과 반환 (전문 2회 배달이 정상 전제다) | DepositReceipt INV-1·2 · BR-29 |
+| A | ★ **같은 기관의 같은 `depositId` 재수신** | 무변화 — 최초 결과 반환 (전문 2회 배달이 정상 전제다). ★ **기관이 다르면 재수신이 아니다** — 별건으로 처리한다(R-06) | DepositReceipt INV-1·2 · BR-29 |
 | B | 같은 키 · **다른 요청 지문** | 충돌 거절 + `DepositConflict` 발행 → ★ **M13**(대사 배치가 아니라 이 이벤트가 적재한다) | INV-3 · BR-02·09 |
 | C | 회수 가능액 ≥ 유입액 | **잔액 증가 0**, 미수만 감소 — 정상 | BR-34 검증① · POST-1 |
 | D | **보류 미수만 있는 계좌** | 보류분은 **선정에서 제외** → 미수가 남은 채 잔액이 는다 (오류가 아니다) | BR-28 · BR-34 검증⑤ · 미수 SM **VF3** |
@@ -98,9 +98,9 @@
 
 | 항목 | 내용 |
 |---|---|
-| payload | `key`(= `depositId`) · `operation`(= 입금) · **두 지문**(deposit-receipt.md §6) — ★ **행위자 비포함**(시스템 적재 — 색인 §3 · AD-7 ②). 축 = **기존 payload 축 유지** · ★ **`ownerId` 없음**(2026-08-06 U-2 확정 — **A-2·3** 전면 비포함. `DepositReceipt`가 그 컬럼을 드는 것은 **저장 모델** 쪽이다 — IS-1) |
+| payload | ★ **`institution`(발신 기관 — R-06. M13 `subject` 축이므로 payload가 실어야 한다)** · `key`(= `depositId`) · `operation`(= 입금) · **두 지문**(deposit-receipt.md §6) — ★ **행위자 비포함**(시스템 적재 — 색인 §3 · AD-7 ②). 축 = **기존 payload 축 유지** · ★ **`ownerId` 없음**(2026-08-06 U-2 확정 — **A-2·3** 전면 비포함. `DepositReceipt`가 그 컬럼을 드는 것은 **저장 모델** 쪽이다 — IS-1) |
 | 구독 | **C6 대사** — 적재 유형 **M13**(BR-09). ★ **적재 주체가 대사 배치가 아니라 이 이벤트다**(discrepancy.md §3 M13 행) |
-| 멱등 키 | 수신측 = 불일치 **INV-2** 유일성 `(type, scope, subject)` — M13의 `subject` = `(key, operation)`. 재전달은 `recordOrTouch`가 흡수한다(같은 영업일이면 `detectionCount`도 오르지 않는다 — DC3) |
+| 멱등 키 | 수신측 = 불일치 **INV-2** 유일성 `(type, scope, subject)` — M13의 `subject` = ★ **`(기관, key, operation)`**(R-06 — 키가 기관 스코프이므로 충돌도 기관 스코프다. 기관을 빼면 **다른 입금원의 같은 `depositId` 충돌이 한 건으로 뭉쳐** 한쪽이 조용히 사라진다). 재전달은 `recordOrTouch`가 흡수한다(같은 영업일이면 `detectionCount`도 오르지 않는다 — DC3) |
 | 스키마 버전 | **`schemaVersion: 1`** (K-3) · 의미 필드 추가 = **새 이벤트 타입**(S-6a) |
 
 ## 8. 규칙 연결 표
@@ -131,6 +131,7 @@
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v0.6 | 2026-08-06 | **R-06 기관 축 전파 일소**: §2 사후·§3-2 `find`·§3-8 `record`·§4-A 재수신 판정에 **기관 축**(`(기관, depositId, 입금)` — 기관이 다르면 "없음"·별건) · §7 `DepositConflict` M13 `subject` = `(기관, key, operation)` + payload에 `institution` 신설(subject 축이므로 payload가 실어야 한다) |
 | v0.5 | 2026-08-06 | **재점검 정정 — 항목 2·4**: §7 오류 표의 **판정 순서를 X-10 참조로 정정**(구 *K-1 순서(단계 → 스코프·존재 → 상태·인자)* 문면 대체 — 멱등 단락이 계좌 조회보다 앞) · §7 멱등 칸 키에 **기관 축**(`(기관, depositId, 입금)` — R-06) + 기관의 정의 1문 |
 | v0.4 | 2026-08-06 | **듀얼 리뷰 반영 — R-02·06·10**(인터페이스 규격서): §7 요청 칸 = **귀속 영업일 판정 입력이 우리 수신 시각**임을 명확화(별도 필드 없음 유지 · 외부 전송일시는 참고값) + `depositId` 유일성 스코프 = 발신 기관 · ★ §7 응답 칸 개정 — **외부 응답 = 수납 총액·귀속 영업일만**(3분해·잔여 미수 Y/N은 **내부 반환값으로 강등** — 계약 §7 밖. 등식·`Deposited` payload는 불변) |
 | v0.3 | 2026-08-06 | **U-2 판정 반영 — 마커 해소·의문 닫기**: 계좌 부재 = `ACCOUNT_NOT_FOUND` 사유 구분(A-4 — **UC7-3 닫힘**) · 예산 = [미확정 — 입금원 SLA 가정 필요] + T-14 전제 비적용 명시(A-5) · 감사 스코프 = 대상 소유 축(A-6·B-5) · 이벤트 3종 payload의 **`ownerId` 비포함**(A-2·3 — K-4 보정) |

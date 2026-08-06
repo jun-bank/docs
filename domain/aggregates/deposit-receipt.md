@@ -125,7 +125,7 @@ BR-29가 *"입금은 입금 식별자 기준으로 멱등"* 이라고 선언했�
 
 | 이벤트 | 코드명 | 발생 | 담는 것 | 구독 |
 |---|---|---|---|---|
-| 입금 충돌 | `DepositConflict` | `assertSameRequest()` 실패 | `key`, `operation`, 두 지문 | **C6 대사** — 적재 유형 **M13** (BR-09) |
+| 입금 충돌 | `DepositConflict` | `assertSameRequest()` 실패 | ★ **`institution`**(발신 기관 — R-06), `key`, `operation`, 두 지문 | **C6 대사** — 적재 유형 **M13** (BR-09) — ★ `subject` = **`(기관, key, operation)`** 이므로 payload가 기관을 실어야 한다 · ★ **S-6a 판정: 계약 발행 전**(Phase 5 전 설계 단계)이라 필드 추가는 새 타입이 아니다 — `schemaVersion: 1` 유지 |
 
 > **정상 경로는 이벤트를 내지 않는다.** 자금 이동은 계좌가 알린다(`Deposited`·`DepositReversed`).
 > 이 애그리게이트는 **막는 것이 일이지 알리는 것이 일이 아니다.**
@@ -179,6 +179,7 @@ BR-29가 *"입금은 입금 식별자 기준으로 멱등"* 이라고 선언했�
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v0.6 | 2026-08-06 | **R-06 기관 축 전파 일소**: §6 `DepositConflict` payload에 `institution` 추가 — M13 `subject`가 `(기관, key, operation)`이 되었으므로(discrepancy.md §3 · BR-09) payload가 그 축을 실어야 한다 |
 | v0.5 | 2026-08-06 | **재점검 정정 — 항목 4**: R-06 기관 축을 INV-1 밖의 **모델 표면 전수 착지** — 루트 식별자 `(발신 기관, key, operation)` · `institution` 필드 신설(기관의 정의 = ACL이 인증한 발신 기관 · X-6 코드 일치 검증, 불일치 = `ARG_MISMATCH`. 정정은 우리 채번이라 자행 고정) · `find`/`record`/`assertSameRequest` 인자 · §8 동시성 표기 |
 | v0.4 | 2026-08-06 | **듀얼 리뷰 반영 — R-06**(인터페이스 규격서): INV-1의 키 유일성에 ★ **발신 기관 축** 추가 — 외부 채널 키(`depositId`)는 입금원이 채번하므로 전역 유일이 아니다(전역 유일 가정 = 다른 입금원의 같은 값이 남의 결과를 반환하고 그 입금이 조용히 사라진다). 물리 표현 = `interfaces/deposit-advice.md` §4 |
 | v0.3 | 2026-08-05 | **멀티테넌시 B-4b** — `ownerId`(`CustomerId`) 필드 추가 — ★ **소유 축**(ADR-018 IS-1) |

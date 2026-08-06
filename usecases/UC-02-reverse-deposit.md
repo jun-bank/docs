@@ -14,7 +14,7 @@
 ## 2. 사전 조건 / 사후 조건
 
 - 사전: 원입금 레코드가 존재한다(INV-4 — 근거 없는 정정이 고객 자금을 줄이면 안 된다). 요청자 스코프 안의 계좌다.
-- 사후(성공): `balance` 감소 · 부족분 `Receivable(origin=DEPOSIT_REVERSAL)` · `(reversalId, 정정)` 수신 기록 · 이동 행 갱신 · 승인 `CONSUMED` · 감사 outbox — **전부 한 커밋**(E5). 원장 `DepositReversed` 기표는 비동기(R6).
+- 사후(성공): `balance` 감소 · 부족분 `Receivable(origin=DEPOSIT_REVERSAL)` · ★ **`(기관, reversalId, 정정)`** 수신 기록(R-06 — `reversalId`는 **우리 채번**이라 기관 = **자행 고정**) · 이동 행 갱신 · 승인 `CONSUMED` · 감사 outbox — **전부 한 커밋**(E5). 원장 `DepositReversed` 기표는 비동기(R6).
 - 사후(거절/만료): 자금 무변화 · 승인 요청 `REJECTED`/`EXPIRED`(종료 — 재사용 불가) · 사유가 감사에 남는다.
 - 사후(실행 커밋 실패): 승인 **미소비**(consume이 같은 트랜잭션 — 재실행 가능, 이중 실행은 멱등이 막는다).
 
@@ -87,7 +87,7 @@
 | 요청 | `reversalId` · 원입금 ID · 금액 · 승인 요청 ID |
 | 응답(성공) | 정정 결과(잔액 회수분 · 미수 전환분 — `DepositReversed` payload와 동형) |
 | 오류 표 ★ | `NOT_FOUND`(계좌 부재·스코프 밖 동일 — L7) · `NO_APPROVAL`(AF1) · ★ **`NOT_MAKER`**(A4 실행자 ≠ maker — `FORBIDDEN_LEVEL`과 판정 위치가 다르다: 단계는 대상 조회 전, 이것은 승인요청을 본 뒤. BR-56 ①~③ 실행 공통 — 2026-08-06 확정) · `ARG_MISMATCH`(INV-3) · `NO_ORIGINAL`(INV-4) · `EXCEEDS_ORIGINAL`(INV-5) · `DUPLICATE`(E5 멱등 — 최초 결과 반환) |
-| 멱등 | `(reversalId, 정정)` — DepositReceipt INV-1 |
+| 멱등 | ★ **`(기관, reversalId, 정정)`** — DepositReceipt INV-1(2026-08-06 **R-06**: 채널 키의 유일성 스코프는 발신 기관이다). ★ **`reversalId`는 우리가 채번**하므로(운영자 지시 — 외부 전문이 아니다) 기관 = **자행 고정**이고 스코프가 자명하다 — 입금(`depositId` = 입금원 채번)과 갈리는 지점이다 |
 | 예산 | 실시간 아님 (사람 조작 — 단 E5 커밋은 락 순서 준수) |
 | 감사 | E5 커밋 내 outbox (AD-2) — 주체·계좌·금액·승인 참조 |
 
@@ -136,6 +136,7 @@
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v1.0 | 2026-08-06 | **R-06 기관 축 전파 일소**: §2 사후 · §7 멱등 칸의 정정 키 = `(기관, reversalId, 정정)` — ★ `reversalId`는 **우리 채번**이라 기관 = **자행 고정**(입금 `depositId`와 갈리는 지점. deposit-receipt v0.5 선례) |
 | v0.9 | 2026-08-06 | **C7 리뷰 루프 1 반영 — L1-06**: 공통 계약의 대상 조작 목록 **①~⑤ → ①~⑥**(권한 부여·수동 회수 — 실행 컨텍스트 C7·R14, break-glass는 요청 자체가 없다) · 정본 선언을 **6조작**으로 · ⑥의 인자 스키마·UC는 **명시 이월**(L1-15) |
 | v0.8 | 2026-08-06 | **리뷰 반영(듀얼 1패스)** — approve/reject 오류표에 ① 단계 추가(F-01) · `DUPLICATE_INSTRUCTION`을 요청 오류표에 정본 등재(F6 — 정본↔인용 역전 해소) |
 | v0.7 | 2026-08-06 | **공통 계약 정본 개정 (계약 전수 — 사용자 확정 3건)**: 종료 상태 재호출 `INVALID_STATE` → `ALREADY_*` 4종(CDS3 소급) · `NOT_MAKER` 신설(A4) · ④⑤ `instructionId` 요청 단계 유일(`DUPLICATE_INSTRUCTION`) |

@@ -58,7 +58,7 @@
 | `POST·DELETE /ops/receivables/{receivableId}/freeze` | UC-12 | 담당자(accountId 귀속) | ✅ |
 | `POST /ops/accounts/{accountId}/receivable-block-lifts` | UC-13 | 담당자(=maker) — BR-56 ② | ✅ |
 | `POST /ops/accounts/{accountId}/receivable-block-reimpositions` | UC-13 | 담당자 — 승인 절차 없음(안전 방향) | ✅ |
-| `POST /ops/capture-batches/{fileId}/isolated-records/{recordId}/promotion` | UC-14 | 담당자(=maker) · 전사 — BR-56 ③ | △ 부재만 NOT_FOUND(축 없음 — BR-55 특칙) |
+| `POST /ops/capture-batches/{institution}/{fileId}/isolated-records/{recordId}/promotion` | UC-14 | 담당자(=maker) · 전사 — BR-56 ③ | △ 부재만 NOT_FOUND(축 없음 — BR-55 특칙. ★ 경로에 기관 — R-06 키 `(기관, fileId)` 귀결) |
 | (승인 요청 공통 계약 `POST /ops/approval-requests` — **①~⑤ 전부** 사용, 정본 = UC-02 §7 · ④⑤만 ★ 실행 엔드포인트 없음 — R15 지시 이벤트) | UC-02·13·14·15·16 | 담당자(=maker) | 대상별 (④ ✕ 영업일 / ⑤ ✅ 원전표 / ①②③ ✅) |
 | ★ `GET /ops/approval-requests` (승인 대기·내 요청 목록 — BR-56 워크플로의 전제 조회. 리뷰 F-4가 발견한 누락) | UC-02 공통 | 담당자(내 요청) / 책임자(대기 목록) · 스코프 | ✅ |
 | `POST /ops/discrepancies/{discrepancyId}/investigation` · `/resolution` | UC-17 | 운영자 담당자 | ✅ 유도 스코프(UC17-1 확정) |
@@ -133,7 +133,7 @@
 - ★ **시스템 채널(전문·파일)은 `X-10`이 정본이다**(`interfaces/README.md` — **① 인자 형식 → ② 멱등 단락 → ③ 대상 존재 → ④ 상태**. 채널 인가 `FORBIDDEN_LEVEL`은 전문 처리 이전의 ACL 판정이라 ① 앞에 선다): **재수신이 대상 조회보다 앞서야** 최초 결과 재반환이 성립하기 때문이다 — 위 사람 채널 순서는 **그대로 두고**(변경 없음) 채널로 갈린다.
 - **코드 3계층**: ⑴ 공통 4종 `FORBIDDEN_LEVEL`·`NOT_FOUND`·`INVALID_STATE`·`ARG_MISMATCH` ⑵ **SM 금지 표의 응답 열이 정본**인 코드(CF·AF·BF·F·RF — 계약이 재발명하지 않는다) ⑶ 조작 고유 코드는 신설 최소화.
 - ★ **CDS3 일반화**: 사람 채널의 **상태 전이 재요청은 전부 명시 거절**(`ALREADY_*` — 무음 무시는 상태 오인을 만든다). 단 **PUT 값 교체는 자연 멱등**(동일값 재요청 = 성공 — 응답이 현재값을 보여줘 오인이 없다). *(o-OQ5 판정 포함 — `changeLimit`·`changeDailyLimit` 동일값 = 성공)*
-- **시스템 채널 재수신 = 최초 결과 재반환**(멱등 키 = 채널 유일 식별자: 승인 전문 = 멱등 레코드 · 입금 = 입금 수신 · 파일 = `(fileId, recordId)` · R15 지시 = 지시 ID).
+- **시스템 채널 재수신 = 최초 결과 재반환**(멱등 키 = 채널 유일 식별자). ★ **채널 키의 유일성 스코프는 전부 `발신 기관`이다**(2026-08-06 **R-06** — 상관 식별자·입금 식별자·파일 ID는 **상대가 자기 체계로 채번**하므로 전역 유일이 아니다. **기관 = ACL이 인증한 발신 기관**이며 전문·파일 본문의 **X-6 기관 코드와 일치 검증**한다 — 불일치 = `ARG_MISMATCH`): 승인·취소 전문 = 멱등 레코드 **`(기관, correlationId, operation)`**(INV-1) · 망취소 = 예약 **`(기관, correlationId)`**(예약 INV-1) · 입금 = 입금 수신 **`(기관, depositId, 입금)`**(DepositReceipt INV-1 — 정정의 `reversalId`는 **우리 채번**이라 기관 = **자행 고정**) · 파일 = **`(기관, fileId)`** · 레코드 = **`(기관, fileId, recordId)`**(배치 INV-1 · BR-23) · R15 지시 = 지시 ID(**내부 채번** — 스코프 자명).
 
 **신설 코드 대장** (2026-08-06 U-2 — K-1 ⑶의 유일 창구. 여기 없는 코드는 계약이 쓸 수 없다):
 `ALREADY_FROZEN`·`ALREADY_UNFROZEN`(보류 재요청 — 승인·미수 공통) · `ALREADY_LIFTED`·`ALREADY_BLOCKED`(차단 해제/재부과) · `ALREADY_PROMOTED`(승격 API 재지시 — BF8 무음은 배치 재개 전용) · `ALREADY_APPROVED/REJECTED/CONSUMED/EXPIRED`(승인요청 종료 재호출 — 구 INVALID_STATE 대체) · `ALREADY_RUNNING`(대사 진행 중 + 진행 runId) · `ALREADY_DELIVERED`·`ALREADY_RESOLVED`(DLQ 종료 재투입) · `NOT_MAKER`(A4 — 승인요청을 본 뒤 판정) · `DUPLICATE_INSTRUCTION`(④⑤ 지시 ID 요청 단계 유일) · `NO_RECEIVABLE`(미결 미수 부재) · `EXCEEDS_CANCELABLE`(누적취소 초과 — 시스템 채널 사유 구분) · `AUTH_NOT_FOUND`·`ACCOUNT_NOT_FOUND`(시스템 채널 대상 부재 — 기관 채널이라 사유 구분, L7 비적용) · ★ `VOIDED_BY_RESERVATION`(취소 예약 소비로 무효 성립 — UC-01 §4-B의 응답, 승인도 거절도 아닌 제3형태의 명시. 2026-08-06 규격서 보고 4) · ★ 승인 거절의 카드 사유 3분 = **SM 응답 열 재사용**(`CARD_SUSPENDED`(CF4)·`CARD_EXPIRED`(CF6)·`CARD_TERMINATED`(CF3) — `DECLINED_CARD` 단일 상수 대체, BR-15 구분 요구. 신설 아님) · `INVALID_BUSINESS_DATE`·`DRAIN_INCOMPLETE`(대사 실행 전제)
@@ -157,8 +157,9 @@
 | 버전 | 일자 | 내용 |
 |---|---|---|
 | v0.14 | 2026-08-06 | **재점검 정정 — 항목 2**: K-1 판정 순서 항에 ★ **시스템 채널(전문·파일) = X-10 정본** 분기 1문 추가(① 인자 형식 → ② 멱등 단락 → ③ 대상 존재 → ④ 상태 — 재수신이 대상 조회보다 앞선다). **사람 채널 순서는 불변** |
+| v0.14 | 2026-08-06 | **R-06 기관 축 전파 일소**: §5 **K-1 멱등 키 열거 행**에 기관 축 — 채널 키의 유일성 스코프는 전부 **발신 기관**이며(상대 채번) 기관 = ACL이 인증한 발신 기관(X-6 일치 검증). 5종 키를 명시(`(기관, correlationId, operation)` · `(기관, correlationId)` · `(기관, depositId, 입금)` · `(기관, fileId)` · `(기관, fileId, recordId)`) + 우리 채번(정정 `reversalId` = 자행 고정 · R15 지시 ID = 내부)의 스코프 자명함 |
 | v0.13 | 2026-08-06 | **C7 리뷰 루프 1 반영 — L1-15·25**: 엔드포인트 색인에 ★ **C7 관리 API 이월 행** + **색인이 현재 전수가 아니라는 명시**(BR-58 전수 시험 입력의 공백 — L1-15) · **K-4의 null·전사 감사 행 조회 자격을 AUDITOR로 전환**(구 "전사 스코프 책임자만"을 D-5가 대체 — L1-25) |
-| v0.13 | 2026-08-06 | K-2에 `DEPOSIT-ADV/RES` 확장 · 코드 대장 +1(`VOIDED_BY_RESERVATION` — 예약 소비 거절, BR-22 사유 구분) · SM 카드 3코드(CF3·4·6)를 승인 거절 사유 구분에 재사용 명시(DECLINED_CARD 3분 — BR-15) |
+| v0.13a | 2026-08-06 | (번호 중복 정정 — 원래 두 v0.13 중 선행분) K-2에 `DEPOSIT-ADV/RES` 확장 · 코드 대장 +1(`VOIDED_BY_RESERVATION` — 예약 소비 거절, BR-22 사유 구분) · SM 카드 3코드(CF3·4·6)를 승인 거절 사유 구분에 재사용 명시(DECLINED_CARD 3분 — BR-15) |
 | v0.12 | 2026-08-06 | **리뷰 반영(듀얼 1패스)** — 선례 승계 코드 절(F9·F3: AUTH_CAPTURED 철회 → F1 재사용) · K-1 순서 재기술(F10) · K-4 null 조회 자격(F1) · 색인: UC-19 행 확정·축 열 확정·B-12 본표 병합(F4·F5·OQ8) |
 | v0.11 | 2026-08-06 | U-2b — UC17-1 유도 스코프 확정 반영(색인 2행) · `INVALID_CURSOR` 코드 대장 등재 |
 | v0.10 | 2026-08-06 | **U-2 판정 통합** — K-4 보정(이벤트 ownerId 전면 비포함 — 사용자)·시스템/축없음 감사 스코프 · **신설 코드 대장**(K-1 창구) · R15 지시 이벤트 이름 확정 · S-9 열 일괄 1 · 이벤트 색인 +2(ReceivableIncurred·WrittenOff — B-12) |
