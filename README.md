@@ -27,7 +27,6 @@ Phase 1 ✅ ── 2 ✅ ── 3 ✅ ── 4 ✅ ── 5 ⬜ ── 6 ⬜
 | **6** | 개발 규약 정비 | ⬜ | Phase 0에서 미룬 문서 체계 규약을 여기서 함께 확정 |
 
 **다음 한 걸음**: ① ~~외부 인터페이스 규격서~~ ✅(2026-08-06 — `interfaces/` 6파일·X-1~11) ② ~~API 레퍼런스 생성 도구~~ ✅(2026-08-06 — `api-reference.md` 생성·검사 ⑥b) ③ ~~Phase 5 진입 아키텍처~~ ✅(2026-08-06 — **ADR-019~025** · C-08 도구 최소주의 · 미니멀 스택(브로커·SCG 불도입+도입 조건). 절차 정본 = study/project-workflow/phase5/01-entry-procedure.md — 다음 = E2 테스트 전략 → E3 개발 규약 → E4 CI/CD 문서 → E5 병행 문서화 정책) ④ **C7 관리 API의 UC·계약**(L1-15 이월). 이후 **Phase 5(샘플 구현 + 실험 38건)** — 입력에 **`implementation-verification.md`(IV-1~12)** 포함(검증 정책 v2 V2-3).
-- `dev-conventions.md` — 개발 규약 32규칙(강제 수단 칸 의무 — E3. 도구 확정 TL-1·2 포함)
 
 > **양식**과 **내용**은 다르다. 양식은 `study/project-workflow/phaseN/`에, 내용은 `product/`·`domain/`·`architecture/`·`usecases/` 같은 정규 위치에 있다.
 > *(초기 계획은 Phase 0~9의 10단계 체계였다 — 위 6단계 체계로 통합됐고 10단계 표기는 이력이다.)*
@@ -43,6 +42,7 @@ Phase 1 ✅ ── 2 ✅ ── 3 ✅ ── 4 ✅ ── 5 ⬜ ── 6 ⬜
 | `domain/` | `glossary.md`(용어 정본) · `context-map.md`(**C1~C8 · R1~R19**) · `aggregates/`(**15종** + 경계·조작 대장) · `state-machines/`(**11종**) |
 | `architecture/` | `README.md`(기술서 — **여기부터 읽으면 지도가 선다**) · `adr/`(**ADR 18건**) · `quality-attributes.md` · `quality-scenarios.md` · `constraints.md` · `views/`(컨텍스트·컨테이너·데이터·런타임) |
 | `usecases/` | **UC-01~20** · `README.md`(색인 — 유스케이스 대장 · **엔드포인트 색인** · 이벤트 색인) · 공통 계약 규약 **K-1~4** |
+| **`dev-conventions.md`** | ★ **개발 규약 33규칙**(E3) — 규칙마다 **강제 수단 칸 의무**(컴파일·아키텍처 테스트·테스트 게이트·린트·리뷰) · 도구 확정 **TL-1 JUnit5 · TL-2 Testcontainers** · 강제 수단 분포(현재/도구 확정 후) · **관측 대장** |
 | `design-changes/` | **DC-001~006** — *왜 그렇게 됐는지*와 *무엇이 몇 번 깨졌는지* |
 | `study/` | 학습 노트 `01~11`(**설계 문서 아님**) + ★ `project-workflow/`(**양식·작성 순서의 정본**) |
 | `reference/` | 리서치 원문 · 장애 사례 · 참고서적 목차 |
