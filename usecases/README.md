@@ -26,7 +26,7 @@
 | UC-17 | [불일치를 조사하고 처리한다](UC-17-investigate-discrepancy.md) | 운영자 담당자 | — | 초안 (계약 블록 후속) |
 | UC-18 | [대사를 수동 실행한다](UC-18-run-reconciliation.md) | 운영자 담당자 (전사) | — | 초안 (계약 블록 후속) |
 | UC-19 | [DLQ 이벤트를 재투입한다](UC-19-requeue-dlq.md) | 운영자 담당자 (전사) | — | 초안 (계약 블록 후속) |
-| UC-20 | [감사 기록을 조회한다](UC-20-view-audit-records.md) | 운영자 책임자 | 조회 | 초안 (계약 블록 후속) |
+| UC-20 | [감사 기록을 조회한다](UC-20-view-audit-records.md) | ★ AUDITOR(D-5 완전 분리) | 조회 | 초안 (계약 블록 후속) |
 
 ## 2. 엔드포인트 색인 ★ (BR-58 전수 시험의 입력 — 사람이 세면 빠진다)
 
@@ -63,7 +63,7 @@
 | ★ `GET /ops/discrepancies` (목록 — UC-17 §3의 전제 조회. 리뷰 F-1이 발견한 누락) | UC-17 | 운영자 조회 이상 | ✅ 유도 스코프(UC17-1 확정) |
 | `POST /ops/reconciliations` · `GET /ops/reconciliations/{runId}` | UC-18 | 담당자·전사 / 조회+ | ✕ 영업일 축 |
 | `GET /ops/dlq` · `POST /ops/dlq/{outboxRecordId}/replay` | UC-19 | 조회+ / 담당자 · 전사 | ✕ · payload = 메타만(D-UC19 확정 — partition=계좌ID 노출은 명시) |
-| `GET /ops/audit-records` · `/{recordId}` | UC-20 | **책임자** · 조직 스코프 | ✅ 목록·집계 포함(BR-58 전 형태) |
+| `GET /ops/audit-records` · `/{recordId}` | UC-20 | ★ **AUDITOR** · grant 스코프 서브트리(축 없는 기록 = **루트 스코프만**) — 2026-08-06 C7 D-5 완전 분리(구 "책임자" 대체) | ✅ 목록·집계 포함(BR-58 전 형태) |
 
 ## 3. 이벤트 색인 ★ (리뷰 Q-6 — 이벤트도 전수 대상: 축·행위자·S-9)
 
@@ -118,7 +118,7 @@
 | 불일치 `investigate`·`resolve` | **UC-17** 불일치 조사·처리 (BR-48) |
 | BR-42 대사 수동 실행 | **UC-18** (담당자 — 전사 스코프) |
 | M17 DLQ 재투입 (ADR-014) | **UC-19** (담당자 — 전사 스코프) |
-| BR-57 감사 기록 조회 (AD-5) | **UC-20** (책임자) |
+| BR-57 감사 기록 조회 (AD-5) | **UC-20** (★ AUDITOR — 2026-08-06 D-5) |
 | ApprovalRequest `request`·`approve`·`reject`·`consume` | 내부 — BR-56 조작 UC들의 공통 단계 (정본 = UC-02 §7 · U-7) · `expire` = 운영 절차(예외 ⑨) |
 | 대사 3자 비교·anchor 생성·릴레이·커트오프 드레인·통지(BR-53) | 운영 절차 — 액터의 목표가 아니다 (U-2) |
 | ★ **조회 표면 (4번째 원천 — 리뷰 F-4 정정: 조작·전이 3원천은 조회를 구조적으로 못 잡는다)** | 고객 조회 = **UC-03**(BR-31·58) · 감사 조회 = **UC-20**(BR-57) · 불일치 목록 = **UC-17의 단계**(`GET /ops/discrepancies`) · 승인 대기/내 요청 목록 = **UC-02 공통 계약의 단계**(`GET /ops/approval-requests` — BR-56 워크플로 전제) · DLQ 목록 = UC-19 · 정산 상태 = UC-18. 조회 UC의 전수성은 **엔드포인트 색인**이 담보한다(도출표의 한계 명시 — 가정 1 부분 반증. ⚠️ 순환 위험 — **교차 검증(색인 ↔ 시나리오 전제 조회 대조)은 계약 전수 패스의 acceptance**) |
