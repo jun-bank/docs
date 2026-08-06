@@ -43,7 +43,9 @@ Phase 1 ✅ ── 2 ✅ ── 3 ✅ ── 4 ✅ ── 5 ⬜ ── 6 ⬜
 | `architecture/` | `README.md`(기술서 — **여기부터 읽으면 지도가 선다**) · `adr/`(**ADR 18건**) · `quality-attributes.md` · `quality-scenarios.md` · `constraints.md` · `views/`(컨텍스트·컨테이너·데이터·런타임) |
 | `usecases/` | **UC-01~20** · `README.md`(색인 — 유스케이스 대장 · **엔드포인트 색인** · 이벤트 색인) · 공통 계약 규약 **K-1~4** |
 | **`dev-conventions.md`** | ★ **개발 규약 33규칙**(E3) — 규칙마다 **강제 수단 칸 의무**(컴파일·아키텍처 테스트·테스트 게이트·린트·리뷰) · 도구 확정 **TL-1 JUnit5 · TL-2 Testcontainers** · 강제 수단 분포(현재/도구 확정 후) · **관측 대장** |
+| **[`git-conventions.md`](git-conventions.md)** | ★ **깃 협업 규약 36규칙**(GC-1~36) — dev-conventions **PR-7·PR-8의 형식 정본**. **유형 어휘 1벌**(커밋 type = 라벨 = 릴리스 노트 축) · 커밋 형식 · 브랜치(trunk 근접·2일 상한) · 이슈·PR 템플릿 · 라벨 3축 · 마일스톤 · SemVer·태그·릴리스 · 멀티리포 의존 · **판정한 충돌 8건** |
 | [`operations/cicd.md`](operations/cicd.md) | 구성 관리·CI/CD 정본 — 파이프라인 P1~P5·RL-9 이월 소화 CD-1~5·롤백·CI 도구 C-08 판정 (E4) |
+| [`operations/infrastructure.md`](operations/infrastructure.md) | ★ **관제·인프라 요구사항** — 홈랩 3대 형상·제약 · 배포 인프라 구성요소(deploy-agent·관제 UI·이미지 레지스트리) · **후속 로드맵 [미확정] 4건**(로그 수집·자원 모니터링·관제 저장·트래픽 생성기) · **저수준 언어 성질 대조**(판정 미도래) |
 | [`study/project-workflow/phase5/05-parallel-documentation.md`](study/project-workflow/phase5/05-parallel-documentation.md) | 구현-병행 문서화 정책 — 판정 먼저 전환·IV 소비 T1~T5·이월 43건 전수·V2-7~9 제안 (E5) |
 | [`reference/writing/`](reference/writing/README.md) | 문서 작성 방법론 리서치 — 종합(README) + 근거 8축(evidence-1~9). 다음: 워크플로우 방법론 정의 |
 | `design-changes/` | **DC-001~006** — *왜 그렇게 됐는지*와 *무엇이 몇 번 깨졌는지* |
