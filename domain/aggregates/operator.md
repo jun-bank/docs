@@ -85,6 +85,7 @@ C7 인증 시점      : 주체 · 단계 · 스코프 + authzVersion 을 확정�
 | **정지·해지는 즉시 반영된다** | 상태 게이트(INV-P1)는 **판정 시점 조회**다 — 버전·캐시와 무관하게 그 자리에서 막힌다 |
 | grant 회수의 전파 | `authzVersion` 동반 + **캐시·전파 컨텍스트의 최대 수명 상한**. 상한 없이 "곧 반영된다"고 적으면 **영영 반영 안 되는 경로**가 남는다 |
 | 캐시가 도입되면 | 캐시 키에 **주체 범위 + `authzVersion` + `treeVersion`**(ADR-018 IS-6 · `org-unit.md` §8) |
+| ★ **버전이 오르지 않는 실효** (L1-18) | **만료·재인증 초과·스코프 조직 폐쇄**는 레코드를 쓰지 않으므로 `authzVersion`을 **올리지 않는다.** 즉 *"버전이 바뀌면 재조회"* 라는 장치가 **작동하지 않는 실효가 존재한다** — 이 경우 **수명 상한이 유일한 한계**다. 상한이 없으면 그 창이 무한하다(`role-grant.md` §4·**RG6** · 창의 실제 크기 = **[구현 검증 — IV-10]**) |
 
 > ⚠️ **"회수했다"와 "회수가 통한다"는 다른 사건이다.** 이 프로젝트 최다 사고 유형이 조용한 실패이고, 권한에서의 그 형태가 **회수된 권한으로 계속 통과하는 것**이다. 수치가 미확정이더라도 **상한이 존재한다는 계약**은 지금 적어야 한다 — 나중에 넣으면 이미 캐시가 깔린 뒤다.
 
@@ -94,11 +95,11 @@ C7 인증 시점      : 주체 · 단계 · 스코프 + authzVersion 을 확정�
 
 | 조작 | 코드명 | 사전조건 | 사후조건 | 발행 이벤트 |
 |---|---|---|---|---|
-| **등록** | `register(homeOrgId, name, operator)` | **조직 존재·`ACTIVE`**(PRE-1) · 주체 = **책임자 + 그 조직을 포함하는 스코프**(PRE-2) | `status = ACTIVE` · `authzVersion = 1` · ★ **권한은 하나도 없다** — 등록은 계정 생성이지 권한 부여가 아니다(`RoleGrant.issue`가 따로 필요하다) | `OperatorRegistered` |
-| **정지** | `suspend(reason, operator)` | `status = ACTIVE`(아니면 `ALREADY_SUSPENDED`·`OPERATOR_TERMINATED`) · PRE-2 | `status = SUSPENDED` · **`authzVersion` 증가** · ★ **유효 권한이 즉시 0**(INV-P1) · **grant 레코드는 건드리지 않는다** — 정지는 가역이므로 회수가 아니다 | `OperatorSuspended` |
-| **정지 해제** | `resume(operator)` | `status = SUSPENDED`(아니면 `ALREADY_ACTIVE`·`OPERATOR_TERMINATED`) · PRE-2 | `status = ACTIVE` · **`authzVersion` 증가** · ★ **정지 전 권한이 그대로 돌아온다** — grant를 지우지 않았기 때문이다 | `OperatorResumed` |
+| **등록** | `register(homeOrgId, name, linkedCustomerId?, operator)` | **조직 존재·`ACTIVE`**(PRE-1) · 주체 = **책임자 + 그 조직을 포함하는 스코프**(PRE-2) · ★ **`linkedCustomerId` 판정 필수**(L1-08) — **신원 대조로 값을 채우거나 "연결 없음"을 확인**한다. **`null`이 판정 없이 통과할 수 없다**(대조 절차는 [미확정] — OP3) | `status = ACTIVE` · `authzVersion = 1` · ★ **권한은 하나도 없다** — 등록은 계정 생성이지 권한 부여가 아니다(`RoleGrant.issue`가 따로 필요하다) · ★ `linkedCustomerId` = **값 또는 "없음 확인"** 이 기록된다 | `OperatorRegistered` |
+| **정지** | `suspend(reason, operator)` | `status = ACTIVE`(아니면 `ALREADY_SUSPENDED`·`OPERATOR_TERMINATED`) · PRE-2 | `status = SUSPENDED` · **`authzVersion` 증가** · ★ **유효 권한이 즉시 0**(INV-P1 — 상태 게이트) · ★ **정지는 권한 복구의 근거를 남기지 않는다** — 해제 시 권한은 **재부여**로만 되살아난다(대장 **D-9** 정본 · BR-59 ③. L1-01) | `OperatorSuspended` |
+| **정지 해제** | `resume(operator)` | `status = SUSPENDED`(아니면 `ALREADY_ACTIVE`·`OPERATOR_TERMINATED`) · PRE-2 | `status = ACTIVE` · **`authzVersion` 증가** · ★ **권한은 자동으로 부활하지 않는다 — 재부여가 필요하다**(대장 **D-9** 정본 · BR-59 ③. L1-01) | `OperatorResumed` |
 | **해지** | `terminate(operator, reason)` | `status ≠ TERMINATED`(아니면 `ALREADY_TERMINATED`) · PRE-2 | `status = TERMINATED`(불가역 — INV-P2) · **`authzVersion` 증가** · ★ **그가 보유한 전 grant에 회수 레코드**(`RoleGrant.revoke(reason = TERMINATION)` — 선검증 D-9 · INV-P5) · ★ **그가 부여자인 유효 grant는 재검토 큐에 뜬다**(role-grant §4 `pendingReview` **파생 뷰** — 저장·호출이 아니라 `grantedBy`의 해지 상태에서 유도된다. **자동 회수하지 않는다**, D-9) | `OperatorTerminated` |
-| **소속 이동** | `transfer(newOrgId, operator)` | `status ≠ TERMINATED`(아니면 `OPERATOR_TERMINATED`) · **새 조직 존재·`ACTIVE`**(PRE-1 · `ORG_UNIT_CLOSED`) · PRE-2 | `homeOrgId` 교체 · **상태는 바뀌지 않는다** · **`authzVersion` 증가** · ★ **옛 소속 스코프의 grant 자동 회수**(`RoleGrant.revoke(reason = TRANSFER)` — 선검증 D-9). 새 소속의 권한은 **자동으로 생기지 않는다** — 재부여가 필요하다 | `OperatorTransferred` |
+| **소속 이동** | `transfer(newOrgId, operator)` | `status ≠ TERMINATED`(아니면 `OPERATOR_TERMINATED`) · **새 조직 존재·`ACTIVE`**(PRE-1 · `ORG_UNIT_CLOSED`) · PRE-2 | `homeOrgId` 교체 · **상태는 바뀌지 않는다** · **`authzVersion` 증가** · ★ **옛 소속 스코프의 grant 자동 회수**(`RoleGrant.revoke(reason = TRANSFER)` — 선검증 D-9). ★ **회수 술어 = `scopeOrgId ∈ subtree(옛 homeOrgId)`**(L1-17 — 아래). 새 소속의 권한은 **자동으로 생기지 않는다** — 재부여가 필요하다 | `OperatorTransferred` |
 
 ### 조작 상세 — `transfer()` 가 권한을 넓히지 않는 이유 ★
 
@@ -111,6 +112,18 @@ grant 의 스코프는 grant 에 고정돼 있다 (D-3 — 스코프 정본 = gr
         → 지점 A 로 발급된 담당자 권한을 지점 B 로 옮긴 사람이 계속 들고 있으면
           "그 조직 사람만 그 조직 것을 만진다" 가 인사 이동에서만 조용히 깨진다
 ```
+
+**회수 술어 (L1-17 — 무엇이 "옛 소속 스코프"인가)**
+
+```
+회수 대상 =  { g ∈ effective(operator) | g.scopeOrgId ∈ subtree(옛 homeOrgId) }
+                                          └─ 옛 소속과 그 아래 ─┘
+유지 =  옛 소속의 **조상** 스코프 grant (지역·전사)  ·  옛 소속과 무관한 스코프 grant (파견·겸직)
+```
+
+> ★ **조상 스코프 grant를 남기는 이유는 그것이 "직급 권한"이기 때문이다.** 지역 책임자가 지점 A에서 지점 B로 옮겼다고 지역 권한을 잃는 것은 인사 사실과 어긋난다 — 그 권한은 애초에 지점에 매인 것이 아니다.
+>
+> ⚠️ **그래서 잔여 위험이 남는다** — 옛 지점을 덮는 **조상 스코프 grant는 이동 후에도 옛 지점을 계속 덮는다.** 이동이 그것을 좁히지 않는다. 이 잔여는 **정기 재인증이 잡는 것**으로 두었고(BR-59 ②), 그것으로 충분한지는 **OP4**로 등재했다.
 
 > ★ **회수 대상은 "옛 소속 스코프의 grant"이지 전 grant가 아니다.** 파견·겸직으로 받은 타 조직 스코프 grant(D-3이 허용한다)까지 지우면 인사 이동이 남의 조직 권한을 임의로 정리하게 된다.
 >
@@ -133,6 +146,10 @@ grant 의 스코프는 grant 에 고정돼 있다 (D-3 — 스코프 정본 = gr
 > ★ **`authzVersion`을 싣는 이유**: 상태 변화도 **유효 권한의 변화**다(F-15) — 판정 캐시·전파가 무효화 시점을 알아야 하고, 감사가 *"그 시점에 이 사람의 권한이 무엇이었나"* 를 재구성하려면 세대 번호가 이력에 있어야 한다.
 >
 > **자금 이벤트가 아니다** — 원장으로 가지 않는다.
+
+### 거절은 이벤트가 아니라 기록이다 ★ (C7 4문서 공통 — F-35 · L1-24)
+
+이 문서의 조작이 **인가·불변식·상태로 거절되면** 그 시도는 **조작 트랜잭션과 독립된 커밋**으로 감사에 남는다(ADR-017 **AD-2**). 거절되면 조작 트랜잭션이 롤백되므로 같은 커밋의 outbox 행도 사라진다 — 독립 커밋이 아니면 흔적이 없다. `TERMINATED` 계정에 대한 재조작 시도·스코프 밖 인사 조작 시도가 **무흔적으로 끝나지 않게** 하는 장치다.
 
 ---
 
@@ -164,9 +181,10 @@ grant 의 스코프는 grant 에 고정돼 있다 (D-3 — 스코프 정본 = gr
 
 | # | 의문 | 영향 |
 |---|---|---|
-| **OP1** | ★ **`terminate`·`transfer`의 grant 회수가 두 애그리게이트를 바꾼다** — 자금 무이동이라 E1~E5 밖이지만, **조작 대장의 경계 기호가 `—`(자기 애그리게이트만)와 맞지 않는다.** C7 내부 경계를 신설할지, C8 `consume`처럼 표 밖 예외로 둘지 판정이 필요하다 | 조작 대장(`aggregates/README.md`) · 검산 ③·③-b |
-| **OP2** | **판정 캐시·컨텍스트 전파의 최대 수명 수치** — [미확정](선검증 D-8). 값이 없으면 *"곧 반영된다"* 가 검증 불가능한 문장으로 남는다 | 미확정 수치 표 · ADR-016 §5 · QS-01 |
-| **OP3** | **`linkedCustomerId`를 무엇이 채우는가** — 임직원이 나중에 고객이 되는 경우(또는 그 반대)를 어느 조작이 잇는가. 연결이 비어 있으면 **BR-60(본인 계좌 조작 금지)이 조용히 통과**한다 | BR-60 · 회원 등록 절차 |
+| ~~OP1~~ | ✅ **닫힘 (2026-08-06 루프 1 — L1-23)**: 경계 기호 = ★ **`C7`**(자금 무이동 C7 내부 원자 경계 — E1~E5 표 밖, C8 `consume`과 같은 계열의 의식적 예외). `OrgUnit.create`·`close`(루트 `treeVersion` 갱신)까지 같은 토큰으로 통일했고 **조작 대장·검산 ⑧에 반영 완료**다(`aggregates/README.md` 표기 절). `role-grant.md` **RG1**과 함께 닫혔다 |
+| **OP2** | **판정 캐시·컨텍스트 전파의 최대 수명 수치** — [미확정](선검증 D-8). 값이 없으면 *"곧 반영된다"* 가 검증 불가능한 문장으로 남는다 · ★ **[구현 검증 — IV-1]**(수치는 부하·운영 관측 후에만 의미가 있다 — 정책 v2 V2-3) | 미확정 수치 표 · ADR-016 §5 · QS-01 |
+| **OP3** | **`linkedCustomerId`의 신원 대조 절차** — 채움 자체는 `register`의 **필수 판정**이 됐다(L1-08: 값 또는 "없음 확인" — `null` 通過 금지). 남은 것은 **무엇으로 대조하는가**이며, 임직원이 나중에 고객이 되는 경우(또는 그 반대)를 잇는 조작도 미정이다 · ★ **[구현 검증 — IV-8]**(실명 확인 연동 — 외부 시스템 접촉) | BR-60 · 회원 등록 절차 |
+| ★ **OP4** | **`transfer` 회수 술어의 잔여 위험** (L1-17) — 회수는 `subtree(옛 homeOrgId)` 안의 grant만 걷는다. **옛 지점을 덮는 조상 스코프 grant**(지역·전사)는 이동 후에도 그대로 옛 지점을 덮는다. 지금은 **정기 재인증**(BR-59 ②)이 그것을 잡는 유일한 장치인데, 재인증 **주기가 미확정**이라 노출 창의 길이도 미정이다 | BR-59 · 미확정 수치 표 · **[구현 검증 — IV-4]** |
 
 ---
 
@@ -174,4 +192,5 @@ grant 의 스코프는 grant 에 고정돼 있다 (D-3 — 스코프 정본 = gr
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v0.2 | 2026-08-06 | **C7 리뷰 루프 1 반영 — L1-01·08·17·18·23·24**: `resume` = ★ **자동 부활 없음·재부여**(대장 D-9 정본 — 부활 서술 제거) · `register`에 **`linkedCustomerId` 필수 판정**(값 또는 "없음 확인" — `null` 通過 금지) · `transfer` **회수 술어 명문화**(`subtree(옛 homeOrgId)` — 조상 스코프는 유지) + 잔여 위험 **OP4 등재** · §4에 **버전이 오르지 않는 실효** 행(수명 상한이 유일한 한계) · **OP1 닫힘**(경계 = `C7`) · OP2·OP3에 **[구현 검증]** 태그 · 거절 = **AD-2 독립 커밋** 절 신설 |
 | v0.1 | 2026-08-06 | 최초 작성 — C7 신설 4종의 하나. 상태 3종 + **`authzVersion`**(회수 즉시성 — D-8) · **`transfer` 자동 회수**(D-9) · 해지 시 전 grant 회수 + **부여자 해지 재검토 큐**(D-9) · 스코프 정본은 grant이고 소속은 인사 사실(D-3) · 본인 계좌 통제 축(`linkedCustomerId` — 규칙 본문은 BR-60). 불변식 5종, 사전조건 2종, 조작 5종, 이벤트 5종 |

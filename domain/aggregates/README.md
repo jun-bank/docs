@@ -3,6 +3,7 @@
 - 작성일: 2026-08-03
 - 상태: **Phase 2 종료 후 Phase 3·4 반영** — 15종 (★ 2026-08-06 C7 명세로 조직·운영자·권한 부여·회원 4종 편입) (DC-001 미수 · R8 입금 수신 · ~~ADR-006 마감 스냅샷~~ **ADR-011·DC-005로 폐기 — 계좌가 영업일별 이동 행을 든다** — 구 표현: `closedBalance`를 직접 든다**). 인계: [`../handoff-to-phase3.md`](../handoff-to-phase3.md)
 - 양식: `study/project-workflow/phase2/04-aggregate-format.md`
+- ★ **2026-08-06 C7 리뷰 루프 1 반영 — L1-23**: 조작 대장의 경계 기호에 **`C7`**(C7 내부 원자 경계) 등재 · `OrgUnit.create`·`close`를 `—` → **`C7`** 로 정정(루트 `treeVersion` 갱신 + 부모 행 잠금) — 대장은 `tools/gen_matrix.py`에서 **재생성**했고 검사 ⑧이 이 토큰을 E와 같은 자격으로 읽는다. `operator.md` **OP1** · `role-grant.md` **RG1** 닫힘
 - 입력: `domain/event-storming.md` ⑦ · `domain/context-map.md` §4 데이터 소유권
 
 ---
@@ -77,6 +78,7 @@ private Account account;       // ❌
 
 **표기**: `E1`~`E5` = 그 경계 안에서 실행 · `—` = 자기 애그리게이트만 변경 · `조회` = 변경 없음
 · `별도` = 커밋 뒤 유실되지 않는 경로로(BR-40)
+· ★ **`C7`** = **C7 내부 원자 경계**(2026-08-06 확정) — 자금이 움직이지 않아 **E1~E5 표 밖**이지만 *"자기 애그리게이트만"* 도 아니다. `Operator.terminate`·`transfer`의 grant 회수, `RoleGrant.*`의 `authzVersion` 증가, `OrgUnit.create`·`close`의 **루트 `treeVersion` 갱신 + 부모 행 잠금**이 여기 든다. **검사 ⑧이 이 토큰을 E와 같은 자격으로 읽는다**(`check_docs.py` `REAL`) — 배정 오류가 기계로 잡힌다는 뜻이며, 그래서 `operator.md` **OP1**·`role-grant.md` **RG1**은 닫혔다(L1-23).
 
 | 조작 | 소유 | 참여 경계 | 비고 |
 |---|---|---|---|
@@ -145,8 +147,8 @@ private Account account;       // ❌
 | `recordOrTouch` | 불일치 `Discrepancy` | 별도 | `DiscrepancyRecorded` — 탐지 배치·격리가 Outbox로 넘긴다 |
 | `investigate` | 불일치 `Discrepancy` | — |  |
 | `resolve` | 불일치 `Discrepancy` | — |  |
-| `create` | 조직 `OrgUnit` | — |  |
-| `close` | 조직 `OrgUnit` | — |  |
+| `create` | 조직 `OrgUnit` | C7 |  |
+| `close` | 조직 `OrgUnit` | C7 |  |
 | `register` | 운영자 `Operator` | — |  |
 | `suspend` | 운영자 `Operator` | C7 |  |
 | `resume` | 운영자 `Operator` | C7 |  |

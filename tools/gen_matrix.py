@@ -32,7 +32,7 @@ ASSIGN = {
  "Settlement.retry":"—","Settlement.escalate":"—","Settlement.resumeByOperator":"—",
  "JournalEntry.post":"별도","JournalEntry.reverse":"별도",
  "Discrepancy.recordOrTouch":"별도","Discrepancy.investigate":"—","Discrepancy.resolve":"—",
- "OrgUnit.create":"—","OrgUnit.close":"—",
+ "OrgUnit.create":"C7","OrgUnit.close":"C7",
  "Operator.register":"—","Operator.suspend":"C7","Operator.resume":"C7",
  "Operator.terminate":"C7","Operator.transfer":"C7",
  "RoleGrant.issue":"C7","RoleGrant.revoke":"C7","RoleGrant.recertify":"C7",
