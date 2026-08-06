@@ -52,14 +52,14 @@
 | 전문 `CANCEL-REQ/RES` (K-2 확정) | UC-08 | 시스템(매입사 경로) | ✕ 사유 구분(C-2 특칙) |
 | 전문 `REVERSAL-REQ/RES` (K-2 확정) | UC-09 | 시스템(매입사 경로) | ✕ 〃 · 원승인 없음 = 예약(존재 비누설) |
 | 파일 `CAPTURE-FILE` (K-2 확정) | UC-10·11 | 시스템(배치 — 예외 ②) | 해당 없음(응답 상대 없음 — 격리+불일치) |
-| `POST·DELETE /ops/authorizations/{id}/freeze` | UC-12 | 담당자(개설 조직) | ✅ |
-| `POST·DELETE /ops/receivables/{id}/freeze` | UC-12 | 담당자(accountId 귀속) | ✅ |
+| `POST·DELETE /ops/authorizations/{authorizationId}/freeze` | UC-12 | 담당자(개설 조직) | ✅ |
+| `POST·DELETE /ops/receivables/{receivableId}/freeze` | UC-12 | 담당자(accountId 귀속) | ✅ |
 | `POST /ops/accounts/{accountId}/receivable-block-lifts` | UC-13 | 담당자(=maker) — BR-56 ② | ✅ |
 | `POST /ops/accounts/{accountId}/receivable-block-reimpositions` | UC-13 | 담당자 — 승인 절차 없음(안전 방향) | ✅ |
 | `POST /ops/capture-batches/{fileId}/isolated-records/{recordId}/promotion` | UC-14 | 담당자(=maker) · 전사 — BR-56 ③ | △ 부재만 NOT_FOUND(축 없음 — BR-55 특칙) |
 | (승인 요청 공통 계약 `POST /ops/approval-requests` — **①~⑤ 전부** 사용, 정본 = UC-02 §7 · ④⑤만 ★ 실행 엔드포인트 없음 — R15 지시 이벤트) | UC-02·13·14·15·16 | 담당자(=maker) | 대상별 (④ ✕ 영업일 / ⑤ ✅ 원전표 / ①②③ ✅) |
 | ★ `GET /ops/approval-requests` (승인 대기·내 요청 목록 — BR-56 워크플로의 전제 조회. 리뷰 F-4가 발견한 누락) | UC-02 공통 | 담당자(내 요청) / 책임자(대기 목록) · 스코프 | ✅ |
-| `POST /ops/discrepancies/{id}/investigation` · `/resolution` | UC-17 | 운영자 담당자 | ✅ 유도 스코프(UC17-1 확정) |
+| `POST /ops/discrepancies/{discrepancyId}/investigation` · `/resolution` | UC-17 | 운영자 담당자 | ✅ 유도 스코프(UC17-1 확정) |
 | ★ `GET /ops/discrepancies` (목록 — UC-17 §3의 전제 조회. 리뷰 F-1이 발견한 누락) | UC-17 | 운영자 조회 이상 | ✅ 유도 스코프(UC17-1 확정) |
 | `POST /ops/reconciliations` · `GET /ops/reconciliations/{runId}` | UC-18 | 담당자·전사 / 조회+ | ✕ 영업일 축 |
 | `GET /ops/dlq` · `POST /ops/dlq/{outboxRecordId}/replay` | UC-19 | 조회+ / 담당자 · 전사 | ✕ · ⚠️ payload 노출 범위 [미정] |
