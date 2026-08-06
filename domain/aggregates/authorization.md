@@ -264,7 +264,7 @@ EXPIRED    → CAPTURED    지연 매입 (BR-19) — 만료는 채무 소멸이 
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
-| v2.1 | 2026-08-06 | 계약 전수 CDS3 소급 — `freeze` 사전조건에 `frozen = false`(재보류 = `ALREADY_FROZEN` — 미수(receivable v1.x)와 한 판정) |
+| v2.2 | 2026-08-06 | 계약 전수 CDS3 소급 — `freeze` 사전조건에 `frozen = false`(재보류 = `ALREADY_FROZEN` — 미수(receivable v1.x)와 한 판정) |
 | v2.1 | 2026-08-05 | **멀티테넌시 B-4b** — 참조 표에 회원 `CustomerId` 추가 — ★ **소유 축**(ADR-018 IS-1, 유도 가능해도 저장). C3에 고객 축이 0이던 공백(전수 스캔) 해소 |
 | v2.0 | 2026-08-05 | **멀티테넌시 B-4** — `freeze`·`unfreeze`에 **`operator` 인자**(이벤트 payload는 이미 "승인ID, 운영자"를 실었는데 시그니처가 못 받고 있었다) + 주체 = 운영자 담당자(BR-55) |
 | v1.9 | 2026-08-04 | **DC-001 단계 12** — **INV-10·INV-11을 대사 불변식 RC-1·RC-2로 이동**(검증 위치에 "승인 단독 검증 불가"라 써 놓고 INV에 뒀다 — P1 재발) · `refund()`에 `recoverable` 인자 추가(E4 참여자) · `capture()`에 **부분 매입의 `limitContribution` 감액** 명시(BR-24 — T8에 한도 복원이 한 글자도 없었다) |

@@ -60,9 +60,9 @@
 | 항목 | 내용 |
 |---|---|
 | 주체 | 운영자 **담당자** 이상 · 스코프 판정 = 대상 식별자의 귀속 (전사 조작이면 전사 스코프 — BR-55 특칙) |
-| 요청 | 대상 조작(BR-56 ①~⑤ 목록 안 — 밖이면 거절) · **조작별 인자(스키마는 각 조작 UC가 정의 — ①은 본 UC: reversalId·원입금·금액)** · 사유 · ★ **④⑤는 `instructionId`(maker 생성 — R15) 포함, 요청 단계 유일**: 같은 ID 재요청 = `DUPLICATE_INSTRUCTION` 거절(없으면 두 번째 승인이 수신측 무연산으로 조용히 사라진다 — 2026-08-06 계약 전수 D 확정) |
+| 요청 | 대상 조작(BR-56 ①~⑤ 목록 안 — 밖이면 거절) · **조작별 인자(스키마는 각 조작 UC가 정의 — ①은 본 UC: reversalId·원입금·금액)** · 사유 · ★ **④⑤는 `instructionId`(maker 생성 — R15) 포함, 요청 단계 유일**(없으면 두 번째 승인이 수신측 무연산으로 조용히 사라진다 — 2026-08-06 계약 전수 D 확정) |
 | 응답(성공) | 요청 ID · `PENDING` |
-| 오류 표 ★ | ★ **판정 순서 (재점검 정정): ① 단계(FORBIDDEN_LEVEL — 자기 속성이라 대상 조회 없이 판정: 단계 미달자는 대상 존재를 영원히 모른다) → ② 스코프·존재(`NOT_FOUND` — 부재·스코프 밖 동일, L7) → ③ 상태·목록(`INVALID_OPERATION`)** — 대상을 본 뒤 단계를 판정하면 FORBIDDEN_LEVEL이 존재 탐색 채널이 된다 |
+| 오류 표 ★ | ★ **판정 순서 (재점검 정정): ① 단계(FORBIDDEN_LEVEL — 자기 속성이라 대상 조회 없이 판정: 단계 미달자는 대상 존재를 영원히 모른다) → ② 스코프·존재(`NOT_FOUND` — 부재·스코프 밖 동일, L7) → ③ 상태·목록(`INVALID_OPERATION`) · ★ **`DUPLICATE_INSTRUCTION`**(④⑤ — 같은 `instructionId`의 요청 존재. 요청 칸의 유일 제약이 여기서 거절된다 — 리뷰 F6 보강)** — 대상을 본 뒤 단계를 판정하면 FORBIDDEN_LEVEL이 존재 탐색 채널이 된다 |
 | 멱등 | 비멱등 — 중복 요청은 각각 `PENDING`으로 남고 방치 통지(BR-53 계열)가 잡는다. *(리뷰 확인 요청 — 멱등 필요?)* |
 | 예산 | 실시간 아님 (관리 조작) |
 | 감사 | 요청자·대상·스코프·인자 (AD-5 직접 append) |
@@ -74,7 +74,7 @@
 | 주체 | 운영자 **책임자** · ★ `checker ≠ maker` (INV-1) |
 | 요청 | (reject는 사유 필수 — A3) |
 | 응답(성공) | 요청 ID · 전이된 상태(`APPROVED`/`REJECTED`) |
-| 오류 표 ★ | ★ **판정 순서 = 스코프·존재 먼저** → `NOT_FOUND`(부재·스코프 밖 동일 — L7) → `SELF_APPROVAL`(INV-1 — 스코프 안 ID에만 반환되므로 탐색 채널이 아니다, 리뷰 Q-2 해소) · ★ **종료 상태 재호출 = `ALREADY_APPROVED`·`ALREADY_REJECTED`·`ALREADY_CONSUMED`·`ALREADY_EXPIRED`**(구 `INVALID_STATE` 단일 코드 대체 — 2026-08-06 CDS3 소급: 무엇이었는지가 응답에 보여야 상태 오인이 없다. approval-request SM 주석이 짝) |
+| 오류 표 ★ | ★ **판정 순서(K-1)**: ① **책임자 단계 미달 = `FORBIDDEN_LEVEL`**(자기 속성 — 대상 조회 전. 2026-08-06 리뷰 F-01 보강) → ② **스코프·존재** `NOT_FOUND`(부재·스코프 밖 동일 — L7) → ③ `SELF_APPROVAL`(INV-1 — 스코프 안 ID에만 반환되므로 탐색 채널이 아니다, 리뷰 Q-2 해소) · ★ **종료 상태 재호출 = `ALREADY_APPROVED`·`ALREADY_REJECTED`·`ALREADY_CONSUMED`·`ALREADY_EXPIRED`**(구 `INVALID_STATE` 단일 코드 대체 — 2026-08-06 CDS3 소급: 무엇이었는지가 응답에 보여야 상태 오인이 없다. approval-request SM 주석이 짝) |
 | 멱등 | 상태 전이가 멱등 경계 — 종료 상태 재호출은 **`ALREADY_*` 명시 거절**(CDS3 소급 — 위 오류 표) |
 | 예산 | 실시간 아님 |
 | 감사 | 승인자/거절자·사유 (AD-5 — C8 자기 조작 직접 append) |
@@ -136,6 +136,7 @@
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v0.8 | 2026-08-06 | **리뷰 반영(듀얼 1패스)** — approve/reject 오류표에 ① 단계 추가(F-01) · `DUPLICATE_INSTRUCTION`을 요청 오류표에 정본 등재(F6 — 정본↔인용 역전 해소) |
 | v0.7 | 2026-08-06 | **공통 계약 정본 개정 (계약 전수 — 사용자 확정 3건)**: 종료 상태 재호출 `INVALID_STATE` → `ALREADY_*` 4종(CDS3 소급) · `NOT_MAKER` 신설(A4) · ④⑤ `instructionId` 요청 단계 유일(`DUPLICATE_INSTRUCTION`) |
 | v0.6 | 2026-08-06 | 계약 전수 — S-9 확정(`schemaVersion: 1` — K-3) |
 | v0.3 | 2026-08-05 | **재점검 정정** — 판정 순서를 ①단계→②스코프·존재→③상태로 (단계는 자기 속성 — 대상 조회 전에 판정해야 FORBIDDEN_LEVEL이 탐색 채널이 안 된다) |
