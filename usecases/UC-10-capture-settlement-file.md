@@ -111,6 +111,15 @@
 >
 > ✅ **확정 (2026-08-06 U-2 — B-12)**: 부족분 적재 시 발행되는 **`ReceivableIncurred`**(미수 §6 정본 · 구독 = C5 원장·운영자)를 **이벤트 색인 §3에 등재**했다(C-6 — 자금 이벤트라 행위자 비포함 · 축 `accountId` · S-9 = 1).
 
+#### 이벤트 `ReceivableIncurred` (기존 — **정본 = receivable.md §6**. 계약 확인 블록 — 리뷰 c-F05 보강)
+
+| 항목 | 내용 |
+|---|---|
+| payload | 미수ID · **`accountId`** · **`origin`(CAPTURE/DEPOSIT_REVERSAL)·`sourceRef`** · 금액 · 영업일 (receivable.md §6) — **행위자 비포함**(자금 — AD-7 ②) · **`ownerId` 비포함**(K-4) |
+| 구독 | **C5 원장**(R6 ACL — `origin`별 분기 기표) · 운영자 |
+| 멱등 키 | 수신측 = 전표 **INV-8**(`sourceEvent`) · 발행측 유일 = **`(origin, sourceRef)`**(receivable INV-6) |
+| 스키마 버전 | **`schemaVersion: 1`** (K-3) |
+
 ## 8. 규칙 연결 표
 
 | 단계/예외 | 규칙·조작 |
@@ -138,6 +147,7 @@
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v0.5 | 2026-08-06 | 듀얼 리뷰 수정 — 색인 등재 이벤트의 **4칸 계약 블록 추가**(c-F05: 색인은 계약이 있다고 주장하는데 블록이 없었다) |
 | v0.4 | 2026-08-06 | **U-2 판정 반영 — 마커 해소·의문 닫기**: 파일 포맷 = [미확정] 백로그(B-7 — UC10-4 주석) · `totalRecords` 미독 = RECEIVED 거부+재전송(B-8 — **UC10-2 닫힘**) · 파일·배치 감사 스코프 = 없음(null)+`fileId`(B-5) · 배치 수명주기 5종 = **발행 대상 아님**(B-9) · 불일치 적재 경로 = **outbox · 컨텍스트 맵 R17 신설**(B-10) · `Captured`·`Withdrawn` payload의 **`ownerId` 비포함**(A-2·3) · `ReceivableIncurred` 색인 등재(B-12) |
 | v0.3 | 2026-08-06 | **계약 전수 — §7 상세 블록**(02 양식 7칸 · 파일 `CAPTURE-FILE` + 이벤트 배치 5종·`Captured`·`Withdrawn`). 격리 결과는 SM/BR 참조로만(M2·M4·M7·M8·M19·보류 — 복사 금지) · 배치 거절 코드는 배치 SM §4 처리 열 귀속 · 멱등 = `fileId`·`(fileId, recordId)` · 예산 = 실시간 아님(상한 = 진척 없음 판정) · 미판정 6건 |
 | v0.2 | 2026-08-06 | **UC10-1 닫힘** — M19 신설 확정 반영(§4-L·§8) |
