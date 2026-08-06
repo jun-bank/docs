@@ -176,6 +176,13 @@ for p in sorted(ROOT.rglob("*.md")):
         if m and m.group(1) != m.group(2):
             bad("⑥", f"{p.relative_to(ROOT)}:{n} 선언 불일치 {m.group(1)}종 vs {m.group(2)}종")
 
+# ── ⑥b API 레퍼런스 생성물 drift (2026-08-06 — gen_api_reference)
+import subprocess as _sp
+_r = _sp.run([sys.executable, str(ROOT/"tools/gen_api_reference.py"), "--check"],
+             capture_output=True, text=True)
+if _r.returncode != 0:
+    bad("⑥b", "api-reference.md drift — tools/gen_api_reference.py 재실행 필요")
+
 # ── ⑦ 없는 규칙 참조
 BRS = ROOT/"product/01-business-rules.md"
 brs = set(re.findall(r"^## (BR-\d+)\.", BRS.read_text(), re.M))
