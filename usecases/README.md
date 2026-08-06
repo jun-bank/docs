@@ -59,8 +59,8 @@
 | `POST /ops/capture-batches/{fileId}/isolated-records/{recordId}/promotion` | UC-14 | 담당자(=maker) · 전사 — BR-56 ③ | △ 부재만 NOT_FOUND(축 없음 — BR-55 특칙) |
 | (승인 요청 공통 계약 `POST /ops/approval-requests` — **①~⑤ 전부** 사용, 정본 = UC-02 §7 · ④⑤만 ★ 실행 엔드포인트 없음 — R15 지시 이벤트) | UC-02·13·14·15·16 | 담당자(=maker) | 대상별 (④ ✕ 영업일 / ⑤ ✅ 원전표 / ①②③ ✅) |
 | ★ `GET /ops/approval-requests` (승인 대기·내 요청 목록 — BR-56 워크플로의 전제 조회. 리뷰 F-4가 발견한 누락) | UC-02 공통 | 담당자(내 요청) / 책임자(대기 목록) · 스코프 | ✅ |
-| `POST /ops/discrepancies/{id}/investigation` · `/resolution` | UC-17 | 운영자 담당자 | ✅ (스코프 축 = UC17-1 대기) |
-| ★ `GET /ops/discrepancies` (목록 — UC-17 §3의 전제 조회. 리뷰 F-1이 발견한 누락) | UC-17 | 운영자 조회 이상 | ✅ (스코프 축 = UC17-1 대기) |
+| `POST /ops/discrepancies/{id}/investigation` · `/resolution` | UC-17 | 운영자 담당자 | ✅ 유도 스코프(UC17-1 확정) |
+| ★ `GET /ops/discrepancies` (목록 — UC-17 §3의 전제 조회. 리뷰 F-1이 발견한 누락) | UC-17 | 운영자 조회 이상 | ✅ 유도 스코프(UC17-1 확정) |
 | `POST /ops/reconciliations` · `GET /ops/reconciliations/{runId}` | UC-18 | 담당자·전사 / 조회+ | ✕ 영업일 축 |
 | `GET /ops/dlq` · `POST /ops/dlq/{outboxRecordId}/replay` | UC-19 | 조회+ / 담당자 · 전사 | ✕ · ⚠️ payload 노출 범위 [미정] |
 | `GET /ops/audit-records` · `/{recordId}` | UC-20 | **책임자** · 조직 스코프 | ✅ 목록·집계 포함(BR-58 전 형태) |
@@ -137,7 +137,7 @@
 - **시스템 채널 재수신 = 최초 결과 재반환**(멱등 키 = 채널 유일 식별자: 승인 전문 = 멱등 레코드 · 입금 = 입금 수신 · 파일 = `(fileId, recordId)` · R15 지시 = 지시 ID).
 
 **신설 코드 대장** (2026-08-06 U-2 — K-1 ⑶의 유일 창구. 여기 없는 코드는 계약이 쓸 수 없다):
-`ALREADY_FROZEN`·`ALREADY_UNFROZEN`(보류 재요청 — 승인·미수 공통) · `ALREADY_LIFTED`·`ALREADY_BLOCKED`(차단 해제/재부과) · `ALREADY_PROMOTED`(승격 API 재지시 — BF8 무음은 배치 재개 전용) · `ALREADY_APPROVED/REJECTED/CONSUMED/EXPIRED`(승인요청 종료 재호출 — 구 INVALID_STATE 대체) · `ALREADY_RUNNING`(대사 진행 중 + 진행 runId) · `ALREADY_DELIVERED`·`ALREADY_RESOLVED`(DLQ 종료 재투입) · `NOT_MAKER`(A4 — 승인요청을 본 뒤 판정) · `DUPLICATE_INSTRUCTION`(④⑤ 지시 ID 요청 단계 유일) · `NO_RECEIVABLE`(미결 미수 부재) · `EXCEEDS_CANCELABLE`(누적취소 초과 — 시스템 채널 사유 구분) · `AUTH_NOT_FOUND`·`ACCOUNT_NOT_FOUND`(시스템 채널 대상 부재 — 기관 채널이라 사유 구분, L7 비적용) · `INVALID_BUSINESS_DATE`·`DRAIN_INCOMPLETE`(대사 실행 전제)
+`ALREADY_FROZEN`·`ALREADY_UNFROZEN`(보류 재요청 — 승인·미수 공통) · `ALREADY_LIFTED`·`ALREADY_BLOCKED`(차단 해제/재부과) · `ALREADY_PROMOTED`(승격 API 재지시 — BF8 무음은 배치 재개 전용) · `ALREADY_APPROVED/REJECTED/CONSUMED/EXPIRED`(승인요청 종료 재호출 — 구 INVALID_STATE 대체) · `ALREADY_RUNNING`(대사 진행 중 + 진행 runId) · `ALREADY_DELIVERED`·`ALREADY_RESOLVED`(DLQ 종료 재투입) · `NOT_MAKER`(A4 — 승인요청을 본 뒤 판정) · `DUPLICATE_INSTRUCTION`(④⑤ 지시 ID 요청 단계 유일) · `NO_RECEIVABLE`(미결 미수 부재) · `EXCEEDS_CANCELABLE`(누적취소 초과 — 시스템 채널 사유 구분) · `AUTH_NOT_FOUND`·`ACCOUNT_NOT_FOUND`(시스템 채널 대상 부재 — 기관 채널이라 사유 구분, L7 비적용) · `INVALID_BUSINESS_DATE`·`DRAIN_INCOMPLETE`(대사 실행 전제) · `INVALID_CURSOR`(목록 커서 — UC-03 선례 승계 등재)
 
 ### K-2 명명
 - 경로 접두 = **주체 채널**(`/me` 고객 본인 · `/ops` 운영자 · 전문/파일 = 채널 규격명). 조작 = **명사 자원**(`POST …/suspension` — 동사 금지), 해제 = **DELETE 동일 자원**, 값 교체 = `PUT`, 조회 = `GET`.
@@ -155,6 +155,7 @@
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v0.11 | 2026-08-06 | U-2b — UC17-1 유도 스코프 확정 반영(색인 2행) · `INVALID_CURSOR` 코드 대장 등재 |
 | v0.10 | 2026-08-06 | **U-2 판정 통합** — K-4 보정(이벤트 ownerId 전면 비포함 — 사용자)·시스템/축없음 감사 스코프 · **신설 코드 대장**(K-1 창구) · R15 지시 이벤트 이름 확정 · S-9 열 일괄 1 · 이벤트 색인 +2(ReceivableIncurred·WrittenOff — B-12) |
 | v0.9 | 2026-08-06 | ★ **계약 공통 규약 §5 신설**(K-1~4 — 사용자 합의 4묶음: 오류·멱등(CDS3 일반화 + PUT 자연 멱등 = o-OQ5 판정) · 명명(전문 이름 확정) · S-9(schemaVersion 1·새 타입 원칙) · 축·감사 스코프) + 색인 [미정] 4행 해제 |
 | v0.8 | 2026-08-06 | **정본 판정 반영 ③** — 행위자 판정 2종 확정(CardTerminated 비포함·JournalReversed 포함) 색인 반영 |
