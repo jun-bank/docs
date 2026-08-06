@@ -133,7 +133,9 @@ core:payment      → core:shared · core:banking(port) · core:card(port)
 core:auth         → core:shared · core:banking(port) · core:payment(port)      C7 (R4 동기)
 core:reconciliation → core:shared · 위 전부의 (port)  ★ 읽기만 — 쓰기 의존 없음  C6 (M-6)
 core:ops          → core:shared 만 의존                                        C8 (M-7)
-core:banking · core:payment → core:ops(port) 추가 허용  ★ R14 consume 호출 — M-7. 위성(settlement·ledger)은 모듈 의존이 아니라 R15 이벤트 수신
+core:banking · core:payment · ★ core:auth → core:ops(port) 추가 허용  ★ R14 consume 호출 — M-7
+                              (★ core:auth = BR-56 ⑥ — 책임자·AUDITOR 단계의 권한 부여·수동 회수가 consume()을 같은 커밋에서 부른다)
+위성(settlement·ledger)은 모듈 의존이 아니라 R15 이벤트 수신
 ```
 
 **`port/`를 별도 빌드 모듈로 뺀다.** 그러면 `core:payment`가 `core:banking:port`에는 의존하되
@@ -177,6 +179,7 @@ core:banking · core:payment → core:ops(port) 추가 허용  ★ R14 consume �
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v0.5 | 2026-08-06 | ★ **빌드 그래프에 `core:auth → core:ops(port)` 추가**(Phase 5 진입 — 선검증 F-07): context-map v1.9가 **R14에 C7을 추가**(BR-56 ⑥ — `RoleGrant.issue`·`revoke`가 `consume()`을 같은 커밋에서 부른다)했는데 §5 빌드 그래프는 `core:banking · core:payment`만 들고 있었다 — **그대로면 C7의 consume 호출이 컴파일되지 않는다.** M-7 규칙 문면(*"코어 모듈은 `core:ops`(port)를 호출할 수 있다"*)은 이미 이것을 허용하고 있었고, 그래프만 낡아 있었다 |
 | v0.4 | 2026-08-05 | **리뷰 루프 3 (R3-08)** — **M-7 규칙 정본 등재**(코어 모듈 → core:ops 호출 허용·역방향 금지·위성은 R15 수신). v0.3이 트리에만 추가하고 규칙 표를 비웠었다 |
 | v0.3 | 2026-08-05 | **멀티테넌시 리뷰 루프 1 (L-09)** — `ops/`(C8) 모듈 추가. 인가 계약 타입은 `shared/` 하향 의존으로 — M-3 단방향 그래프에 새 상향·순환 없음(AU-6) |
 | v0.2 | 2026-08-05 | ★ **ADR-010 반영** — 초안이 **대체된 ADR-004의 배포 구조를 그대로 들고 있었다**(C6·C7을 위성으로). Phase 3 마감 리뷰가 잡았다. **결정 자체(진입 컨텍스트가 조율)는 안 바뀐다** — 바뀐 것은 모듈이 어느 배포 단위에 사는가다. **M-5를 C4·C5로 좁히고 M-6**(대사는 코어 안에서 읽는다) 신설 |
