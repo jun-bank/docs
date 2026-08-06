@@ -135,13 +135,13 @@
 - **시스템 채널 재수신 = 최초 결과 재반환**(멱등 키 = 채널 유일 식별자: 승인 전문 = 멱등 레코드 · 입금 = 입금 수신 · 파일 = `(fileId, recordId)` · R15 지시 = 지시 ID).
 
 **신설 코드 대장** (2026-08-06 U-2 — K-1 ⑶의 유일 창구. 여기 없는 코드는 계약이 쓸 수 없다):
-`ALREADY_FROZEN`·`ALREADY_UNFROZEN`(보류 재요청 — 승인·미수 공통) · `ALREADY_LIFTED`·`ALREADY_BLOCKED`(차단 해제/재부과) · `ALREADY_PROMOTED`(승격 API 재지시 — BF8 무음은 배치 재개 전용) · `ALREADY_APPROVED/REJECTED/CONSUMED/EXPIRED`(승인요청 종료 재호출 — 구 INVALID_STATE 대체) · `ALREADY_RUNNING`(대사 진행 중 + 진행 runId) · `ALREADY_DELIVERED`·`ALREADY_RESOLVED`(DLQ 종료 재투입) · `NOT_MAKER`(A4 — 승인요청을 본 뒤 판정) · `DUPLICATE_INSTRUCTION`(④⑤ 지시 ID 요청 단계 유일) · `NO_RECEIVABLE`(미결 미수 부재) · `EXCEEDS_CANCELABLE`(누적취소 초과 — 시스템 채널 사유 구분) · `AUTH_NOT_FOUND`·`ACCOUNT_NOT_FOUND`(시스템 채널 대상 부재 — 기관 채널이라 사유 구분, L7 비적용) · `INVALID_BUSINESS_DATE`·`DRAIN_INCOMPLETE`(대사 실행 전제)
+`ALREADY_FROZEN`·`ALREADY_UNFROZEN`(보류 재요청 — 승인·미수 공통) · `ALREADY_LIFTED`·`ALREADY_BLOCKED`(차단 해제/재부과) · `ALREADY_PROMOTED`(승격 API 재지시 — BF8 무음은 배치 재개 전용) · `ALREADY_APPROVED/REJECTED/CONSUMED/EXPIRED`(승인요청 종료 재호출 — 구 INVALID_STATE 대체) · `ALREADY_RUNNING`(대사 진행 중 + 진행 runId) · `ALREADY_DELIVERED`·`ALREADY_RESOLVED`(DLQ 종료 재투입) · `NOT_MAKER`(A4 — 승인요청을 본 뒤 판정) · `DUPLICATE_INSTRUCTION`(④⑤ 지시 ID 요청 단계 유일) · `NO_RECEIVABLE`(미결 미수 부재) · `EXCEEDS_CANCELABLE`(누적취소 초과 — 시스템 채널 사유 구분) · `AUTH_NOT_FOUND`·`ACCOUNT_NOT_FOUND`(시스템 채널 대상 부재 — 기관 채널이라 사유 구분, L7 비적용) · ★ `VOIDED_BY_RESERVATION`(취소 예약 소비로 무효 성립 — UC-01 §4-B의 응답, 승인도 거절도 아닌 제3형태의 명시. 2026-08-06 규격서 보고 4) · ★ 승인 거절의 카드 사유 3분 = **SM 응답 열 재사용**(`CARD_SUSPENDED`(CF4)·`CARD_EXPIRED`(CF6)·`CARD_TERMINATED`(CF3) — `DECLINED_CARD` 단일 상수 대체, BR-15 구분 요구. 신설 아님) · `INVALID_BUSINESS_DATE`·`DRAIN_INCOMPLETE`(대사 실행 전제)
 
 **선례 승계 코드** (신설 아님 — 파일럿 UC-01~03·SM 응답 열이 출처. 리뷰 F9 보완 — 대장 창구를 완성한다): 공통 4종 · `INVALID_OPERATION`·`NO_APPROVAL`·`NO_ORIGINAL`·`EXCEEDS_ORIGINAL`·`DUPLICATE`·`SELF_APPROVAL`·`IDEMPOTENCY_CONFLICT`·`INVALID_CURSOR` · **SM 응답 열 전부**(CF·BF·F·RF·SF·DF·VF — 예: `AUTH_ALREADY_CAPTURED`(F1)는 실시간 취소의 CAPTURED 거절에도 재사용한다. 2026-08-06 리뷰 통합 — `AUTH_CAPTURED` 신설안 철회)
 
 ### K-2 명명
 - 경로 접두 = **주체 채널**(`/me` 고객 본인 · `/ops` 운영자 · 전문/파일 = 채널 규격명). 조작 = **명사 자원**(`POST …/suspension` — 동사 금지), 해제 = **DELETE 동일 자원**, 값 교체 = `PUT`, 조회 = `GET`.
-- **전문·파일 이름 확정**: `AUTH-REQ/RES` · `CANCEL-REQ/RES` · `REVERSAL-REQ/RES` · `DEPOSIT-ADV` · `CAPTURE-FILE` (색인 [미정] 해제).
+- **전문·파일 이름 확정**: `AUTH-REQ/RES` · `CANCEL-REQ/RES` · `REVERSAL-REQ/RES` · `DEPOSIT-ADV`★**/RES**(응답 — 2026-08-06 규격서 작성 중 확장: 동기 응답 전문이 UC-07 계약에 있는데 이름이 없었다) · `CAPTURE-FILE` (색인 [미정] 해제).
 - 이벤트 = 과거분사 사실명(기존 관행).
 
 ### K-3 S-9 스키마 버전
@@ -156,6 +156,7 @@
 | 버전 | 일자 | 내용 |
 |---|---|---|
 | v0.13 | 2026-08-06 | **C7 리뷰 루프 1 반영 — L1-15·25**: 엔드포인트 색인에 ★ **C7 관리 API 이월 행** + **색인이 현재 전수가 아니라는 명시**(BR-58 전수 시험 입력의 공백 — L1-15) · **K-4의 null·전사 감사 행 조회 자격을 AUDITOR로 전환**(구 "전사 스코프 책임자만"을 D-5가 대체 — L1-25) |
+| v0.13 | 2026-08-06 | K-2에 `DEPOSIT-ADV/RES` 확장 · 코드 대장 +1(`VOIDED_BY_RESERVATION` — 예약 소비 거절, BR-22 사유 구분) · SM 카드 3코드(CF3·4·6)를 승인 거절 사유 구분에 재사용 명시(DECLINED_CARD 3분 — BR-15) |
 | v0.12 | 2026-08-06 | **리뷰 반영(듀얼 1패스)** — 선례 승계 코드 절(F9·F3: AUTH_CAPTURED 철회 → F1 재사용) · K-1 순서 재기술(F10) · K-4 null 조회 자격(F1) · 색인: UC-19 행 확정·축 열 확정·B-12 본표 병합(F4·F5·OQ8) |
 | v0.11 | 2026-08-06 | U-2b — UC17-1 유도 스코프 확정 반영(색인 2행) · `INVALID_CURSOR` 코드 대장 등재 |
 | v0.10 | 2026-08-06 | **U-2 판정 통합** — K-4 보정(이벤트 ownerId 전면 비포함 — 사용자)·시스템/축없음 감사 스코프 · **신설 코드 대장**(K-1 창구) · R15 지시 이벤트 이름 확정 · S-9 열 일괄 1 · 이벤트 색인 +2(ReceivableIncurred·WrittenOff — B-12) |

@@ -60,6 +60,8 @@
 
 ## 7. 계약 (계약 블록 — 02 양식)
 
+> ★ **물리 규격(고정길이 레이아웃) = [`interfaces/cancel-message.md`](../interfaces/cancel-message.md)** (2026-08-06 신설 — 이 §7이 의미의 정본, 규격은 표면)
+
 #### 전문 `CANCEL-REQ` / `CANCEL-RES` — 승인취소 (API가 아니라 R1 ACL 인터페이스 · 실시간 전문 BR-33. 블록 형식은 UC-01과 동일하게 적용)
 
 | 항목 | 내용 |

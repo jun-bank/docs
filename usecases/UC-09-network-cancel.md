@@ -63,6 +63,8 @@
 
 ## 7. 계약 (계약 블록 — 02 양식)
 
+> ★ **물리 규격(고정길이 레이아웃) = [`interfaces/reversal-message.md`](../interfaces/reversal-message.md)** (2026-08-06 신설 — 이 §7이 의미의 정본, 규격은 표면)
+
 #### 전문 `REVERSAL-REQ` / `REVERSAL-RES` — 망취소 (R1 ACL 인터페이스 · 실시간 전문 BR-33)
 
 | 항목 | 내용 |
