@@ -17,8 +17,10 @@ def index_rows():
     for line in t[s:e].splitlines():
         if not line.startswith("| ") or line.startswith("|---"):
             continue
-        cells = [c.strip() for c in line.strip().strip("|").split(" | ")]
-        if len(cells) >= 4 and cells[0] not in ("인터페이스", "엔드포인트"):
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        # 구분 행(---)·헤더 행 배제 — 표 구조 변형이 데이터로 새지 않게 (codex 지적 ②)
+        if len(cells) >= 4 and cells[0] not in ("인터페이스", "엔드포인트") \
+                and not all(set(c) <= set("-: ") for c in cells[:4]):
             rows.append(cells[:4])
     return rows
 
@@ -51,6 +53,11 @@ def first_sentence(s, limit=120):
 def build():
     idx = index_rows()
     blocks = uc_blocks()
+    # 무음 전멸 차단 (codex 지적 ① — fail-open 골든): 추출이 0이면 정규식이 죽은 것이다
+    if len(idx) < 10:
+        sys.exit("색인 파싱 전멸 의심: %d행 — §2 표 구조 확인" % len(idx))
+    if not blocks:
+        sys.exit("§7 블록 추출 0건 — 계약 헤더 형식 확인")
     lines = [
         "# API 레퍼런스 (생성 문서 — 수기 편집 금지)",
         "",
@@ -72,6 +79,8 @@ def build():
         if not idem:
             idem = "(§7 참조)"
         lines.append(f"| {iface} | {uc} | {subject} | {l7} | {idem} |")
+    if n_enriched == 0:
+        sys.exit("멱등 발췌 0건 — 색인·§7 경로 대응 확인(무음 전멸 차단)")
     lines += [
         "",
         f"> 행 {len(idx)}개 = 색인 §2 전수 · §7 멱등 발췌 {n_enriched}건 · 물리 규격 = [`interfaces/`](interfaces/README.md) · 이벤트 = 색인 §3 · 오류 코드 창구 = 색인 §5 코드 대장.",
