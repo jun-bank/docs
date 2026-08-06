@@ -27,6 +27,7 @@ Phase 1 ✅ ── 2 ✅ ── 3 ✅ ── 4 ✅ ── 5 ⬜ ── 6 ⬜
 | **6** | 개발 규약 정비 | ⬜ | Phase 0에서 미룬 문서 체계 규약을 여기서 함께 확정 |
 
 **다음 한 걸음**: ① ~~외부 인터페이스 규격서~~ ✅(2026-08-06 — `interfaces/` 6파일·X-1~11) ② ~~API 레퍼런스 생성 도구~~ ✅(2026-08-06 — `api-reference.md` 생성·검사 ⑥b) ③ ~~Phase 5 진입 아키텍처~~ ✅(2026-08-06 — **ADR-019~025** · C-08 도구 최소주의 · 미니멀 스택(브로커·SCG 불도입+도입 조건). 절차 정본 = study/project-workflow/phase5/01-entry-procedure.md — 다음 = E2 테스트 전략 → E3 개발 규약 → E4 CI/CD 문서 → E5 병행 문서화 정책) ④ **C7 관리 API의 UC·계약**(L1-15 이월). 이후 **Phase 5(샘플 구현 + 실험 38건)** — 입력에 **`implementation-verification.md`(IV-1~12)** 포함(검증 정책 v2 V2-3).
+- `dev-conventions.md` — 개발 규약 32규칙(강제 수단 칸 의무 — E3. 도구 확정 TL-1·2 포함)
 
 > **양식**과 **내용**은 다르다. 양식은 `study/project-workflow/phaseN/`에, 내용은 `product/`·`domain/`·`architecture/`·`usecases/` 같은 정규 위치에 있다.
 > *(초기 계획은 Phase 0~9의 10단계 체계였다 — 위 6단계 체계로 통합됐고 10단계 표기는 이력이다.)*
