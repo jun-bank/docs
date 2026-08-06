@@ -44,6 +44,7 @@ Phase 1 ✅ ── 2 ✅ ── 3 ✅ ── 4 ✅ ── 5 ⬜ ── 6 ⬜
 | `usecases/` | **UC-01~20** · `README.md`(색인 — 유스케이스 대장 · **엔드포인트 색인** · 이벤트 색인) · 공통 계약 규약 **K-1~4** |
 | **`dev-conventions.md`** | ★ **개발 규약 33규칙**(E3) — 규칙마다 **강제 수단 칸 의무**(컴파일·아키텍처 테스트·테스트 게이트·린트·리뷰) · 도구 확정 **TL-1 JUnit5 · TL-2 Testcontainers** · 강제 수단 분포(현재/도구 확정 후) · **관측 대장** |
 | [`operations/cicd.md`](operations/cicd.md) | 구성 관리·CI/CD 정본 — 파이프라인 P1~P5·RL-9 이월 소화 CD-1~5·롤백·CI 도구 C-08 판정 (E4) |
+| [`study/project-workflow/phase5/05-parallel-documentation.md`](study/project-workflow/phase5/05-parallel-documentation.md) | 구현-병행 문서화 정책 — 판정 먼저 전환·IV 소비 T1~T5·이월 43건 전수·V2-7~9 제안 (E5) |
 | `design-changes/` | **DC-001~006** — *왜 그렇게 됐는지*와 *무엇이 몇 번 깨졌는지* |
 | `study/` | 학습 노트 `01~11`(**설계 문서 아님**) + ★ `project-workflow/`(**양식·작성 순서의 정본**) |
 | `reference/` | 리서치 원문 · 장애 사례 · 참고서적 목차 |
