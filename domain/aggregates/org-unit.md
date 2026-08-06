@@ -125,7 +125,7 @@ INV-O1 ②③에 검사 로직이 없는 것은 빠뜨린 것이 아니다.
 | 조작 | 코드명 | 사전조건 | 사후조건 | 발행 이벤트 |
 |---|---|---|---|---|
 | **조직 생성** | `create(parentId, type, name, operator)` | **부모 존재 · 부모 `ACTIVE`**(PRE-1) · ★ **`type`이 부모의 종류와 맞는다**(INV-O6) · 주체 = ★ **책임자 · 전사 스코프**(**BR-55 배정 표가 정본**이다 — L1-09) | 새 노드가 **리프로** 생성(`status = ACTIVE`) · **부모 행을 잠근 채** 수행(§8) · `OrgUnitChangeRecord(CREATED)` append(INV-O5) · **루트의 `treeVersion` 증가** | `OrgUnitCreated` |
-| **조직 폐쇄** | `close(operator, reason)` | **루트 아님**(INV-O2) · **하위 `ACTIVE` 없음**(INV-O3 · PRE-2) · 이미 `CLOSED`면 **명시 거절** `ALREADY_CLOSED`(CDS3 통일 원칙 — 멱등 무시는 요청자가 상태를 오인하게 한다) · 주체 = ★ **책임자 · 전사 스코프**(BR-55 배정 표 정본 — L1-09) | `status = CLOSED` · **자기 행과 부모 행을 잠근 채** 수행 · `OrgUnitChangeRecord(CLOSED)` append · **루트의 `treeVersion` 증가** · ★ **기존 귀속은 유지된다** — 그 조직에 개설된 계좌·이미 발생한 거래는 그대로다(역사적 사실). 판정은 흡수(§4)가 이어받는다 | `OrgUnitClosed` |
+| **조직 폐쇄** | `close(operator, reason)` | **루트 아님**(INV-O2) · **하위 `ACTIVE` 없음**(INV-O3 · PRE-2) · ★ **소속 `ACTIVE`·`SUSPENDED` 운영자 0**(전보 선행 — INV-P4(`homeOrgId`는 ACTIVE 조직) 위반을 만들지 않는다, 재점검 R8) · 이미 `CLOSED`면 **명시 거절** `ALREADY_CLOSED`(CDS3 통일 원칙 — 멱등 무시는 요청자가 상태를 오인하게 한다) · 주체 = ★ **책임자 · 전사 스코프**(BR-55 배정 표 정본 — L1-09) | `status = CLOSED` · **자기 행과 부모 행을 잠근 채** 수행 · `OrgUnitChangeRecord(CLOSED)` append · **루트의 `treeVersion` 증가** · ★ **기존 귀속은 유지된다** — 그 조직에 개설된 계좌·이미 발생한 거래는 그대로다(역사적 사실). 판정은 흡수(§4)가 이어받는다 | `OrgUnitClosed` |
 
 > ★ **변경 이력은 별도 조작이 아니다.** 두 조작의 사후조건에 들어 있고 **같은 커밋**이다(INV-O5). 별도 조작으로 두면 *"조작은 성공했는데 이력이 없는"* 구간이 생기고, 그 구간이 곧 감사 공백이다.
 >
