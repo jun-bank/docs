@@ -108,7 +108,7 @@
 | **발생** | `incur(origin, sourceRef, accountId, amount, businessDate)` | `amount > 0`, **같은 `(origin, sourceRef)` 없음** | 생성, 상태 = 미결 | `ReceivableIncurred` |
 | **회수** | `recover(amount)` | 상태 = 미결 · **`frozen = false`** · `amount ≤ outstanding()` (INV-1·4·5) | `recoveredAmount` 증가. 잔여 0이면 종결 | `ReceivableRecovered` |
 | **소멸** | `writeOff(amount)` | 상태 = 미결 · `amount > 0` · `amount ≤ outstanding()` (INV-1·4) | `writtenOffAmount` 증가. 잔여 0이면 종결 | `ReceivableWrittenOff` |
-| **보류** | `freeze(operator)` | 상태 = 미결 | `frozen = true` | `ReceivableFrozen` |
+| **보류** | `freeze(operator)` | 상태 = 미결 · ★ **`frozen = false`**(재보류 = 명시 거절 `ALREADY_FROZEN` — 2026-08-06 CDS3 소급, 승인과 동시 판정) | `frozen = true` | `ReceivableFrozen` |
 | **보류 해제** | `unfreeze(operator)` | `frozen = true` | `frozen = false` | `ReceivableUnfrozen` |
 
 > **`recover()`와 `writeOff()`를 나눈 이유가 다르다.**
@@ -231,6 +231,7 @@ receivableDelta[B] += 발생 +amount · 회수 −recoveredAmount · 소멸 −w
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v1.8 | 2026-08-06 | 계약 전수 CDS3 소급 — `freeze` 사전조건에 `frozen = false`(승인 애그리게이트와 한 판정 — RCS1 계약 층 재발 방지) |
 | v0.3 | 2026-08-05 | **멀티테넌시 B-4b** — 참조 표에 회원 `CustomerId` 추가 — ★ **소유 축**(ADR-018 IS-1) |
 | v0.2 | 2026-08-04 | **DC-001 단계 10** — `origin`·`sourceRef` 신설. `incur()`가 승인ID를 필수로 받으면 **입금 정정(BR-38)의 미수를 만들 수 없었다**(원거래 승인이 없다). 유일성 키를 `(origin, sourceRef)`로 하고 INV-6으로 등재 · `writeOff`에 `amount > 0` 사전조건 |
 | v0.1 | 2026-08-04 | 최초 작성 (**DC-001 단계 2**) — 계좌의 `receivable` 합계 필드를 독립 애그리게이트로 승격. 불변식 5종(INV-1·4가 존재 이유), 상태 2종, 조작 5종. `recover`(자금 유입·보류 대상)와 `writeOff`(환불·보류 무관)를 나눈 근거, 회수 대상 선정을 **대상 먼저 → 합계 나중** 순으로 명시 |

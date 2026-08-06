@@ -69,14 +69,21 @@
 
 | 이벤트 | UC | 행위자 판정 (AD-7) | 축 필드 | S-9 |
 |---|---|---|---|---|
-| `HoldPlaced` | UC-01 | 자금 — 비포함 ✓ | 불요(내부 이벤트 — 발행 안 됨) | [미정 — 전수 시] |
-| `DepositReversed` | UC-02 | 자금 — 비포함 ✓ (감사 outbox가 나름) | Phase 4 전수 시 (IS-5) | [미정] |
-| `CardSuspended` | UC-04 | **비포함 확정** ✓ (AD-7 ② 확장 — 주체 혼합, 2026-08-05 판정) | 〃 | [미정] |
-| `LimitChanged`(UC-06) · `Voided`·`Reversed`·tombstone 2종(UC-08·09) · 배치 **수명주기** 5종·`Captured`·`Withdrawn`(UC-10) · ★ `IsolatedRecordReclassified`(UC-14 — 시스템) · `Refunded`·`RefundCredited`(UC-11) · `Deposited`·`ReceivableRecovered`·`DepositConflict`(UC-07) · ★ `AccountDailyLimitChanged`(UC-06) | 각 UC | **비포함 확정**(자금/시스템/주체 혼합 — AD-7 ②) | 〃 | [미정] |
-| ★ `CardTerminated`(UC-05) → **비포함 확정**(AD-7 ② 확장 — 소지자 전용 비자금) · ★ `JournalReversed`(UC-16) → **포함 확정**(①·② 겹침의 ① 우선 — 발생 경로 운영자 전용) | UC-05·16 | 2026-08-06 확정 — 판정 대기 해소(ADR-017 v0.2) | 〃 | [미정] |
-| `DiscrepancyRecorded`·`DiscrepancyRedetected` (정본 discrepancy §5.1 — 발생 = UC-18 대사 · **UC-10 격리 즉시 적재** · **C8 M18(R16)**) | UC-18·10·(C8) | 비포함(시스템 적재) ✓ | 〃 | [미정] |
-| `Frozen`·`Unfrozen`·`ReceivableFrozen/Unfrozen`(UC-12) · `ReceivableBlockLifted`(UC-13) · `IsolatedRecordPromoted`(UC-14) · `DiscrepancyInvestigating/Resolved`(UC-17) · `SettlementResumedByOperator`(UC-15) · ★ `ReceivableBlockReimposed`(UC-13) | 각 UC | **포함 ✓**(AD-7 ① 운영자 전용 — 정본 일치) | 〃 | [미정] |
-| R15 지시 이벤트 2종 (C8→C4·C5 — 이름·payload [미정]) | UC-15·16 | 포함(운영 — maker·checker 실림, AD-6) | 지시 ID | [미정] |
+| `HoldPlaced` | UC-01 | 자금 — 비포함 ✓ | 불요(내부 이벤트 — 발행 안 됨) | 1 |
+| `DepositReversed` | UC-02 | 자금 — 비포함 ✓ (감사 outbox가 나름) | Phase 4 전수 시 (IS-5) | 1 |
+| `CardSuspended` | UC-04 | **비포함 확정** ✓ (AD-7 ② 확장 — 주체 혼합, 2026-08-05 판정) | 〃 | 1 |
+| `LimitChanged`(UC-06) · `Voided`·`Reversed`·tombstone 2종(UC-08·09) · 배치 **수명주기** 5종·`Captured`·`Withdrawn`(UC-10) · ★ `IsolatedRecordReclassified`(UC-14 — 시스템) · `Refunded`·`RefundCredited`(UC-11) · `Deposited`·`ReceivableRecovered`·`DepositConflict`(UC-07) · ★ `AccountDailyLimitChanged`(UC-06) | 각 UC | **비포함 확정**(자금/시스템/주체 혼합 — AD-7 ②) | 〃 | 1 |
+| ★ `CardTerminated`(UC-05) → **비포함 확정**(AD-7 ② 확장 — 소지자 전용 비자금) · ★ `JournalReversed`(UC-16) → **포함 확정**(①·② 겹침의 ① 우선 — 발생 경로 운영자 전용) | UC-05·16 | 2026-08-06 확정 — 판정 대기 해소(ADR-017 v0.2) | 〃 | 1 |
+| `DiscrepancyRecorded`·`DiscrepancyRedetected` (정본 discrepancy §5.1 — 발생 = UC-18 대사 · **UC-10 격리 즉시 적재** · **C8 M18(R16)**) | UC-18·10·(C8) | 비포함(시스템 적재) ✓ | 〃 | 1 |
+| `Frozen`·`Unfrozen`·`ReceivableFrozen/Unfrozen`(UC-12) · `ReceivableBlockLifted`(UC-13) · `IsolatedRecordPromoted`(UC-14) · `DiscrepancyInvestigating/Resolved`(UC-17) · `SettlementResumedByOperator`(UC-15) · ★ `ReceivableBlockReimposed`(UC-13) | 각 UC | **포함 ✓**(AD-7 ① 운영자 전용 — 정본 일치) | 〃 | 1 |
+| ★ `SettlementResumeInstructed`·`JournalReversalInstructed` (C8→C4·C5 — 이름 확정 2026-08-06. payload = instructionId·approvalRequestId·인자·maker·checker·사유·approvedAt) | UC-15·16 | 포함(운영 — maker·checker 실림, AD-6 · AD-7 번역 입력 아님) | 없음(파티션 0) | 1 |
+
+### 색인 추가 (U-2 — B-12)
+
+| 이벤트 | UC | 행위자 판정 (AD-7) | 축 필드 | S-9 |
+|---|---|---|---|---|
+| `ReceivableIncurred` (E2·E5 — C5 원장 구독) | UC-10·02 | 자금 — 비포함 ✓ | accountId | 1 |
+| `ReceivableWrittenOff` (E4 — C5 원장 구독) | UC-11 | 자금 — 비포함 ✓ | accountId | 1 |
 
 ## 4. 도출표 ★ (전수성의 근거 — 조작 **65** · 운영자 규칙 · SM 전이 → 판정)
 
@@ -129,6 +136,9 @@
 - ★ **CDS3 일반화**: 사람 채널의 **상태 전이 재요청은 전부 명시 거절**(`ALREADY_*` — 무음 무시는 상태 오인을 만든다). 단 **PUT 값 교체는 자연 멱등**(동일값 재요청 = 성공 — 응답이 현재값을 보여줘 오인이 없다). *(o-OQ5 판정 포함 — `changeLimit`·`changeDailyLimit` 동일값 = 성공)*
 - **시스템 채널 재수신 = 최초 결과 재반환**(멱등 키 = 채널 유일 식별자: 승인 전문 = 멱등 레코드 · 입금 = 입금 수신 · 파일 = `(fileId, recordId)` · R15 지시 = 지시 ID).
 
+**신설 코드 대장** (2026-08-06 U-2 — K-1 ⑶의 유일 창구. 여기 없는 코드는 계약이 쓸 수 없다):
+`ALREADY_FROZEN`·`ALREADY_UNFROZEN`(보류 재요청 — 승인·미수 공통) · `ALREADY_LIFTED`·`ALREADY_BLOCKED`(차단 해제/재부과) · `ALREADY_PROMOTED`(승격 API 재지시 — BF8 무음은 배치 재개 전용) · `ALREADY_APPROVED/REJECTED/CONSUMED/EXPIRED`(승인요청 종료 재호출 — 구 INVALID_STATE 대체) · `ALREADY_RUNNING`(대사 진행 중 + 진행 runId) · `ALREADY_DELIVERED`·`ALREADY_RESOLVED`(DLQ 종료 재투입) · `NOT_MAKER`(A4 — 승인요청을 본 뒤 판정) · `DUPLICATE_INSTRUCTION`(④⑤ 지시 ID 요청 단계 유일) · `NO_RECEIVABLE`(미결 미수 부재) · `EXCEEDS_CANCELABLE`(누적취소 초과 — 시스템 채널 사유 구분) · `AUTH_NOT_FOUND`·`ACCOUNT_NOT_FOUND`(시스템 채널 대상 부재 — 기관 채널이라 사유 구분, L7 비적용) · `INVALID_BUSINESS_DATE`·`DRAIN_INCOMPLETE`(대사 실행 전제)
+
 ### K-2 명명
 - 경로 접두 = **주체 채널**(`/me` 고객 본인 · `/ops` 운영자 · 전문/파일 = 채널 규격명). 조작 = **명사 자원**(`POST …/suspension` — 동사 금지), 해제 = **DELETE 동일 자원**, 값 교체 = `PUT`, 조회 = `GET`.
 - **전문·파일 이름 확정**: `AUTH-REQ/RES` · `CANCEL-REQ/RES` · `REVERSAL-REQ/RES` · `DEPOSIT-ADV` · `CAPTURE-FILE` (색인 [미정] 해제).
@@ -137,14 +147,15 @@
 ### K-3 S-9 스키마 버전
 - 전 이벤트 payload에 **`schemaVersion: 1`**. ★ **의미 필드 추가 = 새 이벤트 타입**(S-6a — 버전 올림 아님). 버전은 비의미 변경(표현·검증 강화)용으로만.
 
-### K-4 축·감사 스코프
-- 이벤트 축 = **기존 파티션 축(accountId) 유지**. **`ownerId`(값=CustomerId)는 IS-1 선반영 6종 대상 이벤트에만** 추가. 테넌트 축은 형태만(IS-7 — 필드 예약 안 함).
-- 감사 AD-8 스코프 칸 = ★ **판정에 실제 쓰인 스코프 값**(운영자 = 조직 축 값 · 고객 = 소유) — 재현 가능성 기준, 혼재 해소.
+### K-4 축·감사 스코프 (2026-08-06 보정 — U-2 판정 A-2·3·B-11·A-6·B-5)
+- 이벤트 축 = **기존 파티션 축(accountId) 유지**. ★ **이벤트 payload에 `ownerId`를 얹지 않는다(전면 비포함)** — IS-1 6종은 **저장 모델** 대상이다(초안 문면 "이벤트에만"은 오독이었다 — 사용자 보정): 자금 이벤트 = 원장 언어(IS-5) · 내부 이벤트 = 구독자 없음 · 운영 이벤트 = 스코프는 소비 시점 판정. 테넌트 축은 형태만(IS-7 — 필드 예약 안 함).
+- 감사 AD-8 스코프 칸 = ★ **판정에 실제 쓰인 스코프 값**(운영자 = 조직 축 값 · 고객 = 소유 · ★ **시스템 채널 = 대상의 소유 축**(IS-2 형태) · **축 없는 대상(예약·파일·배치·감사 자신) = 없음(null) + 대상 식별자**) — 재현 가능성 기준, 혼재 해소.
 
 ## 변경 이력
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v0.10 | 2026-08-06 | **U-2 판정 통합** — K-4 보정(이벤트 ownerId 전면 비포함 — 사용자)·시스템/축없음 감사 스코프 · **신설 코드 대장**(K-1 창구) · R15 지시 이벤트 이름 확정 · S-9 열 일괄 1 · 이벤트 색인 +2(ReceivableIncurred·WrittenOff — B-12) |
 | v0.9 | 2026-08-06 | ★ **계약 공통 규약 §5 신설**(K-1~4 — 사용자 합의 4묶음: 오류·멱등(CDS3 일반화 + PUT 자연 멱등 = o-OQ5 판정) · 명명(전문 이름 확정) · S-9(schemaVersion 1·새 타입 원칙) · 축·감사 스코프) + 색인 [미정] 4행 해제 |
 | v0.8 | 2026-08-06 | **정본 판정 반영 ③** — 행위자 판정 2종 확정(CardTerminated 비포함·JournalReversed 포함) 색인 반영 |
 | v0.7 | 2026-08-06 | **정본 판정 반영 ②** — M19 신설(UC10-1)·자동 재분류(UC14-2) 착지: 도출표 +1행(`reclassifyIsolated` 내부) |

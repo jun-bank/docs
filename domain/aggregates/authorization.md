@@ -130,7 +130,7 @@
 | **만료** | `expire(at)` | 상태 = 성립, **`frozen = false`** (BR-28) | 상태 = 만료, `holdingFunds = false` | `Expired` |
 | **매입** | `capture(amount, at)` | INV-2·INV-3 (`amount ≤ 승인액 − 누적취소액`), 상태 ∈ {성립, 만료}, **`frozen = false`** (BR-50) | 상태 = 매입됨 · `holdingFunds = false` · `heldAmount = 0` · ★ **`at`의 영업일 = `limitBasisDate` 일 때만 한도 복원**(DC-003): 복원액 = `limitContribution` − min(매입액, `limitContribution`) 만큼 `Card.restoreLimit(복원액, limitBasisDate)` · `Account.restoreAccountLimit(복원액, limitBasisDate)` 호출 후 `limitContribution` 감액 (BR-24, E2). **기준일이 다르면 셋 다 불변** — 그 버킷은 이미 닫혔다(`usage`가 리셋됐다). 만료로 이미 복원됐으면 `limitContribution = 0`이라 복원액도 0 | `Captured` |
 | **환불** | `refund(amount, receivable, recoverable)` | 상태 ∈ {**매입됨, 정산완료**}, **INV-7** | `refundedTotal` 증가 → 반환액·소멸액 파생 → **소멸 먼저, 그다음 계좌 입금(`recoverable`이 회수 대상)** → `returnedTotal` 증가. 잔여 채무 0이면 상태 = 환불됨. **승인·자기 미수·계좌·회수 대상 미수들이 한 커밋**(E4) | `Refunded` |
-| **보류** | `freeze(operator)` | 종료 상태 아님 · 주체 = **운영자 담당자**(BR-55) | `frozen = true` | `Frozen` |
+| **보류** | `freeze(operator)` | 종료 상태 아님 · ★ **`frozen = false`**(재보류 = 명시 거절 `ALREADY_FROZEN` — 2026-08-06 CDS3 소급, 미수와 동시 판정) · 주체 = **운영자 담당자**(BR-55) | `frozen = true` | `Frozen` |
 | **보류 해제** | `unfreeze(operator)` | `frozen = true`. **종료 상태에서도 허용** — 보류 목록에서 내릴 유일한 경로다 · 주체 = **운영자 담당자**(BR-55) | `frozen = false` | `Unfrozen` |
 | **정산 확정** | `markSettled(businessDate)` | 상태 = 매입됨 **또는 (정산완료 ∧ `settledBusinessDate` == businessDate)** — ★ 후자는 **무연산**(멱등). **`frozen` 여부와 무관** (BR-28에 정산 제외가 없다) | 상태 = 정산완료 · ★ **`settledBusinessDate` 확정**(이후 불변 — 정산 등식의 부분집합 키, DC-002) | `Settled` |
 
@@ -264,6 +264,7 @@ EXPIRED    → CAPTURED    지연 매입 (BR-19) — 만료는 채무 소멸이 
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v2.1 | 2026-08-06 | 계약 전수 CDS3 소급 — `freeze` 사전조건에 `frozen = false`(재보류 = `ALREADY_FROZEN` — 미수(receivable v1.x)와 한 판정) |
 | v2.1 | 2026-08-05 | **멀티테넌시 B-4b** — 참조 표에 회원 `CustomerId` 추가 — ★ **소유 축**(ADR-018 IS-1, 유도 가능해도 저장). C3에 고객 축이 0이던 공백(전수 스캔) 해소 |
 | v2.0 | 2026-08-05 | **멀티테넌시 B-4** — `freeze`·`unfreeze`에 **`operator` 인자**(이벤트 payload는 이미 "승인ID, 운영자"를 실었는데 시그니처가 못 받고 있었다) + 주체 = 운영자 담당자(BR-55) |
 | v1.9 | 2026-08-04 | **DC-001 단계 12** — **INV-10·INV-11을 대사 불변식 RC-1·RC-2로 이동**(검증 위치에 "승인 단독 검증 불가"라 써 놓고 INV에 뒀다 — P1 재발) · `refund()`에 `recoverable` 인자 추가(E4 참여자) · `capture()`에 **부분 매입의 `limitContribution` 감액** 명시(BR-24 — T8에 한도 복원이 한 글자도 없었다) |
