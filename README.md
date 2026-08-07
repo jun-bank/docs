@@ -50,6 +50,8 @@ Phase 1 ✅ ── 2 ✅ ── 3 ✅ ── 4 ✅ ── 5 ⬜ ── 6 ⬜
 | [`study/project-workflow/development-cycle.md`](study/project-workflow/development-cycle.md) | 개발 사이클 how-to — 마일스톤→이슈→브랜치→PR→머지→태그→롤백을 실제로 도는 순서 (규칙 정본은 git-conventions) |
 | [`reference/writing/`](reference/writing/README.md) | 문서 작성 방법론 리서치 — 종합(README) + 근거 8축(evidence-1~9). 다음: 워크플로우 방법론 정의 |
 | [`study/tech/`](study/tech/) | 기술 학습 해설(사람 층) — data-access 3편(JPA·Data JDBC·비교) · languages 5편(JVM/Java·Kotlin·Go·Rust·C/C++/C#) — 결정 정본은 ADR-026·028 |
+| [`study/tech/security/`](study/tech/security/) | 보안 학습 해설 — HMAC·SHA-256/digest·OIDC(claim·jti)·게이트1 인증 패턴(우리 코드 매핑) |
+| [`study/tech/languages/go-syntax-in-our-code.md`](study/tech/languages/go-syntax-in-our-code.md) | Go 문법 — 우리 infra 코드에 실제 나온 것만(nil의 세 얼굴 등) |
 | `design-changes/` | **DC-001~006** — *왜 그렇게 됐는지*와 *무엇이 몇 번 깨졌는지* |
 | `study/` | 학습 노트 `01~11`(**설계 문서 아님**) + ★ `project-workflow/`(**양식·작성 순서의 정본**) |
 | `reference/` | 리서치 원문 · 장애 사례 · 참고서적 목차 |
