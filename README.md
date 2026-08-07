@@ -48,6 +48,7 @@ Phase 1 ✅ ── 2 ✅ ── 3 ✅ ── 4 ✅ ── 5 ⬜ ── 6 ⬜
 | [`operations/infrastructure.md`](operations/infrastructure.md) | ★ **관제·인프라 요구사항** — 홈랩 3대 형상·제약 · 배포 인프라 구성요소(deploy-agent·관제 UI·이미지 레지스트리) · **후속 로드맵 [미확정] 4건**(로그 수집·자원 모니터링·관제 저장·트래픽 생성기) · **저수준 언어 성질 대조**(판정 미도래) |
 | [`study/project-workflow/phase5/05-parallel-documentation.md`](study/project-workflow/phase5/05-parallel-documentation.md) | 구현-병행 문서화 정책 — 판정 먼저 전환·IV 소비 T1~T5·이월 43건 전수·V2-7~9 제안 (E5) |
 | [`reference/writing/`](reference/writing/README.md) | 문서 작성 방법론 리서치 — 종합(README) + 근거 8축(evidence-1~9). 다음: 워크플로우 방법론 정의 |
+| [`study/tech/`](study/tech/) | 기술 학습 해설(사람 층) — data-access 3편(JPA·Data JDBC·비교) · languages 5편(JVM/Java·Kotlin·Go·Rust·C/C++/C#) — 결정 정본은 ADR-026·028 |
 | `design-changes/` | **DC-001~006** — *왜 그렇게 됐는지*와 *무엇이 몇 번 깨졌는지* |
 | `study/` | 학습 노트 `01~11`(**설계 문서 아님**) + ★ `project-workflow/`(**양식·작성 순서의 정본**) |
 | `reference/` | 리서치 원문 · 장애 사례 · 참고서적 목차 |
