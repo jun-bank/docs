@@ -279,3 +279,5 @@ FAQ의 "Kotlin is 100% interoperable with the Java programming language"([Kotlin
 이것을 "Kotlin이 기대만 못하다"로 읽으면 틀린 독해다. 규약이 저 배치에 도달할 수 있었던 것 자체가 언어가 제공한 것 덕분이다 — 무엇이 컴파일에 걸리고 무엇이 걸리지 않는지를 **한 줄로 판정할 수 있었기 때문에** 나머지를 린트·테스트·리뷰로 정확히 배분할 수 있었다. Java에서 같은 표를 만들면 대부분의 칸이 "리뷰"가 된다.
 
 그래서 이 언어를 쓰는 실질은 이렇게 요약된다. Kotlin은 규칙을 대신 지켜 주지 않는다. **어느 규칙이 언어로 지켜질 수 있고 어느 규칙이 그럴 수 없는지를 분명하게 만들어 준다.** 후자를 무엇이 막을지 정하는 일은 여전히 남고, 그 배분을 적어 둔 것이 [`dev-conventions.md`](../../../dev-conventions.md) §1과 §7이다.
+
+> ★ 컬렉션 별칭 함정의 실측(`listOf`가 런타임에 Java 가변 리스트) 프로그램은 [`reference/measurements/kotlin-collections/Probe.java`](../../../reference/measurements/README.md)에 있다.

@@ -170,3 +170,5 @@ Go를 한 문장으로 줄이면 "대규모 팀의 빌드·의존 문제에서 �
 원 출처를 읽는다면 순서를 하나 권한다. 먼저 [Go at Google](https://go.dev/talks/2012/splash.article)을 통독한다 — 30분이면 읽히고, 이 문서 1절뿐 아니라 나머지 전부의 전제가 거기 있다. 대비를 위해 [Less is exponentially more](https://commandcenter.blogspot.com/2012/06/less-is-exponentially-more.html)를 같이 읽으면 "왜 이 언어에 그 기능이 없나"에 대한 답이 대부분 잡힌다. 런타임을 보려면 [Getting to Go](https://go.dev/blog/ismmkeynote)(GC 설계의 전체 서사)와 [Scalable Go Scheduler Design Doc](https://go.dev/s/go11sched)(G-M-P의 원 설계) 두 편이면 충분하고, 운영 관점의 실전 지식은 [Go GC Guide](https://go.dev/doc/gc-guide)에 있다. 언어 표면의 찬반은 [Why Generics?](https://go.dev/blog/why-generics)와 2025년의 [에러 문법 종결 선언](https://go.dev/blog/error-syntax)을 나란히 놓고 읽는 것이 가장 빠르다 — 같은 팀이 하나는 13년 만에 받아들이고 하나는 끝내 거절한 이유가 대조되면서 이 언어의 판단 기준이 드러난다.
 
 마지막으로 실습 하나를 권한다. `net`을 import하는 20줄짜리 프로그램을 `CGO_ENABLED=1`과 `CGO_ENABLED=0`으로 각각 빌드해 `file`과 `ldd`로 비교해 보면, 4절 전체가 5분 만에 몸으로 이해된다 — 그리고 "Go는 정적 바이너리를 만든다"가 조건부 명제라는 사실을 다시는 잊지 않게 된다.
+
+> ★ 이 문서의 실측 수치(고루틴 RSS·GC 정지·기동·바이너리 크기)의 측정 프로그램·방법·환경은 [`reference/measurements/`](../../../reference/measurements/README.md)에 보존돼 있다 — 재현 가능하다.
