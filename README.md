@@ -48,6 +48,7 @@ Phase 1 ✅ ── 2 ✅ ── 3 ✅ ── 4 ✅ ── 5 ⬜ ── 6 ⬜
 | [`operations/infrastructure.md`](operations/infrastructure.md) | ★ **관제·인프라 요구사항** — 홈랩 3대 형상·제약 · 배포 인프라 구성요소(deploy-agent·관제 UI·이미지 레지스트리) · **후속 로드맵 [미확정] 4건**(로그 수집·자원 모니터링·관제 저장·트래픽 생성기) · **저수준 언어 성질 대조**(판정 미도래) |
 | [`study/project-workflow/phase5/05-parallel-documentation.md`](study/project-workflow/phase5/05-parallel-documentation.md) | 구현-병행 문서화 정책 — 판정 먼저 전환·IV 소비 T1~T5·이월 43건 전수·V2-7~9 제안 (E5) |
 | [`study/project-workflow/development-cycle.md`](study/project-workflow/development-cycle.md) | 개발 사이클 how-to — 마일스톤→이슈→브랜치→PR→머지→태그→롤백을 실제로 도는 순서 (규칙 정본은 git-conventions) |
+| [`study/project-workflow/dev-journal-2026-08-07.md`](study/project-workflow/dev-journal-2026-08-07.md) | 개발 일지 — 2026-08-07 구현·문서·리뷰 회고(듀얼 리뷰가 잡은 결함과 해결) |
 | [`reference/writing/`](reference/writing/README.md) | 문서 작성 방법론 리서치 — 종합(README) + 근거 8축(evidence-1~9). 다음: 워크플로우 방법론 정의 |
 | [`study/tech/`](study/tech/) | 기술 학습 해설(사람 층) — data-access 3편(JPA·Data JDBC·비교) · languages 5편(JVM/Java·Kotlin·Go·Rust·C/C++/C#) — 결정 정본은 ADR-026·028 |
 | [`study/tech/security/`](study/tech/security/) | 보안 학습 해설 — HMAC·SHA-256/digest·OIDC(claim·jti)·게이트1 인증 패턴(우리 코드 매핑) |
