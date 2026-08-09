@@ -4,6 +4,45 @@
 
 이 문서는 JVM(Java Virtual Machine)이 무엇을 풀려고 만들어졌고, 그 해법이 어떤 성질과 비용을 필연적으로 낳는지를 개념부터 설명한다. 순서는 하나의 논리를 따른다 — 무엇이 문제였나, 그 문제를 어떤 아이디어로 풀었나, 그 아이디어가 반드시 만드는 청구서는 무엇인가. 바이트코드·클래스로더·JIT·GC·메모리 모델은 각각의 기능이 아니라 **"컴파일 시점에 확정하지 않고 실행 시점까지 미룬다"는 하나의 결정에서 갈라져 나온 결과**로 읽는 것이 이해가 빠르다. 인용한 스펙 문장은 Java SE 21의 JVMS·JLS, HotSpot 동작은 OpenJDK 문서·JEP·소스 주석 기준이며, 수치는 각 출처가 밝힌 측정 조건에서만 유효하다.
 
+## 0. 왜 Java/JVM이 태어났나 — 무엇을 지향하고, 이웃 언어와 어디서 갈리나
+
+본문(§1~§13)은 JVM의 동작을 "결정을 실행 시점까지 미룬다"는 한 결정에서 풀어낸다. 그런데 그 결정 자체가 왜 내려졌는지는 그 앞에 있다 — 1990년대 초의 한 지향점이 애초에 "기계를 하나 발명해 그 위에 서자"는 답을 불렀다. 이 절은 그 지향점과 짧은 역사, 그리고 같은 문제에 다른 답을 낸 이웃 언어들과의 좌표를 먼저 세운다. 이후 절들이 그 지향점이 낳은 기계와 청구서를 하나씩 뜯는다.
+
+### 생긴 계기 — C++가 버거웠던 자리
+
+Java는 언어 연구가 아니라 제품 문제에서 나왔다. 1995년 백서가 그 출발을 직접 적는다 — "Java originated as part of a research project to develop advanced software for a wide variety of networked devices and embedded systems. The goal was to develop a small, reliable, portable, distributed, real-time operating environment. When the project started, C++ was the language of choice. But over time the difficulties encountered with C++ grew to the point where the problems could best be addressed by creating an entirely new language environment."([The Java Language Environment, 1995](https://www.stroustrup.com/1995_Java_whitepaper.pdf) §1.1) 두 가지가 이 문장에 겹쳐 있다 — 배포 대상이 CPU·OS가 제각각인 **이기종 네트워크 기기**라는 것, 그리고 그 위에서 C++의 복잡성과 메모리 위험이 감당이 안 됐다는 것. 이 둘이 §1이 다시 기술 문제로 정식화하는 바로 그 두 축이다.
+
+지향점은 백서의 설계 목표 절들이 이름표를 붙여 두었다.
+
+- **플랫폼 독립.** "the Java compiler generates bytecodes—an architecture neutral intermediate format ... The interpreted nature of Java solves both the binary distribution problem and the version problem; the same Java language byte codes will run on any platform."(같은 백서 §1.2.3) 이것이 뒤에 Sun의 구호 "Write Once, Run Anywhere(WORA)"로 굳는다 — 구호는 마케팅이되 그 근거는 이 문장이다. 이식성을 한 걸음 더 밀어 기본 자료형의 크기와 산술 동작까지 스펙이 못박는다 — "Java puts a stake in the ground and specifies the sizes of its basic data types and the behavior of its arithmetic operators. Your programs are the same on every platform."(같은 절)
+- **메모리 안전.** "The memory management model—no pointers or pointer arithmetic—eliminates entire classes of programming errors that bedevil C and C++ programmers."(같은 백서 §1.2.2) 포인터 산술을 언어에서 아예 빼고 GC를 런타임에 붙박아, C/C++를 괴롭히던 결함 계급을 통째로 없앤다는 선언이다. §12가 은행 맥락에서 되짚는 "틀린 값으로 조용히 계속 도는" 계급이 정확히 이것이다.
+- **친숙함 위에서 위험만 제거.** "keeping Java looking like C++ as far as possible results in Java being a familiar language, while removing the unnecessary complexities of C++."(같은 백서 §1.2.1) C++를 버리되 겉모습은 남겨 이주 비용을 낮춘다.
+- **거대 표준 라이브러리·후방 호환·"지루하지만 안정적".** 이 셋은 백서의 목표라기보다 이후 30년의 운영에서 굳은 지향이다. 표준 라이브러리는 백서가 든 "basic data types through I/O and network interfaces to graphical user interface toolkits"(§1.2.1)에서 시작해 오늘의 방대한 `java.*`로 자랐고, 그 위에서 **옛 바이트코드가 새 JVM에서 그대로 도는 후방 호환**이 이 생태계의 사실상 제1 계율이 됐다. 바로 아래 역사가 그 계율이 어떻게 지켜졌는지를 보여 준다. [실무 의견]
+
+### 짧은 역사 — 지향을 이해하는 데 필요한 이정표만
+
+완결한 연표가 아니라, 위 지향점이 어떻게 유지·확장됐는지를 드러내는 마디만 시간순으로 고른다.
+
+- **1991년 6월 — Green 프로젝트, 언어명 Oak.** James Gosling 등이 셋톱박스·가전 같은 소비자 기기를 겨냥해 시작했다. 기기마다 칩이 다르다는 제약이 "플랫폼 독립"을 첫날부터 요구했다([Computer History Museum: James Gosling](https://computerhistory.org/profile/james-gosling/)). 이름 Oak는 Gosling 사무실 앞 참나무에서 왔다. [불확실] 개명 경위·후보명 같은 세부는 2차 자료마다 조금씩 다르다.
+- **1995년 — Oak → Java 개명, HotJava·애플릿으로 공개.** 백서가 소개하는 HotJava 브라우저가 "코드를 네트워크로 실어 날라 실행한다"는 WORA를 처음 무대에 올렸다(위 백서). 소비자 기기용으로 만든 언어가 웹이라는 이기종 네트워크를 만나 제자리를 찾은 순간이다.
+- **1996년 1월 — JDK 1.0.** 첫 정식 배포(1996-01-23, [Java version history](https://en.wikipedia.org/wiki/Java_version_history)).
+- **2004년 9월 — J2SE 5.0.** 제네릭·for-each·오토박싱으로 타입 안전을 언어 표면까지 넓혔다. 방식이 성격을 말해 준다 — 제네릭을 **소거(type erasure)**로 구현해 옛 바이트코드·라이브러리와의 후방 호환을 깨지 않았다(같은 연표). "안전을 늘리되 기존 것을 안 깬다"가 이 릴리스의 요약이다.
+- **2014년 3월 — Java 8.** 람다·스트림으로 18년 된 언어를 함수형으로 현대화하면서도, 역시 기존 코드를 깨지 않았다(같은 연표). §2가 인용하는 "`class` 파일 형식이 계약"이라는 성질이 이 무혈 현대화를 떠받친 토대다.
+- **2017년 9월 — 6개월 릴리스 케이던스.** 수년 주기의 큰 릴리스에서 6개월마다의 작은 릴리스로 전환했다(Mark Reinhold 제안, Java 9부터 적용, 같은 연표). "지루하지만 예측 가능한" 진화로의 공식 전환점이다.
+
+### 이웃 언어와의 좌표 — 무엇을 공유하고 어디서 갈리나
+
+같은 "메모리 안전"을 **가비지 컬렉션으로** 이룬 언어가 Java만은 아니다. Go와 C#이 같은 진영이고, 셋 다 §12가 말하는 "틀린 값으로 조용히 계속 도는" 결함 계급 자체를 런타임이 없앤다. 갈리는 곳은 그다음이다.
+
+- **Go(같은 GC 진영).** 공통점은 메모리 오류 계급 제거다. 차이는 무게와 겨냥이다 — Go는 런타임을 가볍게 유지해 고루틴 하나가 약 2.6KB, 단일 바이너리로 뜨고 기동이 짧다([`go.md`](go.md) §2·§11). JVM은 그 대가로 무겁지만(§11), 25년치 관측 도구(§10)와 JIT의 정점 성능(§6)을 얹어 준다. 그래서 이 프로젝트는 "인터넷 입력을 받는 작은 상주 데몬"은 Go로, 오래 사는 도메인 코어는 JVM으로 갈랐다(정본: [ADR-028](../../../architecture/adr/ADR-028-language-selection.md)).
+- **C#(거의 동형).** CLR 위의 관리 런타임으로 JIT·GC·바이트코드(IL) 구조가 JVM과 거의 겹친다 — 기술적으로 갈릴 자리가 별로 없다. 그래서 이 프로젝트에서 C#은 성능이 아니라 **생태계와 팀**에서 갈린다([`c-cpp-csharp.md`](c-cpp-csharp.md) §8~10). "동형인데 왜 JVM인가"의 답이 기술 밖에 있다는 뜻이다.
+- **C·C++(반대 진영 — 안전 대 제어).** 백서가 포인터 산술을 빼며 없앤 그 결함 계급을, C/C++는 "프로그래머를 신뢰하라"는 설계 원칙 아래 **의도적으로 떠안는다** — 검사 대신 제어와 속도를 택한 것이다([`c-cpp-csharp.md`](c-cpp-csharp.md) §2~3). JVM의 무게(§11)는 이 제어를 포기한 값이자, 그 포기로 산 안전(§12)의 값이다.
+- **Rust(GC 없는 제3의 답).** 같은 메모리 안전을 **런타임 없이 컴파일 타임 소유권**으로 이룬다 — GC라는 고전 해법을 거부한 쪽이다([`rust.md`](rust.md) §1). Java는 그 고전 해법의 대표 격이고, 그래서 이 둘의 대비가 "안전의 값을 런타임에 낼 것인가, 컴파일러에 낼 것인가"를 가장 선명하게 보여 준다.
+
+### 지향점의 대가 — 장단점은 이 청구서의 다른 이름이다
+
+위 지향점들은 공짜가 아니고, 본문 §11이 그 청구서를 항목별로 뜯는다. 미리 지도만 그리면 이렇다 — **기동**은 WORA를 위해 매번 클래스를 로드·검증·링크하는 값이고(플랫폼 독립의 청구서), **상주 메모리**는 실행 시점에 판단할 런타임이 늘 떠 있어야 하는 값이며(메모리 안전·GC의 청구서), **워밍업**은 실행 통계를 모아야 최적화하는 JIT가 정점에 닿기까지의 값이다(JIT의 청구서). 즉 §11의 단점 목록은 별개의 결함이 아니라 이 절이 세운 지향점을 뒤에서 읽은 것이다. 그래서 §13의 결론 — "오래 살아서 그 판단 비용을 상각할 수 있는가" — 이 지향점 선택의 마지막 줄이 된다.
+
 ## 1. 문제 — 모르는 기계 위에서, 사람이 메모리를 세지 않고 돌아야 한다
 
 두 가지 문제가 동시에 있었다. 첫째, 배포 대상 기계의 CPU·OS를 컴파일 시점에 알 수 없다. 기계마다 다시 컴파일하면 "같은 프로그램"이라는 말이 흔들린다. 둘째, 사람이 해제 시점을 관리하는 메모리 모델은 해제 후 사용(use-after-free)과 이중 해제를 만드는데, 이 결함의 특징은 프로세스가 **죽지 않고 오염된 상태로 계속 도는 것**이다.
@@ -213,3 +252,7 @@ JEP 483이 이 청구서를 스스로 요약한다. "All this dynamism comes at 
 그래서 JVM이 값을 내는 조건은 한 문장으로 줄어든다 — **오래 살아서 그 판단 비용을 상각할 수 있는가.** 은행 코어는 그 조건을 만족하고, 배포 스크립트는 만족하지 않는다.
 
 이 프로젝트가 그 판단으로 서비스 레이어를 Kotlin/JVM으로, 인프라 레이어를 Go로 갈랐다(정본: [ADR-028](../../../architecture/adr/ADR-028-language-selection.md) — 재판정은 그 문서에서 한다). 같은 디렉토리의 다음 문서들이 각 언어를 같은 축으로 다룬다.
+
+## 변경 이력
+
+- 2026-08-09: §0 신설 — 생긴 계기(1990년대 Sun·C++ 반작용·WORA)·지향점·짧은 역사(1991 Oak~2017 6개월 케이던스)·이웃 언어 좌표(GC 공유 Go·C#, 안전 대 제어 C/C++, GC 없는 Rust)·장단점의 지향점 대가 재프레이밍을 앞에 덧댔다. 기존 §1~§13은 보존.

@@ -6,6 +6,30 @@
 
 이 문서가 따라가는 축은 다른 것이다: **무엇을 컴파일러가 거부하게 만들었는가.** null, 상태 분기의 누락, 금액과 날짜의 혼동, 컬렉션의 가변성 — 이것들은 Java에서 전부 "규율로 지키는 것"이고, Kotlin은 그중 일부를 "타입으로 지켜지는 것"으로 옮겼다. 옮긴 만큼 얻고, **옮기지 못한 경계에서 정확히 비용이 발생한다.** 그 경계가 이 문서의 절반이다. 인용은 Kotlin 2.x 기준 공식 문서와 KEEP(설계 제안서), 그리고 대조가 필요한 곳에서는 OpenJDK JEP를 쓴다. 이 프로젝트의 실측은 `jun-bank/common` 저장소의 첫 커밋(TL-1 스파이크)과 이 문서를 쓰며 직접 돌린 확인에서 가져왔다.
 
+## 왜 Kotlin이 생겼나 · 무엇을 지향하나
+
+위에서 본 "기본값을 반대로 정한다"는 성격은 언어 취향이 아니라 **JetBrains가 자기 코드베이스의 문제를 풀려고 건 제약**에서 나왔다. 그 제약을 먼저 짚어 두면 뒤의 절들이 왜 그렇게 배치됐는지가 읽힌다.
+
+**생긴 계기.** Kotlin은 언어 연구가 아니라 IntelliJ를 비롯한 수백만 줄의 Java를 가진 회사에서 나왔다. 2010년 시작된 이 프로젝트의 동기를 초기 구성원이 직접 적었는데(Dmitry Jemerov, 2011), 핵심은 두 개의 제약이다. 하나는 상호운용 — 새 언어는 "점진적으로 도입될 것이고 기존 코드베이스와 매끄럽게 상호운용해야 한다"([Why JetBrains needs Kotlin](https://blog.jetbrains.com/kotlin/2011/08/why-jetbrains-needs-kotlin/)). 기존 Java를 버리지 않고 한 파일씩 옮겨 갈 수 있어야 했다는 뜻이다. 다른 하나는 컴파일 속도 — "our code base takes long enough to compile with javac, and we cannot afford making it any slower"(같은 글). 이 두 번째 제약이 언어의 성격을 크게 갈랐다. 표현력을 끝까지 밀어붙인 JVM 언어를 두고도 그리로 가지 않은 이유가 여기 있다. [불확실] 당시 가장 가까운 대안이 Scala였고 그것을 컴파일 속도 때문에 물렸다는 서사가 널리 회자되지만, 위 원문은 Scala를 경쟁자가 아니라 병행 지원 대상으로만 언급하므로("our work on Kotlin does not in any way affect our investment into … the Scala plugin") "Scala를 느린 컴파일 때문에 버렸다"는 문장 그대로의 1차 출처는 이 글에서 확인하지 못했다. 확실한 것은 컴파일 속도가 물러설 수 없는 요구였다는 사실 자체다. 이름은 Java가 자바 섬에서 왔듯 상트페테르부르크 인근의 코틀린 섬에서 왔다([Kotlin — Wikipedia](https://en.wikipedia.org/wiki/Kotlin)).
+
+**짧은 흐름.** 지향을 이해하는 데 필요한 이정표만 시간순으로 추린다(완전한 연표가 아니다).
+
+- **2010** — JetBrains 사내 프로젝트로 시작(공식 FAQ가 프로젝트 시작 연도를 2010으로 적는다, [Kotlin FAQ](https://kotlinlang.org/docs/faq.html)).
+- **2011-07-19** — JVM Language Summit에서 "JVM용 정적 타입 언어"로 공개([Hello World](https://blog.jetbrains.com/kotlin/2011/07/hello-world-2/) · [Kotlin@JVMLS 2011](https://blog.jetbrains.com/kotlin/2011/09/video-kotlinjvmls-2011/)).
+- **2016-02** — Kotlin 1.0. 발표 글이 이 언어의 자기규정을 한 단어로 못박는다 — "If I were to choose one word to describe Kotlin's design, it would be pragmatism … Kotlin is not so much about invention or research"([Kotlin 1.0 Released](https://blog.jetbrains.com/kotlin/2016/02/kotlin-1-0-released-pragmatic-language-for-jvm-and-android/)). 같은 글이 하위 호환도 약속한다(새 컴파일러가 옛 바이너리와, 옛 바이너리가 새 바이너리와 런타임에 동작).
+- **2017-05** — Google이 Google I/O에서 Android 공식 지원 언어로 채택([Kotlin on Android. Now official](https://blog.jetbrains.com/kotlin/2017/05/kotlin-on-android-now-official/)). 이 문서의 관심(서버·JVM)과는 층이 다르지만, "실무에서 검증된 도구"라는 위치를 굳힌 분기점이다.
+- **2024-05-21** — Kotlin 2.0, K2 컴파일러 Stable([Celebrating Kotlin 2.0](https://blog.jetbrains.com/kotlin/2024/05/celebrating-kotlin-2-0-fast-smart-and-multiplatform/)). §10에서 보는 컴파일 속도 개선(최대 94%)이 이 컴파일러 재작성의 결과다 — 컴파일 속도가 창립 제약이었음을 생각하면 이 재작성의 자리가 우연이 아니다.
+
+**무엇을 지향하나.** 공식 FAQ가 네 가지를 스스로 든다 — 간결(줄 수 감소), 안전("support for non-nullable types makes applications less prone to NPE's"), 100% Java 상호운용, 도구 지원(IntelliJ·Android Studio 기본 탑재)([Kotlin FAQ](https://kotlinlang.org/docs/faq.html)). 이 넷을 하나로 묶는 단어가 위의 pragmatism이다 — "the primary goal is being useful. And the less our users have to relearn, reinvent, redo from scratch, and the more they can reuse, the better"(1.0 발표 글). 앞의 도입부가 "간결"을 이 문서의 축으로 삼지 않은 이유가 여기서 분명해진다. 간결은 목록의 첫 줄이지만 설계 결정을 이끈 것은 실용주의이고, 실용주의의 첫 대가가 "Java를 버리지 않는다"는 제약이다.
+
+**세 개의 대조 — 지향이 곧 장단점의 출처다.** 이 지향을 옆 언어들과 겹쳐 놓으면 뒤 절들이 세는 비용의 뿌리가 보인다.
+
+- **Java와의 관계** — 같은 JVM 바이트코드로 내려가 표준 라이브러리를 공유한다(그래서 100% 상호운용). Kotlin이 더한 것은 런타임이 아니라 **타입 시스템의 방어선**이다(§1의 일곱 줄). 이점 대부분이 컴파일 시점에 있다는 뜻이고, 그래서 §9의 상호운용 마찰(플랫폼 타입·`@JvmStatic`·final by default)은 우연한 결함이 아니라 "Java 위에 얹힌다"는 선택의 청구서다. 얹힌 대가는 §10의 `kotlin-stdlib` 런타임 의존으로도 돌아온다.
+- **Scala와의 관계** — 둘 다 "Java를 개선한다"에서 출발했지만 갈림길이 다르다. Scala가 표현력을 끝까지 밀었다면 Kotlin은 컴파일 속도와 학습 표면을 지키는 쪽을 택했다(위 창립 제약). 그 선택이 §10의 "기능이 많다"의 상한을 낮췄다 — "Kotlin에 있고 Java에 없는 것" 21개는 Scala 기준으로는 오히려 절제된 목록이다. 그러면서 §7의 DSL·확장 같은 표현력은 포기하지 않은 균형점이 실용주의의 실제 모습이다.
+- **null을 타입에 두는 언어들** — 이 발상은 Kotlin 고유가 아니다. Swift의 `Optional`, Rust의 `Option<T>`이 같은 사고를 공유한다 — "값이 없을 수 있음"을 주석이나 규율이 아니라 **타입으로** 만들어 컴파일러가 강제하게 한다. §2가 Java의 `@Nullable`과 갈리는 지점("기본값이 어느 쪽인가")은 이 계열 전체가 Java와 갈리는 지점이다. Kotlin의 특수성은 발상이 아니라 그것을 **Java와 100% 섞으면서** 하려 한 데 있고, §2의 플랫폼 타입이라는 구멍이 정확히 그 야심의 이음매다.
+
+정리하면 이 문서가 뒤에서 비용으로 세는 것들 — 컴파일 시간(§10), 상호운용 마찰(§9), stdlib 의존(§10) — 은 대부분 두 결정의 대가다. **실용주의**(기존 자산을 버리지 않는다)와 **JVM에 얹힘**(런타임을 새로 만들지 않는다). §1~8의 타입 방어선과 같은 뿌리에서 나온 청구서다.
+
 ## 1. 공식 목록이 스스로 말하는 축
 
 Kotlin 문서에는 Java와의 대조를 정면으로 적은 페이지가 있고, 거기 실린 "Kotlin에서 해소된 Java의 문제"는 일곱 줄이다 — "Null references are controlled by the type system · No raw types · Arrays in Kotlin are invariant · Kotlin has proper function types, as opposed to Java's SAM-conversions · Use-site variance without wildcards · Kotlin does not have checked exceptions · Separate interfaces for read-only and mutable collections"([Comparison to Java](https://kotlinlang.org/docs/comparison-to-java.html)).

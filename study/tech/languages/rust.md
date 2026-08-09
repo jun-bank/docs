@@ -4,6 +4,25 @@
 
 이 문서는 Rust의 소유권 모델을 개념부터 설명하고, 그 모델이 무엇을 보증하며 그 보증에 얼마를 청구하는지까지 간다. 순서는 하나의 논리를 따른다 — 무엇이 문제였나, 그 문제를 어떤 아이디어로 풀었나, 그 아이디어가 필연적으로 만드는 비용은 무엇이고 어디서 그 비용이 회수되나. 차용 검사기·수명·`Send`/`Sync`·제로 코스트 추상은 각각의 기능이 아니라 **"값마다 소유자를 하나만 두고 그 사실을 컴파일러가 추적한다"는 하나의 결정에서 갈라져 나온 결과**로 읽는 것이 이해가 빠르다. 인용한 문장은 The Rust Programming Language(현행 판)·Rustonomicon·표준 라이브러리 문서 기준이고, 컴파일 오류 출력은 rustc 1.92.0에서 재현한 것이다.
 
+## 0. 왜 이 언어가 생겼나 · 무엇을 지향하나
+
+**생긴 계기.** Rust는 2006년 모질라에서 일하던 프로그래머 Graydon Hoare의 개인 프로젝트로 시작했다. 널리 인용되는 계기는 사소하다 — 밴쿠버의 자기 아파트에 돌아왔더니 엘리베이터가 소프트웨어가 죽어 멈춰 서 있었고, "이런 기반 소프트웨어가 왜 아직도 이렇게 잘 죽는가"가 출발점이었다([How Rust went from a side project to the world's most-loved programming language](https://www.technologyreview.com/2023/02/14/1067869/rust-worlds-fastest-growing-programming-language/), MIT Technology Review, 2023). 문제의 배경은 이 문서 §1이 수치로 보이는 것 — C/C++로 쓰인 브라우저·커널 같은 대형 시스템에서 메모리 안전 결함이 심각한 취약점의 지배적 계급이라는 사실이었다. 2009년 모질라가 이 프로젝트를 공식 후원하기 시작한 이유가 정확히 그 자리에 있었다 — 차세대 브라우저 엔진을 안전하게 짤 언어가 필요했고, "가비지 컬렉터를 얹지 않고도 안전하게"가 처음부터 조건이었다(같은 글).
+
+**간략한 흐름.** 언어의 지향을 이해하는 데 필요한 이정표만 시간순으로 든다(완전한 연표가 아니라 관련된 것만이다).
+
+- **2006** — Graydon Hoare가 개인 프로젝트로 착수([MIT Technology Review](https://www.technologyreview.com/2023/02/14/1067869/rust-worlds-fastest-growing-programming-language/), 2023).
+- **2009** — 모질라가 공식 후원을 시작 — 브라우저 엔진용 안전 언어라는 목적이 이때 붙는다(같은 글).
+- **2015-05-15** — 1.0 릴리스. 이때부터 하위 호환 안정성 보증(stable)이 시작된다([Announcing Rust 1.0](https://blog.rust-lang.org/2015/05/15/Rust-1.0.html), 2015 — 이 날짜는 10주년 릴리스 노트가 "정확히 Rust 1.0의 10주년"이라 적어 재확인된다, [Rust 1.87.0](https://blog.rust-lang.org/2025/05/15/Rust-1.87.0/)).
+- **2016** — 모질라가 Rust로 만든 브라우저 엔진 Servo를 공개([MIT Technology Review](https://www.technologyreview.com/2023/02/14/1067869/rust-worlds-fastest-growing-programming-language/), 2023). 지향이 대형 시스템에서 실제로 값을 낸 자리이고, §8에서 다룰 Quantum CSS(Stylo)가 이 계열이다.
+- **2018년 말** — 2018 에디션(1.31)에서 비렉시컬 수명(NLL)이 안정화된다 — §3에서 볼 RFC 2094가 이때 기본 동작이 된다(2015 에디션까지 확장은 1.36, 완전 기본화는 2022년, [NLL by default](https://blog.rust-lang.org/2022/08/05/nll-by-default.html)).
+- **2021-02-08** — Rust Foundation 설립. 2020년 모질라 정리해고 뒤, AWS·구글·화웨이·마이크로소프트·모질라가 함께 세워 언어의 관리 주체가 특정 회사에서 독립 재단으로 옮겨간다([Mozilla Welcomes the Rust Foundation](https://blog.mozilla.org/en/mozilla/mozilla-welcomes-the-rust-foundation/), 2021).
+
+**지향점.** Rust가 내건 것은 네 가지로 요약된다. 첫째, GC 없는 메모리 안전 — §1이 말하는 "런타임에 아무것도 두지 않고 컴파일 타임 검사만으로 같은 보증"이다. 둘째, 데이터 레이스를 실행이 아니라 컴파일에서 막는 것(§5). 셋째, 제로 코스트 추상 — 안전과 고수준 표현을 런타임 비용 없이 얻는 것(§6). 넷째, 이 셋을 묶은 표어가 공식 Book 16장의 제목 그대로 "두려움 없는 동시성(Fearless Concurrency)"이다([Book ch.16](https://doc.rust-lang.org/book/ch16-00-concurrency.html)) — 동시성 코드를 "돌려 보고 레이스를 디버깅한다"가 아니라 "컴파일되면 레이스가 없다"로 바꾸겠다는 목표다.
+
+**세 언어군의 자리 — 그리고 그 대가.** 이 지향들은 안전을 한 축이 아니라 두 축(메모리 안전 · 데이터 레이스 없음)으로 보고, 각 언어가 그 두 축을 어디서 사느냐로 갈린다 — C++는 어느 축도 언어가 보장하지 않고 개발자 규율에 맡기며(비안전이 사양), Go·JVM·C#은 런타임 GC로 메모리 안전 축을 사되 데이터 레이스 축은 여전히 프로그래머에게 열어 두고, Rust는 두 축을 다 컴파일 타임에 잠근다. 그래서 Rust는 C++에 대한 반작용이다 — 같은 무런타임 제어를 유지하되 그 제어를 안전하게 만든다. 이 대비의 정밀판이 §9이고, 각 언어가 안전을 어느 통화로 지불하는지가 그 절의 요점이다.
+
+공짜는 아니다. GC 언어가 안전을 런타임 자원(메모리·CPU·정지)으로 내는 자리에서, Rust는 같은 안전을 사람의 시간 — 소유권·수명을 배우는 학습 곡선과 매 빌드의 컴파일 시간 — 으로 낸다. 이 청구서가 §7이고, 학습 곡선과 컴파일 시간은 결함이 아니라 "GC 없는 안전"이라는 지향의 필연적 대가다. 이 문서 전체가 그 하나의 교환 — 무엇을 보증하고 그 보증을 어느 통화로 지불하는가 — 을 절마다 되짚는다.
+
 ## 1. 문제 — 두 가지 해법을 동시에 거부한다
 
 메모리 안전 결함은 대규모 C/C++ 코드베이스의 지배적 취약점 계급이다. 미국·영국·호주 등 7개국 보안 기관이 공동 발표한 문서가 네 측정을 한자리에 모아 놓았다 — "마이크로소프트 CVE의 약 70%가 메모리 안전 취약점이고(2006~2018년 CVE 기준), 구글 Chromium 프로젝트에서 식별된 취약점의 약 70%가 메모리 안전 취약점이며, Mozilla 취약점 분석에서 치명·고위험 버그 34건 중 32건이 메모리 안전 취약점이었고, 구글 Project Zero 분석에서 2021년 제로데이의 67%가 메모리 안전 취약점이었다"([The Case for Memory Safe Roadmaps](http://web.archive.org/web/2024id_/https://media.defense.gov/2023/Dec/06/2003352724/-1/-1/0/THE-CASE-FOR-MEMORY-SAFE-ROADMAPS-TLP-CLEAR.PDF), CISA·NSA·FBI 외, 2023).
@@ -296,3 +315,9 @@ GC 자체의 비용도 감춰지지 않는다. Go의 공식 GC 가이드가 이�
 마지막은 균형 자료다. 비용 쪽은 [Rust 컴파일러 성능 설문 2025](https://blog.rust-lang.org/2025/09/10/rust-compiler-performance-survey-2025-results/)와 [The Rust Compilation Model Calamity](https://www.pingcap.com/blog/rust-compilation-model-calamity/)가 자기비판으로서 가장 정직하고, 효용 쪽은 구글의 [Rust fact vs. fiction](https://opensource.googleblog.com/2023/06/rust-fact-vs-fiction-5-insights-from-googles-rust-journey-2022.html)과 안드로이드 보고([Rust in Android](https://blog.google/security/rust-in-android-move-fast-fix-things/))가 실측 수치를 가진 몇 안 되는 출처다. 학습 난이도를 수치로 확인하고 싶으면 [Bronze GC 무작위 대조 시험](https://arxiv.org/abs/2110.01098)과 [Learning and Programming Challenges of Rust](https://songlh.github.io/paper/survey.pdf) 두 논문이면 충분하다.
 
 실습 제안 하나로 마친다. 같은 작은 프로그램 — 여러 스레드가 하나의 카운터를 올리는 코드 — 을 Go와 Rust로 각각 쓰고, Go 쪽은 뮤텍스를 일부러 빼고 `go run -race`로 돌려 보고, Rust 쪽은 `Arc` 없이 컴파일해 보면 이 문서 §5와 §9가 십 분 만에 몸으로 이해된다. 한쪽은 실행해야 알고, 다른 쪽은 실행할 수조차 없다는 것이 두 설계의 차이 전부다.
+
+## 변경 이력
+
+| 버전 | 일자 | 내용 |
+|---|---|---|
+| v1.1 | 2026-08-09 | §0 **왜 이 언어가 생겼나·무엇을 지향하나** 신설 — 2006 Graydon Hoare 개인 프로젝트→2009 모질라 후원의 계기, 이정표 6개(2006·2009·2015·2016·2018·2021)를 시간순으로, 지향점 4가지(GC 없는 메모리 안전·데이터 레이스 컴파일 차단·제로 코스트·두려움 없는 동시성), 안전 두 축의 세 언어군 대비와 GC 대비를 §7·§9의 지향 대가로 명시 연결. 기존 §1~§11 본문·수치·출처는 그대로 보존 |
