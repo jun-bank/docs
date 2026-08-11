@@ -4,7 +4,7 @@
 - 상태: **채택**
 - 결정자: 사용자 · AI 페어
 - 근거: **ADR-024 RL-7·RL-8**(배포 경로·인증) · `operations/cicd.md` **CDT-1·CDT-2**(닫히지 않은 공백 2건) · ★ **2026-08-07 홈랩 실측**(집 서버 3대 + 오라클 엣지 — 접속·권한·컨테이너 형상) · ★ **2026-08-07 설계 선검증**(치명 6 · 높음 8 — 반영분 = **§2.1** · 작업 기록 `plans/2026-08-07/deploy-orchestration/`) · **C-08**(도구 최소주의) · **C-09**(스테이징 없음)
-- 관련: **ADR-024**(릴리스 — 특히 **§2.1** 배포물 · **RL-5** 이미지 롤백 · **RL-10** 모드 조항 · **RL-11** · ★ **§2.4** 긴급 롤백 override) · **ADR-019**(CH-1 진입점 · CH-4 어댑터 · CH-8) · **ADR-020**(RT-1 정적 라우팅) · ★ **ADR-022**(권한 매트릭스 — ⚠️ ★ **2026-08-07 개정으로 뒤집혔다**: v0.1의 *"agent에게 DB 계정을 주지 않는다"* → **§2.1 배포 스키마 + deploy-agent 계정 DT-9~DT-11**) · **ADR-023**(OB-1 관측 독립성) · `operations/cicd.md`(**CD-1~CD-5**) · `implementation-verification.md`(**IV-14 ⑶** 배포 인증키) · ★ `operations/infrastructure.md` **§4**(저수준 도구 언어 — **Go 확정**)
+- 관련: **ADR-024**(릴리스 — 특히 **§2.1** 배포물 · **RL-5** 이미지 롤백 · **RL-10** 모드 조항 · **RL-11** · ★ **§2.4** 긴급 롤백 override) · **ADR-019**(CH-1 진입점 · CH-4 어댑터 · CH-8) · **ADR-020**(RT-1 정적 라우팅) · ★ **ADR-022**(권한 매트릭스 — ⚠️ ★ **2026-08-07 개정으로 뒤집혔다**: v0.1의 *"agent에게 DB 계정을 주지 않는다"* → **§2.1 배포 스키마 + deploy-agent 계정 DT-9~DT-11**) · **ADR-023**(OB-1 관측 독립성) · ★ **ADR-030**(배포물 전달 — compose를 서명 manifest에 동봉 · **DO-18 refine**(`ComposeRevision`=sha256)·**DO-4 refine**·**DO-23 원리 확장** · 잔여-6 부근 compose provisioning 공백을 닫음) · `operations/cicd.md`(**CD-1~CD-5**) · `implementation-verification.md`(**IV-14 ⑶** 배포 인증키) · ★ `operations/infrastructure.md` **§4**(저수준 도구 언어 — **Go 확정**)
 - 규칙 ID 접두어: **`DO-`**
 
 ---
