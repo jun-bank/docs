@@ -70,7 +70,7 @@ manifest 스키마는 이미 `ComposeRevision`(불변 식별자)과 `ConfigVersi
 
 ## 6. 이 ADR이 닫지 않는 것
 
-- **허브 블루-그린 전환 수단**(잔여-6 / DO-20 ⑶) — green 프로젝트를 정의하는 것은 이 compose이지만, nginx upstream 전환인가 compose 포트 스왑인가는 별개의 미정 자리다. 이 ADR은 compose가 무엇을 정의하는가까지만 정한다.
+- **허브 블루-그린 전환 수단**(잔여-6 / DO-20 ⑶) — green 프로젝트를 정의하는 것은 이 compose이지만, 전환 수단은 별개의 자리다. 이 ADR은 compose가 무엇을 정의하는가까지만 정한다. ★ **2026-08-12 — 그 자리는 ADR-031 BG-1이 닫았다**(SCG 라우트 전환 · 이 절이 열거했던 두 후보(nginx upstream·포트 스왑)는 기각).
 - **config 값 전달·버전 검증의 실형, 그리고 config 버전 롤백**(#19-config · `[구현 검증]`) — CP-5가 결박 강도의 차이를 정했으나 배포된 app이 `ConfigVersion`과 호환됨을 어떤 응답으로 보고하는가는 구현이 판정한다. ⚠️ **#19-config는 CP-4의 「후속」이 아니라 선행조건**이다 — config 버전 롤백은 #19-config(버전별 config 로컬 보관·선택 또는 호환 불변식)가 선 뒤에만 로컬 완결되며, 그 전까지 config 불일치는 fail-closed다. §4의 롤백 「로컬 완결」은 **compose + 이미지 층 한정**이고, config 층과 동시에 참이 되려면 이 선행이 필요하다.
 - **동봉 compose 허용 기능 allowlist의 정확한 항목**(CP-7 · `[구현 검증]`) — 결정은 *"안전 allowlist로 닫고 위반은 fail-closed"* 이고, 허용/거부의 정확한 compose 키 목록은 구현이 정밀화한다(결정 수준의 예시는 CP-7에 적었다).
 - **롤백 요청 envelope의 서명 주체 — 결정 전까지 롤백 실행 경로가 성립하지 않는다**(CP-4 · 관련 이슈, 단순 `[구현 검증]` 아님) — 롤백에서 로컬 완결되는 것은 payload 회수뿐이고, 실행은 새 서명 envelope를 요구한다(RL-8·DO-10 우회 금지). 그 envelope를 **CI가 재발급하는가 / DO-8·DO-19 형 정의된 로컬 예외로 로컬에서 서명하는가**는 RL-8의 **HMAC+OIDC AND 검증(DO-11)·DO-18 「CI가 서명」의 예외**를 요구하는 **신뢰경계 결정**이라 이 ADR이 정하지 않고 관련 이슈로 명명한다(미정 기본 = envelope 없이는 롤백이 서지 않는다 = fail-closed).
