@@ -32,6 +32,10 @@ S2는 실제로 배포하는 단계다. 배포 창 락 배선([pr-16](../../../.
 
 이후 HTTP→오케스트레이션 배선([pr-18](../../../../infra/docs/devlog/pr-18-http-orchestration.md)), 실 dispatch([pr-22](../../../../infra/docs/devlog/pr-22-local-dispatch.md)), JWKS 실검증([pr-24](../../../../infra/docs/devlog/pr-24-jwks.md))을 거쳐 첫 실배포에 도달했는데, 거기서 false-UNKNOWN 사건([pr-25](../../../../infra/docs/devlog/pr-25-false-unknown.md))이 터졌다 — "통합에서 처음 실행되는 명령은 단위 테스트가 못 잡는다"는 것을 실증한 사건이다. 그다음 블루-그린 전환([pr-27](../../../../infra/docs/devlog/pr-27-blue-green.md)), repo별 allowlist([pr-29](../../../../infra/docs/devlog/pr-29-oidc-allowlist.md)), Outcome·identity 결박([pr-30](../../../../infra/docs/devlog/pr-30-outcome-identity.md))을 지나, 마지막으로 compose 동봉 실행 결박([pr-31](../../../../infra/docs/devlog/pr-31-compose-embed.md))이 S2를 완주시켰다.
 
+### S3 — 분산: 다른 서버로 넓히다
+
+S3은 .9 한 대에서 돌던 배포를 정산(.158)·원장(.164) 두 대로 넓힌 단계다. 로컬에는 없던 문제 — 원격 명령의 응답이 유실되면 무슨 일이 일어났는지 모른다 — 를 다뤄야 했고, 코드를 쓰기 전 두 번의 선검증이 "전송+자동 재개+fencing을 한 슬라이스에 담으면 서로 물린다"를 드러내 **세 조각으로 재슬라이스**했다([distributed-deploy-unknown](distributed-deploy-unknown.md)). 전송·실행자(최소·UNKNOWN=사람)→위성 fencing guard→자동 재개 순으로 각각 높음 리뷰를 거쳐 세운 뒤, 실서버 배선에서 그 계약들이 하나씩 fail-closed로 작동하는 걸 확인하며(lease 하한·workspace 배타성이 기동을 거부하며 배선을 지도했다) 양 위성 실배포를 완주했다 — "위성 배포 실행 불가"(CDT-1)로 오래 남아 있던 칸이 닫히고 배포 대상 넷이 전부 실동작한다([위성 여정](../../../../infra/docs/devlog/pr-34-38-satellite-transport.md)).
+
 ## 관통하는 하나의 문제 — fail-open
 
 이 여정을 한 줄로 요약하면 "조용히 열리는 문을 하나씩 닫는 이야기"다. 리뷰가 잡은 결함의 압도적 다수가 fail-open이었다 — 모드를 모르면 dev로 열림, 시계 편차 0이 60초로 완화됨, stale 키로 무기한 검증, orphan이 틀린 이미지를 가림, 낡은 compose가 digest만 맞으면 통과. 이 프로젝트가 반복해서 택한 태도는 "값이 없으면 뜨지 않는 편이 맞다"이고, 그 태도가 어떤 구조로 코드에 나타났는지가 [patterns.md](patterns.md)의 주제다.
