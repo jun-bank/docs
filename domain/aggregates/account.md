@@ -5,19 +5,25 @@
 - 소속 컨텍스트: **C1 뱅킹**
 - 코드명: `Account`
 
+> 이 문서를 다 읽으면 계좌가 **무엇을 소유하고**(자금의 현재 상태와 가용잔액) **무엇을 통제하는지**(홀딩·한도·미수 차단의 합계와 조작) 설명할 수 있어야 한다.
+
 ---
 
 ## 1. 책임
 
+계좌가 지는 책임은 한 문장이다.
+
 > **고객의 자금을 보관하고, 지금 쓸 수 있는 금액(가용잔액)을 정확히 유지한다.**
 
-계좌는 **자금의 현재 상태**를 소유한다. "무슨 일이 있었는가"는 원장(C5)이, "왜 묶여 있는가"는 승인(C3)이 안다.
+계좌는 **자금의 현재 상태**를 소유한다.\
+"무슨 일이 있었는가"는 원장(C5)이, "왜 묶여 있는가"는 승인(C3)이 안다.
 
-**책임지지 않는 것**:
-- 전표·회계 기록 → C5 원장
-- 어느 승인이 얼마를 묶었는지 → C3 결제. 계좌는 **합계**를, 승인은 **자기 몫(`heldAmount`)** 을 든다 (BR-04 등식)
-- **미수** → C1의 `Receivable` 애그리게이트 (DC-001)
-- 카드별 한도 → C2 카드
+반대로 계좌가 지지 않는 책임이 넷 있다.
+
+- 전표·회계 기록 — C5 원장이 든다.
+- 어느 승인이 얼마를 묶었는지 — C3 결제가 안다. 계좌는 **합계**를, 승인은 **자기 몫(`heldAmount`)** 을 든다 (BR-04 등식).
+- 미수 — C1의 `Receivable` 애그리게이트가 든다 (DC-001).
+- 카드별 한도 — C2 카드가 든다.
 
 ---
 
@@ -25,11 +31,15 @@
 
 ### 애그리게이트 루트
 
+루트는 하나다.
+
 | 이름 | 코드명 | 식별자 |
 |---|---|---|
 | 계좌 | `Account` | `AccountId` |
 
 ### 값 객체
+
+계좌가 드는 값 객체는 둘이다.
 
 | 이름 | 코드명 | 담는 값 | 자체 규칙 |
 |---|---|---|---|
@@ -38,95 +48,175 @@
 
 ### 상태 필드
 
+계좌가 소유하는 상태는 아래와 같다.
+
 | 필드 | 타입 | 뜻 |
 |---|---|---|
 | `balance` | `Money` | **계좌잔액** — 확정된 자금 |
 | `holdTotal` | `Money` | **홀딩 합계** — 승인으로 점유된 금액의 총합 |
 | `receivableBlockLifted` | `boolean` | 운영자가 미수 차단을 해제했는가 (BR-45) |
-| **`movements`** | `AccountDailyMovement[]` | ★ **영업일별 이동 행** (DC-006) — `(businessDate, netAmount, receivableDelta)` + ★ **`ownerId`**(소유 축 — ADR-018 IS-1. 그릇·키·산식은 DC-006 그대로, 컬럼만 는다). 원장 대사 **M12·M14**의 좌변을 **구성**한다 |
-| **`anchors`** | `AccountBalanceAnchor[]` | ★ **기준점** (DC-006 A-1~A-4) — **성능 최적화일 뿐**이며 없어도 계산된다 |
+| `movements` | `AccountDailyMovement[]` | 영업일별 이동 행 (DC-006) — `(businessDate, netAmount, receivableDelta)` + `ownerId` (아래) |
+| `anchors` | `AccountBalanceAnchor[]` | 기준점 (DC-006 A-1~A-4) — 성능 최적화일 뿐이며 없어도 계산된다 |
 | `dailyLimit` | `Money` | **계좌 1일 한도** — 이 계좌의 모든 카드 사용액 합계에 적용 (BR-44) |
 | `dailyUsage` | `LimitUsage` | 계좌 단위 달력일 누적 사용액 (BR-44) |
 
-> **미수는 이 애그리게이트에 없다.** `Receivable`이 채권 한 건씩 소유한다 (BR-20 · DC-001). 계좌가 알아야 하는 것은 *"이 계좌에 미결 미수가 있는가"* 뿐이고, 그것은 존재 여부 조회다.
+`movements`와 미수의 위치를 표 밖에 풀어 둔다.
+
+`movements`는 원장 대사 **M12·M14**의 좌변을 **구성**한다.\
+`ownerId`는 소유 축이며(ADR-018 IS-1), 그릇·키·산식은 DC-006 그대로이고 컬럼만 는다.
+
+**미수는 이 애그리게이트에 없다.**\
+`Receivable`이 채권 한 건씩 소유한다 (BR-20 · DC-001).\
+계좌가 알아야 하는 것은 *"이 계좌에 미결 미수가 있는가"* 뿐이고, 그것은 존재 여부 조회다.
 
 ### ⚠️ `holdTotal`은 합계 필드다 — **의식적 예외(③)** (DC-001)
 
-`holdTotal`은 **다른 애그리게이트들의 합**이다. 저장을 택했으므로 양식이 요구하는 셋을 전부 적는다:
+`holdTotal`은 **다른 애그리게이트들의 합**이다.\
+저장을 택했으므로 양식이 요구하는 셋 — 등식·트랜잭션 경계·탐지 — 을 전부 적는다.
 
 | | 내용 |
 |---|---|
-| **등식** | `holdTotal = Σ(이 계좌의 `holdingFunds = true` 인 승인들의 **`heldAmount`**)` → **대사 불변식 RC-1**. **우변의 정본은 승인의 `heldAmount` 필드다** |
-| **트랜잭션 경계** | 승인의 **성립·해제·복원 전부** 계좌와 같은 커밋 (README **E1**) — 망취소·승인취소·만료를 포함한다 |
-| **탐지** | **BR-41 내부 대사**가 영업일마다 등식을 검증하고 불일치를 **M9**로 적재한다 |
+| **등식** | `holdTotal = Σ(이 계좌의 `holdingFunds = true` 인 승인들의 `heldAmount`)` → 대사 불변식 RC-1 |
+| **트랜잭션 경계** | 승인의 성립·해제·복원 전부 계좌와 같은 커밋 (README E1) — 망취소·승인취소·만료를 포함 |
+| **탐지** | BR-41 내부 대사가 영업일마다 등식을 검증하고 불일치를 M9로 적재 |
 
-> **왜 파생값(①)이 아닌가**: 실시간 승인 경로(QS-01 p99 3초)에서 가용잔액 계산에 매번 필요하다.
-> **왜 분리(②)가 아닌가**: 홀딩에는 승인 수명 외의 개별 규칙이 없다 — 미수와 다른 점이다.
->
-> ⚠️ **"이중 해제는 승인 상태가 막는다"는 근거가 아니었다.** 그렇게 처리한 결과가 1차 리뷰의 치명(T9 이중 해제)이었다. 등식·경계·탐지 셋이 있어야 ③이 성립한다.
+등식의 우변 정본은 **승인의 `heldAmount` 필드**다.\
+파생값(①)이나 분리(②)로 두지 않은 이유를 밝힌다.
+
+**왜 파생값(①)이 아닌가**: 실시간 승인 경로(QS-01 p99 3초)에서 가용잔액 계산에 매번 필요하다.\
+**왜 분리(②)가 아닌가**: 홀딩에는 승인 수명 외의 개별 규칙이 없다 — 미수와 다른 점이다.
+
+⚠️ **"이중 해제는 승인 상태가 막는다"는 근거가 아니었다.**\
+그렇게 처리한 결과가 1차 리뷰의 치명(T9 이중 해제)이었다.\
+등식·경계·탐지 셋이 있어야 ③이 성립한다.
 
 ### 다른 애그리게이트 참조
+
+계좌는 두 축을 ID로만 참조한다.
 
 | 참조 대상 | 참조 방식 | 왜 참조하는가 |
 |---|---|---|
 | 회원 | `CustomerId` | 소유자 식별 (C7 인증이 소유) |
-| 조직/지점 | `BranchId` | ★ **개설 조직** (ADR-018 IS-4 — 운영자 스코프 판정의 대상 축: "운영자가 어디 소속인가 × 이 계좌가 어디 것인가". 조직 마스터는 C7 소유) |
+| 조직/지점 | `BranchId` | **개설 조직** (ADR-018 IS-4 — 운영자 스코프 판정의 대상 축. 조직 마스터는 C7 소유) |
+
+`BranchId`의 축은 "운영자가 어디 소속인가 × 이 계좌가 어디 것인가"의 판정 대상이다 (ADR-018 IS-4).
+
+계좌가 소유하는 것은 **자금의 현재 상태**이고, 등식의 우변을 대는 것은 승인·미수·입금 수신이다.\
+인증 축은 참조만 하며, 계좌가 내는 이벤트 일부는 원장으로 나간다.
+
+### 협력·소유 구조
+
+아래 그림은 계좌가 누구와 협력하고 무엇을 소유하는지 한 장으로 보여준다.
+
+```
+                          소속: C1 뱅킹
+  ┌───────────────────────── Account ─────────────────────────┐
+  │ 소유: balance · holdTotal · dailyLimit · dailyUsage       │
+  │       receivableBlockLifted · movements · anchors         │
+  │ 식별자: AccountId    파생: availableBalance()             │
+  └─┬─────────────────────────────────┬────────────────────┬──┘
+    │ [C3 승인]                       │ [Receivable](C1)   │ [C7 인증]
+    │ heldAmount → holdTotal (RC-1)   │ 미수 발생·회수     │ 회원 CustomerId
+    │ limitContribution               │ (E2·E3·E4)         │ 지점 BranchId
+    ▼ 같은 커밋 E1                    ▼ 회수 먼저          ▼ 참조만
+    → dailyUsage (RC-3)               잔여만 잔액          소유·운영자
+    등식 우변 — 합계                  증가 (FIFO)          스코프 축
+
+  발행:
+   HoldPlaced · HoldReleased (같은 트랜잭션 — 구독 없음)
+   Withdrawn · Deposited · DepositReversed ───▶ C5 원장
+   RefundCredited ─▶ 원장 아님 (C3 Refunded가 기표)
+   AccountLimitUsed / Restored · DailyLimitChanged (내부)
+   ReceivableBlockLifted / Reimposed ───▶ C8 운영
+
+  트랜잭션 경계: 성립 E1 · 매입 E2 · 입금 E3 · 환불 E4 · 정정 E5
+```
 
 ---
 
 ## 3. 불변식 (INV) ★
 
+계좌가 조작마다 지키는 명제는 넷이다.
+
 | # | 불변식 | 근거 | 위반 시 | 검증 위치 |
 |---|---|---|---|---|
 | **INV-1** | `balance ≥ 0` | BR-20 | 없는 돈이 나간 상태 | 모든 조작 후 |
 | **INV-2** | `holdTotal ≥ 0` | — | 음수 점유는 무의미 | 모든 조작 후 |
-| **INV-3** | 미결 미수가 없으면 `receivableBlockLifted = false` — ★ **함의(⇒)다, 동치가 아니다**: 미수가 남아도 `false`일 수 있다(기본 상태 · ★ 재부과 `reimposeReceivableBlock` — 2026-08-06 두 번째 false 경로. 리뷰 o-F2) | BR-45 | 미수가 없는데 차단 해제 플래그가 남음 | **E3·E4 커밋 후** |
+| **INV-3** | 미결 미수가 없으면 `receivableBlockLifted = false` (함의 ⇒, 동치 아님 — 아래) | BR-45 | 미수가 없는데 차단 해제 플래그가 남음 | E3·E4 커밋 후 |
 | **INV-4** | `dailyUsage.amount ≤ dailyLimit` | BR-44 | 계좌 한도 초과 | `useAccountLimit()` 후 |
 
+INV-3이 왜 동치가 아닌지 밝힌다.
+
+INV-3은 함의(⇒)이지 동치가 아니다 — 미수가 남아도 `false`일 수 있다.\
+기본 상태가 `false`이고, 재부과 `reimposeReceivableBlock`이 2026-08-06 확정된 두 번째 false 경로다 (리뷰 o-F2).
 
 ### 대사 불변식 — 실시간 검증 불가 ★
 
-**여러 애그리게이트에 걸쳐 있어 조작마다 검증할 수 없다.** 양식 §4의 분류에 따라 INV와 분리해 적는다.
+아래 명제는 여러 애그리게이트에 걸쳐 있어 조작마다 검증할 수 없다.\
+양식 §4의 분류에 따라 INV와 분리해 적는다.
 
 | # | 명제 | 근거 | 위반 시 | 어디서 검증되나 |
 |---|---|---|---|---|
-| **RC-1** | ★ **`holdTotal = Σ(이 계좌의 `holdingFunds = true` 인 승인들의 `heldAmount`)`** | BR-04 · DC-001 | 이미 풀린 홀딩을 또 해제하면 **다른 승인의 점유가 깎여 초과 승인**이 난다 | **BR-41 내부 대사** → 불일치 **M9** |
-| **RC-2** | 회수액의 **미수별 배분 합계 = 회수액** | BR-34 | 배분이 새거나 부풀면 채권 총액이 실제 회수와 어긋난다 | **E3·E4 커밋 안에서 검사**(절차상 성립하므로 사후조건에 가깝다) |
-| **RC-3** | ★ **`dailyUsage = Σ(그 계좌·그 기준일 승인들의 `limitContribution`)`** | BR-44 · DC-001 | 복원 경로가 계좌를 빠뜨리면 **계좌 한도가 실제보다 작게 남아 정상 결제가 거절**된다 | **BR-41** → 불일치 **M11** |
-| **RC-4** | ★ **`balance = anchor.balance + Σ(netAmount[anchor < businessDate ≤ 최신])`** | **DC-006** | **이동 기록과 현재 잔액이 갈렸다** — 대사 좌변 전체가 무효다 | ★ **자금 조작마다**(같은 트랜잭션) + 대사 |
-| **RC-5** | ★ **`Σ(이 계좌 미결 미수 outstanding()) = anchor.receivableOutstanding + Σ(receivableDelta[〃])`** | **DC-006** | 〃 (M14 좌변) | 〃 |
+| **RC-1** | `holdTotal = Σ(이 계좌의 `holdingFunds = true` 인 승인들의 `heldAmount`)` | BR-04 · DC-001 | 이미 풀린 홀딩을 또 해제하면 초과 승인 | BR-41 내부 대사 → 불일치 M9 |
+| **RC-2** | 회수액의 미수별 배분 합계 = 회수액 | BR-34 | 채권 총액이 실제 회수와 어긋난다 | E3·E4 커밋 안에서 검사 |
+| **RC-3** | `dailyUsage = Σ(그 계좌·그 기준일 승인들의 `limitContribution`)` | BR-44 · DC-001 | 계좌 한도가 작게 남아 정상 결제가 거절 | BR-41 → 불일치 M11 |
+| **RC-4** | `balance = anchor.balance + Σ(netAmount[anchor < businessDate ≤ 최신])` | DC-006 | 이동 기록과 현재 잔액이 갈렸다 | 자금 조작마다(같은 트랜잭션) + 대사 |
+| **RC-5** | `Σ(이 계좌 미결 미수 outstanding()) = anchor.receivableOutstanding + Σ(receivableDelta[〃])` | DC-006 | 〃 (M14 좌변) | 〃 |
 
-> ★ **RC-4·RC-5가 없으면 `balance` 자체를 검증하는 것이 사라진다** (구조 분석 fable §4):
-> DC-006 이전 M12의 좌변은 **`balance`(또는 그 복사본)** 이었다. 좌변이 `Σ(이동)` 이 되면서
-> **M12는 "이동 기록 ↔ 원장"을 보게 됐고, "이동 기록 ↔ 현재 잔액"을 보는 것이 없어졌다.**
->
-> ```
-> netAmount 를 한 번 안 더하면
->   balance      = 100  (조작은 반영됐다)
->   anchor + Σ   =  70  (이동만 빠졌다)
->   → M12 는 70 을 원장과 비교한다 → 원장도 70 이면 ★ 통과한다
->   → 실제 고객 잔액 100 은 아무도 안 본다
-> ```
->
-> ★ **RC-4는 계좌 안에서 닫히므로 자금 조작마다 검증할 수 있다** — 대사를 기다리지 않는다.
+RC-4·RC-5가 없으면 무슨 검증이 사라지는지 풀어 둔다.
 
-> ⚠️ **이것을 INV로 적으면 안 된다.** *"모든 조작 후 참"* 이라고 선언하면서 정작 **아무도 검사하지 않는** 상태가 된다. 실시간 검증이 불가능하다는 사실을 표에 드러내고 **탐지 장치를 명시**해야 ③이 성립한다 (양식 §4).
+★ **RC-4·RC-5가 없으면 `balance` 자체를 검증하는 것이 사라진다** (구조 분석 fable §4).\
+DC-006 이전 M12의 좌변은 `balance`(또는 그 복사본)였는데, 좌변이 `Σ(이동)`이 되면서 M12는 "이동 기록 ↔ 원장"을 보게 됐고 "이동 기록 ↔ 현재 잔액"을 보는 것이 없어졌다.
+
+```
+netAmount 를 한 번 안 더하면
+  balance      = 100  (조작은 반영됐다)
+  anchor + Σ   =  70  (이동만 빠졌다)
+  → M12 는 70 을 원장과 비교한다 → 원장도 70 이면 ★ 통과한다
+  → 실제 고객 잔액 100 은 아무도 안 본다
+```
+
+★ **RC-4는 계좌 안에서 닫히므로 자금 조작마다 검증할 수 있다** — 대사를 기다리지 않는다.
+
+⚠️ **이것을 INV로 적으면 안 된다.**\
+*"모든 조작 후 참"* 이라고 선언하면서 정작 아무도 검사하지 않는 상태가 된다.\
+실시간 검증이 불가능하다는 사실을 표에 드러내고 탐지 장치를 명시해야 ③이 성립한다 (양식 §4).
 
 ### 불변식이 **아닌** 것 — 사전조건이다
 
+아래 셋은 불변식으로 보이지만 사전조건이다.
+
 | # | 조건 | 왜 불변식이 아닌가 |
 |---|---|---|
-| **PRE-1** | `hold()` 시 `요청액 ≤ 가용잔액` | 가용잔액(= `balance − holdTotal`)이 **일시적으로 음수가 될 수 있다.** 입금 역분개(BR-38)로 잔액이 줄었는데 홀딩이 남아 있는 경우다. 이때 **신규 승인만 막으면 되고**, 기존 홀딩을 강제 해제할 이유는 없다 |
-| **PRE-2** | `hold()` 시 **미결 미수 없음** 또는 `receivableBlockLifted = true` (BR-45) | 미수는 **정상적으로 존재할 수 있다.** 불변식으로 두면 미수가 생기는 순간 계좌가 무효가 된다. **금액이 아니라 존재 여부만 필요**하므로 조회로 충분하다 |
+| **PRE-1** | `hold()` 시 `요청액 ≤ 가용잔액` | 가용잔액이 일시적으로 음수가 될 수 있다 (아래) |
+| **PRE-2** | `hold()` 시 미결 미수 없음 또는 `receivableBlockLifted = true` (BR-45) | 미수는 정상적으로 존재할 수 있다 (아래) |
 | **PRE-3** | `useAccountLimit()` 시 `dailyUsage + 요청액 ≤ dailyLimit` (BR-44) | 한도를 낮추면 기존 사용액이 새 한도를 넘을 수 있다 (BR-46). 그때 계좌가 무효가 되면 안 된다 |
+
+세 사전조건이 왜 불변식이 아닌지 풀어 둔다.
+
+PRE-1의 가용잔액(= `balance − holdTotal`)은 일시적으로 음수가 될 수 있다.\
+입금 역분개(BR-38)로 잔액이 줄었는데 홀딩이 남아 있는 경우다 — 이때 신규 승인만 막으면 되고, 기존 홀딩을 강제 해제할 이유는 없다.
+
+PRE-2는 존재 여부만 필요하다.\
+미수를 불변식으로 두면 미수가 생기는 순간 계좌가 무효가 되므로, 금액이 아니라 존재 여부만 조회한다.
 
 ### 조작 사후조건 — 불변식이 아니다
 
+아래는 사후조건이며 불변식이 아니다.
+
 | # | 조건 | 왜 불변식이 아닌가 |
 |---|---|---|
-| **POST-1** | `deposit()`·`refund()` 후 **회수 가능한 미수를 전부 채우기 전에는 잔액이 늘지 않는다** | ⚠️ *"`balance > 0`이면 미결 미수가 없다"* 를 **불변식으로 두면 보류 미수와 양립할 수 없다.** 보류 미수 5만 + 회수 가능 2만인 계좌에 6만이 들어오면 잔액 4만이 늘면서 미결 미수가 남는데, **그것이 BR-34가 요구하는 정상 결과**다 (검증 ⑤). 불변식이면 정상 입금이 거부된다 |
+| **POST-1** | `deposit()`·`refund()` 후 회수 가능한 미수를 전부 채우기 전에는 잔액이 늘지 않는다 | 불변식으로 두면 보류 미수와 양립할 수 없다 (아래) |
 
-> ⚠️ **"가용잔액 ≥ 0"을 불변식으로 두면 BR-38(입금 역분개)이 불가능해진다.** 잔액을 되돌리려는데 애그리게이트가 거부하기 때문이다. **불변식과 사전조건을 구분하지 않으면 정상 경로가 막힌다.**
+POST-1을 불변식으로 두면 안 되는 이유를 풀어 둔다.
+
+⚠️ *"`balance > 0`이면 미결 미수가 없다"* 를 불변식으로 두면 보류 미수와 양립할 수 없다.\
+보류 미수 5만 + 회수 가능 2만인 계좌에 6만이 들어오면 잔액 4만이 늘면서 미결 미수가 남는데, 그것이 BR-34가 요구하는 정상 결과다 (검증 ⑤).\
+불변식이면 정상 입금이 거부된다.
+
+⚠️ **"가용잔액 ≥ 0"을 불변식으로 두면 BR-38(입금 역분개)이 불가능해진다.**\
+잔액을 되돌리려는데 애그리게이트가 거부하기 때문이다.\
+불변식과 사전조건을 구분하지 않으면 정상 경로가 막힌다.
 
 ---
 
@@ -142,37 +232,37 @@ AccountDailyMovement(accountId, businessDate, netAmount, receivableDelta)
   receivableDelta[B] += 미수 증감           (발생 + · 회수 − · 소멸 −)
 ```
 
-**대사가 읽는 것**
+대사가 읽는 좌변은 아래와 같다.
 
 ```
 M12 좌변 = anchor.balance               + Σ(netAmount      [anchor < bd ≤ D])
 M14 좌변 = anchor.receivableOutstanding + Σ(receivableDelta[anchor < bd ≤ D])
 ```
 
-> ★ **왜 복사가 아니라 더하기인가** (DC-006): `balance`는 **귀속 영업일을 구분하지 않는
-> 누적 현재값**이라 *"D일까지의 잔액"* 을 사후에 알 수 없다. 그래서 **어딘가에 복사**해야 했는데,
-> **복사 시점을 정하려는 세 번의 시도가 세 번 다 깨졌다**
-> (구 표현 `DailySnapshot` T2 → `closedBalance` 하루 어긋남 → `AccountDailyClose` 역순 귀속 — DC-006 §1).
->
-> **더하기는 순서가 무관하다.** 늦게 도착한 D-1 거래가 D+1에 와도 **그 행에 더하면 끝**이고,
-> 뒤의 행은 손댈 필요가 없다 — **누적합이 자동으로 맞는다.**
->
-> ★ **기준점이 없어도 계산된다**(A-2). 그래서 **T2·DS2가 구조적으로 못 생긴다** —
-> 기준점을 만들려다 깨진 것이 앞의 세 번이었다.
->
-> ⚠️ **피연산자는 `balance` 변화량이지 조작 금액이 아니다.**
-> 입금 6 중 미수 회수가 4면 **계좌 잔액은 +2만 는다** — `netAmount += 2` 다.
-> 회수분 4는 `receivableDelta -= 4` 로 따로 잡힌다. **좌변이 원장 예치금 보조부와 맞아야** 하므로
-> *"계좌 잔액을 얼마나 움직였나"* 가 기준이다.
->
-> ⚠️ **행이 없으면 0으로 시작한다 — 이월 복사를 하지 않는다.**
-> 이월하면 Σ 가 **이중 계상**된다. 행은 *"그날의 이동"* 이지 *"그날까지의 누계"* 가 아니다.
->
-> ⚠️ **거래가 없는 계좌는 행이 안 생긴다.** Σ 가 0이므로 anchor 값 그대로다.
+왜 복사가 아니라 더하기인지, 무엇을 피연산자로 쓰는지 풀어 둔다.
+
+★ **왜 복사가 아니라 더하기인가** (DC-006): `balance`는 귀속 영업일을 구분하지 않는 누적 현재값이라 *"D일까지의 잔액"* 을 사후에 알 수 없다.\
+그래서 어딘가에 복사해야 했는데, 복사 시점을 정하려는 세 번의 시도가 세 번 다 깨졌다(구 표현 `DailySnapshot` T2 → `closedBalance` 하루 어긋남 → `AccountDailyClose` 역순 귀속 — DC-006 §1).\
+**더하기는 순서가 무관하다** — 늦게 도착한 D-1 거래가 D+1에 와도 그 행에 더하면 끝이고, 뒤의 행은 손댈 필요가 없다.
+
+★ **기준점이 없어도 계산된다**(A-2).\
+그래서 T2·DS2가 구조적으로 못 생긴다 — 기준점을 만들려다 깨진 것이 앞의 세 번이었다.
+
+⚠️ **피연산자는 `balance` 변화량이지 조작 금액이 아니다.**\
+입금 6 중 미수 회수가 4면 계좌 잔액은 +2만 는다 — `netAmount += 2`다.\
+회수분 4는 `receivableDelta -= 4`로 따로 잡히며, 좌변이 원장 예치금 보조부와 맞아야 하므로 *"계좌 잔액을 얼마나 움직였나"* 가 기준이다.
+
+⚠️ **행이 없으면 0으로 시작한다 — 이월 복사를 하지 않는다.**\
+이월하면 Σ가 이중 계상된다 — 행은 *"그날의 이동"* 이지 *"그날까지의 누계"* 가 아니다.
+
+⚠️ **거래가 없는 계좌는 행이 안 생긴다.**\
+Σ가 0이므로 anchor 값 그대로다.
 
 ---
 
 ## 4. 파생 값
+
+계좌에서 파생되는 값은 하나다.
 
 | 이름 | 계산 | 근거 |
 |---|---|---|
@@ -184,21 +274,55 @@ M14 좌변 = anchor.receivableOutstanding + Σ(receivableDelta[anchor < bd ≤ D
 
 ## 5. 조작
 
+계좌가 제공하는 조작은 아래와 같다.\
+사후조건이 표 한 줄로 담기지 않는 조작은 표 뒤에 산문으로 풀어 둔다.
+
 | 조작 | 코드명 | 사전조건 | 사후조건 | 발행 이벤트 |
 |---|---|---|---|---|
 | **홀딩 점유** | `hold(amount)` | `amount ≤ availableBalance()` (PRE-1) | `holdTotal` 증가. `balance` 불변 | `HoldPlaced` |
 | **홀딩 해제** | `releaseHold(amount)` | `amount ≤ holdTotal` | `holdTotal` 감소 | `HoldReleased` |
-| **매입 출금** | `capture(captureAmount, heldAmount, restoreLimit)` | `heldAmount ≤ holdTotal` | `holdTotal` **전액 해제** · `balance` 감소 · **미매입분만큼 `Account.restoreAccountLimit(미매입분, at)` 호출**(BR-24 — 직접 감액하지 않는다. 기준일·하한 가드가 그 조작에 있다) · 부족분은 **`Receivable.incur(CAPTURE, …)`** — 전부 **같은 커밋**(E2) · ★ **`AccountDailyMovement`(귀속 영업일) `netAmount += balance 변화량`(조작 금액이 아니다 — DC-006 §3)**(DC-006) | `Withdrawn` |
-| **입금** | `deposit(depositId, amount, recoverable)` | `amount > 0` · ★ **`(기관, depositId, 입금)` 수신 기록이 없음** (E3 — `DepositReceipt` INV-1. `depositId`는 **외부 입금원이 채번**하므로 유일성 스코프는 **발신 기관**이다 — 2026-08-06 **R-06**. 기관 = ACL이 인증한 발신 기관) | **회수 대상 미수들을 FIFO로 회수**(`recoverable` — 보류 제외) 후 **잔여분만** `balance` 증가 (BR-34) · ★ **`AccountDailyMovement`(귀속 영업일) `netAmount += balance 변화량`(조작 금액이 아니다 — DC-006 §3)**(DC-006) | `Deposited` |
-| **환불 입금** | `refund(amount, recoverable)` | `amount ≥ 0` | **입금과 동일** — FIFO 회수 후 잔여만 `balance` 증가 (BR-34). **`amount = 0`도 정상**(미수만 소멸한 환불) · ★ **`AccountDailyMovement`(귀속 영업일) `netAmount += balance 변화량`(조작 금액이 아니다 — DC-006 §3)**(DC-006) | `RefundCredited` |
+| **매입 출금** | `capture(captureAmount, heldAmount, restoreLimit)` | `heldAmount ≤ holdTotal` | 홀딩 전액 해제 · `balance` 감소 · 한도 복원 · 부족분 미수 (E2 · 아래) | `Withdrawn` |
+| **입금** | `deposit(depositId, amount, recoverable)` | `amount > 0` · 수신 기록 없음 (아래) | FIFO 회수 후 잔여만 `balance` 증가 (E3 · 아래) | `Deposited` |
+| **환불 입금** | `refund(amount, recoverable)` | `amount ≥ 0` | 입금과 동일 — FIFO 회수 후 잔여만 증가 (`amount = 0`도 정상 · 아래) | `RefundCredited` |
 | **계좌 한도 사용** | `useAccountLimit(amount, at)` | PRE-3 | `dailyUsage` 증가 (기준일 리셋 포함) | `AccountLimitUsed` |
-| **계좌 한도 복원** | `restoreAccountLimit(amount, at)` | **`amount ≤ dailyUsage.amount`** (위반 시 거절) | `dailyUsage` 감소. **기준일이 다르면 아무 일도 하지 않는다**(오류 아님 — 카드와 동일) | `AccountLimitRestored` |
-| **계좌 한도 변경** | `changeDailyLimit(newLimit, requester)` | 유효 금액 표현(BR-07) — ★ 하한·0 허용은 미확정(UC6-4) | `dailyLimit` **교체**. ★ **`dailyUsage`는 건드리지 않는다** — 우변(승인 `limitContribution` 합)은 그대로인데 좌변만 움직이면 **RC-3이 깨져 M11이 발화**한다. 기존 승인 비무효(BR-46) — **새 한도 < 사용액 상태가 정상으로 존재**한다(PRE-3이 사전조건인 이유) | `AccountDailyLimitChanged` |
-| **미수 차단 해제** | `liftReceivableBlock(operator)` | **미결 미수 존재** · ★ **`receivableBlockLifted = false`**(이미 해제 = 명시 거절 `ALREADY_LIFTED` — 2026-08-06 CDS3 소급. UC13-2 닫힘) · ★ **승인된 요청 존재**(BR-56 ② — C8 동기 확인, R14) | `receivableBlockLifted = true` | `ReceivableBlockLifted` |
-| **미수 차단 재부과** | `reimposeReceivableBlock(operator)` | **`receivableBlockLifted = true`** (아니면 거절 — 되돌릴 해제가 없다) | `receivableBlockLifted = false` — 신규 승인이 다시 **PRE-2**에 걸린다. **다시 풀려면 새 2인 승인**(BR-56 ② — 해제·재부과가 비대칭인 이유: 재부과는 안전 방향이라 담당자 단독, BR-45) | `ReceivableBlockReimposed` |
-| **입금 정정** | `reverseDeposit(reversalId, originalDepositId, amount, operator)` | ★ **`(기관, reversalId, 정정)` 수신 기록이 없음** — ★ `reversalId`는 **우리가 채번**(운영자 지시)하므로 기관 = **자행 고정**이고 스코프가 자명하다(R-06 · DepositReceipt INV-1) · **원입금 레코드 존재**(E5 — `DepositReceipt` INV-1·INV-4) · ★ **승인된 정정 요청 존재**(BR-56 ① — C8 동기 확인, R14) | `balance` 감소. 부족분은 **`Receivable.incur(origin=DEPOSIT_REVERSAL, sourceRef)`** — 원거래 승인이 없으므로 **입금 식별자를 출처로 쓴다**. **멱등 레코드 기록도 같은 커밋**(E5) · ★ **`AccountDailyMovement`(귀속 영업일) `netAmount += balance 변화량`(조작 금액이 아니다 — DC-006 §3)**(DC-006) | `DepositReversed` |
+| **계좌 한도 복원** | `restoreAccountLimit(amount, at)` | `amount ≤ dailyUsage.amount` (위반 시 거절) | `dailyUsage` 감소 (기준일이 다르면 무연산 — 카드와 동일) | `AccountLimitRestored` |
+| **계좌 한도 변경** | `changeDailyLimit(newLimit, requester)` | 유효 금액 표현(BR-07) · 하한·0 허용 미확정 (AC4·UC6-4) | `dailyLimit` 교체 (`dailyUsage` 불변 · 아래) | `AccountDailyLimitChanged` |
+| **미수 차단 해제** | `liftReceivableBlock(operator)` | 미결 미수 존재 · `lifted = false` · 승인된 요청 존재 (아래) | `receivableBlockLifted = true` | `ReceivableBlockLifted` |
+| **미수 차단 재부과** | `reimposeReceivableBlock(operator)` | `receivableBlockLifted = true` (아니면 거절) | `receivableBlockLifted = false` (아래) | `ReceivableBlockReimposed` |
+| **입금 정정** | `reverseDeposit(reversalId, originalDepositId, amount, operator)` | 수신 기록 없음 · 원입금 존재 · 승인된 정정 요청 존재 (아래) | `balance` 감소 · 부족분 미수 (E5 · 아래) | `DepositReversed` |
+
+자금을 움직이는 네 조작 — `capture`·`deposit`·`refund`·`reverseDeposit` — 은 공통 규칙을 하나 따른다.
+
+★ 넷 다 **`AccountDailyMovement`(귀속 영업일)에 `netAmount += balance 변화량`** 을 더한다 — 조작 금액이 아니라 잔액 변화량이다 (DC-006 §3, 위 §3 참조).
+
+이제 조작별 세부를 푼다.
+
+`capture`는 홀딩을 **전액 해제**하고 `balance`를 줄인다.\
+미매입분만큼 `Account.restoreAccountLimit(미매입분, at)`을 호출하며(BR-24 — 직접 감액하지 않는다. 기준일·하한 가드가 그 조작에 있다), 부족분은 `Receivable.incur(CAPTURE, …)`로 만든다 — 전부 같은 커밋(E2)이다.
+
+`deposit`의 사전조건 수신 기록 키는 `(기관, depositId, 입금)`이다 (E3 — `DepositReceipt` INV-1).\
+`depositId`는 외부 입금원이 채번하므로 유일성 스코프는 발신 기관이며(2026-08-06 R-06), 기관은 ACL이 인증한 발신 기관이다.\
+사후조건은 회수 대상 미수들을 FIFO로 회수(`recoverable` — 보류 제외)한 뒤 잔여분만 `balance`를 늘리는 것이다 (BR-34).
+
+`refund`는 입금과 동일한 절차다 — FIFO 회수 후 잔여만 증가 (BR-34).\
+`amount = 0`도 정상이다(미수만 소멸한 환불).
+
+`changeDailyLimit`은 `dailyLimit`을 교체하되 `dailyUsage`는 건드리지 않는다.\
+우변(승인 `limitContribution` 합)은 그대로인데 좌변만 움직이면 RC-3이 깨져 M11이 발화한다.\
+기존 승인은 무효화되지 않으므로(BR-46) 새 한도 < 사용액 상태가 정상으로 존재한다 — 그것이 PRE-3이 사전조건인 이유다.
+
+`liftReceivableBlock`의 사전조건은 미결 미수가 존재하고, `receivableBlockLifted = false`이며(이미 해제 = 명시 거절 `ALREADY_LIFTED` — 2026-08-06 CDS3 소급. UC13-2 닫힘), 승인된 요청이 존재(BR-56 ② — C8 동기 확인, R14)할 때다.
+
+`reimposeReceivableBlock`은 `receivableBlockLifted`를 false로 되돌려 신규 승인이 다시 PRE-2에 걸리게 한다.\
+다시 풀려면 새 2인 승인이 필요하다(BR-56 ②) — 해제·재부과가 비대칭인 이유는 재부과가 안전 방향이라 담당자 단독이기 때문이다(BR-45).
+
+`reverseDeposit`의 사전조건은 `(기관, reversalId, 정정)` 수신 기록이 없고, 원입금 레코드가 존재(E5 — `DepositReceipt` INV-1·INV-4)하며, 승인된 정정 요청이 존재(BR-56 ① — C8 동기 확인, R14)할 때다.\
+`reversalId`는 우리가 채번(운영자 지시)하므로 기관 = 자행 고정이고 스코프가 자명하다 (R-06 · DepositReceipt INV-1).\
+사후조건은 `balance`를 줄이고, 부족분을 `Receivable.incur(origin=DEPOSIT_REVERSAL, sourceRef)`로 만드는 것이다 — 원거래 승인이 없으므로 입금 식별자를 출처로 쓰며, 멱등 레코드 기록도 같은 커밋(E5)이다.
 
 ### 조작 상세 — `capture()` (BR-18 + BR-20)
+
+매입 출금의 내부 절차는 아래와 같다.
 
 ```
 입력: 매입액(captureAmount), 이 승인이 잡고 있던 홀딩액(heldAmount)
@@ -216,8 +340,8 @@ M14 좌변 = anchor.receivableOutstanding + Σ(receivableDelta[anchor < bd ≤ D
 
 ### 이벤트 금액을 셋으로 나눈 이유 ★ (R7 U4)
 
-`deposit()` 하나가 **두 이벤트**를 만든다 — `Deposited` 와 (회수분만큼의) `ReceivableRecovered`.
-`Deposited`에 **총 유입액**을 실으면 원장에서 **예치금 차변이 두 번** 잡힌다:
+`deposit()` 하나가 **두 이벤트**를 만든다 — `Deposited` 와 (회수분만큼의) `ReceivableRecovered`.\
+`Deposited`에 총 유입액을 실으면 원장에서 예치금 차변이 두 번 잡힌다.
 
 ```
 입금 6 · 미수 회수 2 · 잔액 증가 4
@@ -237,6 +361,8 @@ M14 좌변 = anchor.receivableOutstanding + Σ(receivableDelta[anchor < bd ≤ D
 
 ### 조작 상세 — `deposit()` · `refund()` — 회수가 먼저다 (BR-34)
 
+유입 자금의 처리 순서는 회수가 먼저다.
+
 ```
 입력: 유입액(amount), 회수 대상 미수 목록(recoverable — 보류 제외, FIFO 정렬)
 
@@ -246,35 +372,53 @@ M14 좌변 = anchor.receivableOutstanding + Σ(receivableDelta[anchor < bd ≤ D
 4) balance += (amount - 회수액)                   ← 남은 것만
 ```
 
-> ★ **`recoverable`을 인자로 받는 것이 핵심이다.** 계좌가 `receivable` 합계에서 회수액을 먼저 정하면 **보류분을 뺄 수 없어** 회수액과 배분 합계가 어긋난다. 대상을 먼저 고르고 그 합으로 정한다.
->
-> **유입액이 회수 가능액보다 적으면 잔액은 늘지 않는다** (POST-1).
-> **미수가 전부 종결되면 `receivableBlockLifted`를 false로 되돌린다** (INV-3).
->
-> ⚠️ **보류 미수는 회수 대상이 아니므로, 보류 미수가 남은 채 잔액이 느는 것이 정상이다** (BR-34 검증 ⑤). 그래서 POST-1은 *"미결 미수"* 가 아니라 **"회수 가능한 미수"** 를 술어로 쓴다.
-> `refund()`도 같은 절차다 — 계좌로 들어오는 돈은 출처와 무관하게 채권 회수의 재원이다 (BR-34).
+`recoverable`을 인자로 받는 것이 왜 핵심인지 풀어 둔다.
 
-> ⚠️ **환불의 "미수 소멸"은 여기 없다.** 소멸은 **미수 자신의 조작**(`writeOff`)이고 **자금이 움직이지 않는다**(BR-43 ①). 계좌가 합계에서 금액을 빼는 방식이면 **그 사이 다른 경로로 이미 회수된 경우 남의 채권이 깎인다** — DC-001이 없앤 구조다.
->
-> ⚠️ **`refund(0)`은 정상이다.** 잔여 채무가 회수액 위에 있으면 반환액이 0이고 미수만 소멸한다. 사전조건을 `amount > 0`으로 두면 그 경로가 실패한다.
+★ **`recoverable`을 인자로 받는 것이 핵심이다.**\
+계좌가 `receivable` 합계에서 회수액을 먼저 정하면 보류분을 뺄 수 없어 회수액과 배분 합계가 어긋난다 — 대상을 먼저 고르고 그 합으로 정한다.
+
+유입액이 회수 가능액보다 적으면 잔액은 늘지 않는다 (POST-1).\
+미수가 전부 종결되면 `receivableBlockLifted`를 false로 되돌린다 (INV-3).
+
+⚠️ **보류 미수는 회수 대상이 아니므로, 보류 미수가 남은 채 잔액이 느는 것이 정상이다** (BR-34 검증 ⑤).\
+그래서 POST-1은 *"미결 미수"* 가 아니라 **"회수 가능한 미수"** 를 술어로 쓴다.\
+`refund()`도 같은 절차다 — 계좌로 들어오는 돈은 출처와 무관하게 채권 회수의 재원이다 (BR-34).
+
+⚠️ **환불의 "미수 소멸"은 여기 없다.**\
+소멸은 미수 자신의 조작(`writeOff`)이고 자금이 움직이지 않는다(BR-43 ①).\
+계좌가 합계에서 금액을 빼는 방식이면 그 사이 다른 경로로 이미 회수된 경우 남의 채권이 깎인다 — DC-001이 없앤 구조다.
+
+⚠️ **`refund(0)`은 정상이다.**\
+잔여 채무가 회수액 위에 있으면 반환액이 0이고 미수만 소멸한다.\
+사전조건을 `amount > 0`으로 두면 그 경로가 실패한다.
 
 ---
 
 ## 6. 발행 이벤트
 
+계좌가 발행하는 이벤트는 아래와 같으며, 일부는 원장으로 간다.
+
 | 이벤트 | 코드명 | 언제 | 담는 정보 | 구독자 |
 |---|---|---|---|---|
-| 홀딩 점유됨 | `HoldPlaced` | `hold()` 성공 | **`accountId`**, 금액 | — (같은 트랜잭션) |
-| 홀딩 해제됨 | `HoldReleased` | `releaseHold()` | **`accountId`**, 금액 | — |
-| 출금됨 | `Withdrawn` | `capture()` | **`accountId`**, ★ **`withdrawnAmount`(계좌에서 실제 나간 돈 — 매입액이 아니다)**, 영업일 | **C5 원장** |
-| 입금됨 | `Deposited` | `deposit()` | **`accountId`**, **`receivedAmount`(총 유입액)**, **`recoveredAmount`(미수 회수분)**, **`creditedAmount`(잔액 증가분)**, 입금식별자, 영업일 | **C5 원장** |
-| 환불 입금됨 | **`RefundCredited`** | `refund()` | **`accountId`**, 회수분, 잔액 증가분, 원거래 | ⚠️ **원장 아님** — 승인 `Refunded`가 이미 기표한다 (이름도 C3 `Refunded`와 충돌했다) |
-| 입금 정정됨 | `DepositReversed` | `reverseDeposit()` | **`accountId`**, **`amount`(정정 총액)** · **`recoveredFromBalance`(잔액에서 회수한 몫)** · **`receivableIncurred`(부족분)**, `sourceRef`, 사유 — ★ **행위자는 싣지 않는다**(자금 이벤트 = 원장 언어. 행위자는 감사 수집 AD-2가 나른다 — 리뷰 L-03) | **C5 원장** |
-| 계좌 한도 변경됨 | `AccountDailyLimitChanged` | `changeDailyLimit()` | **`accountId`**, 이전·이후 한도 — ★ **행위자 비포함**(주체 혼합: 소지자∪운영자, 비자금 — AD-7 ②. 카드 `LimitChanged` 판정 UC4-2와 동일. 행위자는 감사 AD-2가 나른다) | — (같은 트랜잭션) |
-| 계좌 한도 사용됨 | `AccountLimitUsed` | `useAccountLimit()` | **`accountId`**, 금액, 기준일 | — (같은 트랜잭션) |
-| 계좌 한도 복원됨 | `AccountLimitRestored` | `restoreAccountLimit()` | **`accountId`**, 금액, 기준일 | — (같은 트랜잭션) |
-| 미수 차단 해제됨 | `ReceivableBlockLifted` | `liftReceivableBlock()` | **`accountId`**, **운영자** | 운영자 |
-| 미수 차단 재부과됨 | `ReceivableBlockReimposed` | `reimposeReceivableBlock()` | **`accountId`**, **운영자** (AD-7 ① — 운영자 전용 이벤트, 행위자 포함) | 운영자 |
+| 홀딩 점유됨 | `HoldPlaced` | `hold()` 성공 | `accountId`, 금액 | — (같은 트랜잭션) |
+| 홀딩 해제됨 | `HoldReleased` | `releaseHold()` | `accountId`, 금액 | — |
+| 출금됨 | `Withdrawn` | `capture()` | `accountId`, `withdrawnAmount`(실제 나간 돈 — 매입액 아님), 영업일 | **C5 원장** |
+| 입금됨 | `Deposited` | `deposit()` | `accountId`, `receivedAmount`·`recoveredAmount`·`creditedAmount`, 입금식별자, 영업일 | **C5 원장** |
+| 환불 입금됨 | `RefundCredited` | `refund()` | `accountId`, 회수분, 잔액 증가분, 원거래 | ⚠️ **원장 아님** (아래) |
+| 입금 정정됨 | `DepositReversed` | `reverseDeposit()` | `accountId`, `amount`·`recoveredFromBalance`·`receivableIncurred`, `sourceRef`, 사유 — 행위자 비포함 (아래) | **C5 원장** |
+| 계좌 한도 변경됨 | `AccountDailyLimitChanged` | `changeDailyLimit()` | `accountId`, 이전·이후 한도 — 행위자 비포함 (아래) | — (같은 트랜잭션) |
+| 계좌 한도 사용됨 | `AccountLimitUsed` | `useAccountLimit()` | `accountId`, 금액, 기준일 | — (같은 트랜잭션) |
+| 계좌 한도 복원됨 | `AccountLimitRestored` | `restoreAccountLimit()` | `accountId`, 금액, 기준일 | — (같은 트랜잭션) |
+| 미수 차단 해제됨 | `ReceivableBlockLifted` | `liftReceivableBlock()` | `accountId`, **운영자** | 운영자 |
+| 미수 차단 재부과됨 | `ReceivableBlockReimposed` | `reimposeReceivableBlock()` | `accountId`, **운영자** (아래) | 운영자 |
+
+행위자 포함/비포함과 원장 여부를 표 밖에 풀어 둔다.
+
+`RefundCredited`가 원장으로 가지 않는 이유는 승인 `Refunded`가 이미 기표하기 때문이다(이름도 C3 `Refunded`와 충돌했다).
+
+`DepositReversed`는 행위자를 싣지 않는다 — 자금 이벤트 = 원장 언어이고, 행위자는 감사 수집 AD-2가 나른다 (리뷰 L-03).\
+`AccountDailyLimitChanged`도 행위자 비포함이다 — 주체 혼합(소지자∪운영자)에 비자금 이벤트이며(AD-7 ②, 카드 `LimitChanged` 판정 UC4-2와 동일), 행위자는 감사 AD-2가 나른다.\
+반대로 `ReceivableBlockReimposed`는 행위자를 포함한다 — 운영자 전용 이벤트다 (AD-7 ①).
 
 > 원장은 이 이벤트를 **전표 언어로 번역**한다 (컨텍스트 맵 R6, ACL).
 >
@@ -284,40 +428,48 @@ M14 좌변 = anchor.receivableOutstanding + Σ(receivableDelta[anchor < bd ≤ D
 
 ## 7. 경계 근거
 
+이 애그리게이트를 왜 이 크기로 그었는지에 대한 답이다.
+
 | 질문 | 답 |
 |---|---|
-| **왜 이 범위인가** | 가용잔액 판단(BR-04)이 `balance`와 `holdTotal`을 **함께** 요구한다 |
-| **왜 더 크지 않은가** | 카드 한도를 넣으면 **한 계좌에 카드가 여러 장(1:N)** 일 때 계좌가 카드별 한도를 떠안는다. 승인 상태를 넣으면 승인 수만큼 커진다. **미수를 넣으면 회수 순서·보류·진행도가 갈 곳이 없다**(DC-001) |
-| **왜 더 작지 않은가** | `holdTotal`을 빼면 가용잔액을 계좌 안에서 판단할 수 없어 **불변식이 밖으로 샌다** |
-| **합계 필드는 없는가** | **둘 다 해당** — `holdTotal`(RC-1) · **`dailyUsage`(RC-3)**. 둘 다 **의식적 예외 ③**. *"계좌 자신의 누적"* 이라는 구현 위치는 합계 필드 여부를 바꾸지 않는다 |
-| **트랜잭션 단위인가** | 원칙상 예. **단 승인 성립 시에는 카드·승인과 한 트랜잭션** (README 의식적 예외) |
+| **왜 이 범위인가** | 가용잔액 판단(BR-04)이 `balance`와 `holdTotal`을 함께 요구한다 |
+| **왜 더 크지 않은가** | 카드 한도를 넣으면 1:N에서 계좌가 카드별 한도를 떠안는다. 승인 상태를 넣으면 승인 수만큼 커진다. 미수를 넣으면 회수 순서·보류·진행도가 갈 곳이 없다(DC-001) |
+| **왜 더 작지 않은가** | `holdTotal`을 빼면 가용잔액을 계좌 안에서 판단할 수 없어 불변식이 밖으로 샌다 |
+| **합계 필드는 없는가** | 둘 다 해당 — `holdTotal`(RC-1) · `dailyUsage`(RC-3). 둘 다 의식적 예외 ③. *"계좌 자신의 누적"* 이라는 구현 위치는 합계 필드 여부를 바꾸지 않는다 |
+| **트랜잭션 단위인가** | 원칙상 예. 단 승인 성립 시에는 카드·승인과 한 트랜잭션 (README 의식적 예외) |
 
 ---
 
 ## 8. 동시성
 
+계좌 단위 경합은 아래처럼 처리한다.
+
 | 상황 | 처리 |
 |---|---|
-| 같은 계좌에 동시 승인 | **계좌 단위 낙관적 락**(버전) + 충돌 시 재시도. 카드가 여러 장이어도 경합은 계좌 단위 |
+| 같은 계좌에 동시 승인 | 계좌 단위 낙관적 락(버전) + 충돌 시 재시도. 카드가 여러 장이어도 경합은 계좌 단위 |
 | 승인과 매입 배치의 경합 | 매입이 우선 확정(BR-26 C5), 취소는 매입취소로 강등 |
 | 입금과 매입의 동시 도착 | 순서 무관 — `deposit()`과 `capture()`는 교환적이다 (둘 다 잔액 증감) |
-| **회수 대상 조회와 회수의 경합** | **한 트랜잭션**(E3). 조회 후 커밋 전에 다른 경로가 그 미수를 회수하면 미수 단위 락에서 하나만 성공 |
-| **홀딩 등식(RC-1) 검증** | 실시간으로 검증하지 않는다 — E1이 경계를 보장하고 **BR-41 대사가 사후 탐지**(M9)한다 |
+| **회수 대상 조회와 회수의 경합** | 한 트랜잭션(E3). 조회 후 커밋 전에 다른 경로가 그 미수를 회수하면 미수 단위 락에서 하나만 성공 |
+| **홀딩 등식(RC-1) 검증** | 실시간으로 검증하지 않는다 — E1이 경계를 보장하고 BR-41 대사가 사후 탐지(M9)한다 |
 
-> ⚠️ **`hold()`는 교환적이지 않다.** 읽고-판단하고-쓰는 사이에 다른 홀딩이 끼어들면 초과 승인이 난다. 반드시 낙관적 락 또는 직렬화가 필요하다 (QS-02).
+⚠️ **`hold()`는 교환적이지 않다.**\
+읽고-판단하고-쓰는 사이에 다른 홀딩이 끼어들면 초과 승인이 난다.\
+반드시 낙관적 락 또는 직렬화가 필요하다 (QS-02).
 
 ---
 
 ## 9. 미해결
 
+세 의문은 확정되어 닫혔고, 한 의문(AC4)이 열려 있다.
+
 | # | 의문 | 영향 |
 |---|---|---|
 | ~~AC1~~ | 미수 계좌의 신규 승인 | **거절한다. 운영자가 계좌 단위로 차단 해제 가능. 전액 상계 시 자동 해제** → BR-45, PRE-2, INV-3 |
 | ~~AC2~~ | 환불 입금의 미수 상계 | **상계한다.** 계좌로 들어오는 돈은 출처와 무관 → BR-34 확장. **단 그 승인 자신의 미수는 소멸이 먼저다**(BR-43 ①) |
-
 | ~~AC3~~ | 이미 상계된 미수 뒤의 환불 | **미수가 자기 회수액을 소유하고 상계를 FIFO로 배분한다** → BR-34, DC-001 (당시 결정은 "승인이 추적"이었으나 DC-001로 대체) |
+| **AC4** (UC6-4) | 계좌 1일 한도(`changeDailyLimit`)의 **유효 금액 하한·0 허용 여부** — 0 한도의 의미가 정본에 없다 (§5 · BR-07·44) | **미확정 수치** — 품질 시나리오 근거 필요(Phase 3~4). 임의 확정 금지 |
 
-**(현재 미해결 없음)**
+★ 열린 의문 1건(AC4 — §5 조작 표에서 살아 있던 UC6-4를 §9 색인에 승격. 이전 "미해결 없음"은 §5와 어긋난 색인 불일치였다).
 
 ---
 
@@ -325,6 +477,8 @@ M14 좌변 = anchor.receivableOutstanding + Σ(receivableDelta[anchor < bd ≤ D
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v2.5 | 2026-09-16 | **가독성 재작성**(작성법 분리/복원/이연 — 내용 무변). 정향 문단·표 앞 lead-in 추가 · 불변식/조작/이벤트 표의 뭉친 셀을 1줄로 두고 RC-4·RC-5, PRE·POST 근거, 자금 4조작의 사후조건(수신 키·한도·미수·기관 축), DC-006 이동 규칙, 행위자 포함/비포함을 표 밖 산문(한 문장 한 줄)으로 분리. AC4·모든 ID·닫힌 의문 전부 보존 |
+| v2.4 | 2026-09-15 | **색인 정합** — §9가 "미해결 없음"이라 적혀 있었으나 §5 조작 표(:225)에 **UC6-4(한도 하한·0 허용 미확정)** 가 살아 있어 어긋났다. §9에 **AC4**로 승격(미확정 수치 — 임의 확정 금지). 설계 판단이 아니라 색인 불일치 수정 |
 | v2.3 | 2026-08-06 | **R-06 기관 축 전파 일소**: §5 `deposit()` 사전조건의 수신 기록 키 = `(기관, depositId, 입금)`(스코프 = 발신 기관) · `reverseDeposit()` 사전조건 = `(기관, reversalId, 정정)` — 정정은 우리 채번이라 **자행 고정**(deposit-receipt v0.5 선례) |
 | v2.2 | 2026-08-06 | 계약 전수 CDS3 소급 — `liftReceivableBlock` 사전조건에 `lifted = false`(재실행 = `ALREADY_LIFTED` 명시 거절) |
 | v2.1 | 2026-08-06 | ★ **정본 판정 반영 (유스케이스 전수 UC6-1·UC13-1 — 사용자 합의)** — 조작 2신설: `changeDailyLimit(newLimit, requester)`(BR-46이 선언만 하고 조작이 없던 공백. `dailyUsage` 불변 — RC-3) · `reimposeReceivableBlock(operator)`(해제 오판 복구 — 담당자 단독, 안전 방향. BR-45) + 이벤트 2종(`AccountDailyLimitChanged` 행위자 비포함 ② / `ReceivableBlockReimposed` 포함 ①) |
