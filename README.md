@@ -18,8 +18,8 @@ Phase 1 ✅ ── 2 ✅ ── 3 ✅ ── 4 ✅ ── 5 ⏳ ── 6 ⬜
 |---|---|---|---|
 | **0** | 문서 체계 준비 | ⏭ **건너뜀** | Phase 6에서 함께 정리한다 |
 | **1** | 제품 정의 | ✅ | `product/` — 제품 정의서 · **업무 규칙 BR-01~61**(불일치 유형표 포함) |
-| **2** | 도메인 정의 | ✅ | `domain/` — 용어집 · **컨텍스트 맵 8종(C1~C8) · 관계 R1~R19** · **애그리게이트 15종** · **상태 머신 11종** · 트랜잭션 경계 E1~E5 |
-| **3** | 아키텍처 설계 | ✅ | `architecture/` — **ADR 30건**(ADR-001~030 — ADR-019~030에서 채널·라우팅·이벤트 전송·DB 토폴로지·관측·릴리스·공통 라이브러리·데이터 접근·배포 오케스트레이션·언어 선택·내부 아키텍처·배포물 전달을 확정) · 품질 속성(채택 6·포기 6) · 품질 시나리오 · 제약 · 뷰 4종 |
+| **2** | 도메인 정의 | ✅ | `domain/` — 용어집 · **컨텍스트 맵 8종(C1~C8) · 관계 R1~R20** · **애그리게이트 16종** · **상태 머신 11종** · 트랜잭션 경계 E1~E5 |
+| **3** | 아키텍처 설계 | ✅ | `architecture/` — **ADR 32건**(ADR-001~032 — ADR-019~030에서 채널·라우팅·이벤트 전송·DB 토폴로지·관측·릴리스·공통 라이브러리·데이터 접근·배포 오케스트레이션·언어 선택·내부 아키텍처·배포물 전달을 확정) · 품질 속성(채택 6·포기 6) · 품질 시나리오 · 제약 · 뷰 4종 |
 | ★ | 멀티테넌시 설계 변경 | ✅ (2026-08-05) | C8 운영 승격 · BR-54~58 · ADR-016~018 · M18 · 듀얼 리뷰 3루프 |
 | **4** | 유스케이스·기능 명세 | ✅ (2026-08-06) | `usecases/` — **UC-01~20 전수** · **계약 전수 패스**(§7 전 칸 · 공통 규약 **K-1~4**) · 엔드포인트·이벤트 색인. ⚠️ ★ **C7 관리 API는 이 전수에 없다 — 명시 이월**(아래 행) |
 | ★ | **C7 신원·조직 명세** | ✅ **모델** / ⬜ **관리 API** (2026-08-06) | 운영자·조직·권한 부여 모델 — **BR-59~61 신설** · BR-55 **AUDITOR 완전 분리** · BR-56 ⑥ · 애그리게이트 4종·SM 2종 · R19. ★ **리뷰 루프 1 반영 완료**(L1-01~28). ⚠️ **UC·계약(엔드포인트)은 후속 패스로 이월**됐다 — 조직·운영자·권한·회원의 관리 표면이 아직 없고, 그동안 **BR-58 전수 시험의 입력(엔드포인트 색인)이 불완전**하다(`usecases/README.md` §2 이월 행) |
@@ -28,7 +28,7 @@ Phase 1 ✅ ── 2 ✅ ── 3 ✅ ── 4 ✅ ── 5 ⏳ ── 6 ⬜
 
 **다음 한 걸음**(Phase 5 진행 중): ① **워킹 스켈레톤 라우팅 실증** — 최소 서비스 3 + Spring Cloud Gateway를 docker compose로 띄워 라우팅을 확인한다 ② **첫 실배포** — 인프라 배포 파이프라인으로 스켈레톤을 실제로 배포한다 ③ **배포 파이프라인·JWKS e2e [구현 검증] 해소** — 문서가 이연한 판정(IV 대장 `implementation-verification.md`)을 실 배포·인증 흐름으로 실증한다 ④ **도메인 로직** — 그 위에 컨텍스트별 실 구현을 얹는다. (병행 이월: **C7 관리 API의 UC·계약** L1-15.)
 
-> **양식**과 **내용**은 다르다. 양식은 `study/project-workflow/phaseN/`에, 내용은 `product/`·`domain/`·`architecture/`·`usecases/` 같은 정규 위치에 있다.
+> **양식**과 **내용**은 다르다. 양식은 **`study-note` repo `project/jun-bank/workflow/`**(2026-09-16 이관)에, 내용은 이 repo의 `product/`·`domain/`·`architecture/`·`usecases/` 같은 정규 위치에 있다.
 > *(초기 계획은 Phase 0~9의 10단계 체계였다 — 위 6단계 체계로 통합됐고 10단계 표기는 이력이다.)*
 
 ---
@@ -41,22 +41,18 @@ Phase 1 ✅ ── 2 ✅ ── 3 ✅ ── 4 ✅ ── 5 ⏳ ── 6 ⬜
 |---|---|
 | **`HANDOFF.md`** | ★ **세션 인계 정본** — 현황 · **되돌리면 사고가 재발하는 곳** · 검산 실행법 · 남은 것 |
 | `product/` | 제품 정의서 · **업무 규칙 정본**(`01-business-rules.md` — **BR-01~61** · 불일치 유형 · 미확정 수치 표) |
-| `domain/` | `glossary.md`(용어 정본) · `context-map.md`(**C1~C8 · R1~R19**) · `aggregates/`(**15종** + 경계·조작 대장) · `state-machines/`(**11종**) |
-| `architecture/` | `README.md`(기술서 — **여기부터 읽으면 지도가 선다**) · `adr/`(**ADR 30건** ADR-001~030) · `quality-attributes.md` · `quality-scenarios.md` · `constraints.md` · `views/`(컨텍스트·컨테이너·데이터·런타임) |
+| `domain/` | `glossary.md`(용어 정본) · `context-map.md`(**C1~C8 · R1~R20**) · `aggregates/`(**16종** + 경계·조작 대장) · `state-machines/`(**11종**) |
+| `architecture/` | `README.md`(기술서 — **여기부터 읽으면 지도가 선다**) · `adr/`(**ADR 32건** ADR-001~032) · `quality-attributes.md` · `quality-scenarios.md` · `constraints.md` · `views/`(컨텍스트·컨테이너·데이터·런타임) |
 | `usecases/` | **UC-01~20** · `README.md`(색인 — 유스케이스 대장 · **엔드포인트 색인** · 이벤트 색인) · 공통 계약 규약 **K-1~4** |
 | **`dev-conventions.md`** | ★ **개발 규약 33규칙**(E3) — 규칙마다 **강제 수단 칸 의무**(컴파일·아키텍처 테스트·테스트 게이트·린트·리뷰) · 도구 확정 **TL-1 JUnit5 · TL-2 Testcontainers** · 강제 수단 분포(현재/도구 확정 후) · **관측 대장** |
 | **[`git-conventions.md`](git-conventions.md)** | ★ **깃 협업 규약 36규칙**(GC-1~36) — dev-conventions **PR-7·PR-8의 형식 정본**. **유형 어휘 1벌**(커밋 type = 라벨 = 릴리스 노트 축) · 커밋 형식 · 브랜치(trunk 근접·2일 상한) · 이슈·PR 템플릿 · 라벨 3축 · 마일스톤 · SemVer·태그·릴리스 · 멀티리포 의존 · **판정한 충돌 8건** |
 | [`operations/cicd.md`](operations/cicd.md) | 구성 관리·CI/CD 정본 — 파이프라인 P1~P5·RL-9 이월 소화 CD-1~5·롤백·CI 도구 C-08 판정 (E4) |
 | [`operations/infrastructure.md`](operations/infrastructure.md) | ★ **관제·인프라 요구사항** — 홈랩 3대 형상·제약 · 배포 인프라 구성요소(deploy-agent·관제 UI·이미지 레지스트리) · **후속 로드맵 [미확정] 4건**(로그 수집·자원 모니터링·관제 저장·트래픽 생성기) · **저수준 언어 성질 대조**(판정 미도래) |
-| [`study/project-workflow/phase5/05-parallel-documentation.md`](study/project-workflow/phase5/05-parallel-documentation.md) | 구현-병행 문서화 정책 — 판정 먼저 전환·IV 소비 T1~T5·이월 43건 전수·V2-7~9 제안 (E5) |
-| [`study/project-workflow/development-cycle.md`](study/project-workflow/development-cycle.md) | 개발 사이클 how-to — 마일스톤→이슈→브랜치→PR→머지→태그→롤백을 실제로 도는 순서 (규칙 정본은 git-conventions) |
-| [`study/project-workflow/dev-journal-2026-08-07.md`](study/project-workflow/dev-journal-2026-08-07.md) | 개발 일지 — 2026-08-07 구현·문서·리뷰 회고(듀얼 리뷰가 잡은 결함과 해결) |
+| ★ **워크플로우·개발 방법론** | **`study-note` repo `project/jun-bank/workflow/`로 이관** — phase1~5 양식·design-change·개발 사이클·병행 문서화 정책·개발 일지 (2026-09-16 이관) |
 | [`reference/writing/`](reference/writing/README.md) | 문서 작성 방법론 리서치 — 종합(README) + 근거 8축(evidence-1~9). 다음: 워크플로우 방법론 정의 |
-| [`study/tech/`](study/tech/) | 기술 학습 해설(사람 층) — data-access 3편(JPA·Data JDBC·비교) · languages 5편(JVM/Java·Kotlin·Go·Rust·C/C++/C#) — 결정 정본은 ADR-026·028 |
-| [`study/tech/security/`](study/tech/security/) | 보안 학습 해설 — HMAC·SHA-256/digest·OIDC(claim·jti)·게이트1 인증 패턴(우리 코드 매핑) |
-| [`study/tech/languages/go-syntax-in-our-code.md`](study/tech/languages/go-syntax-in-our-code.md) | Go 문법 — 우리 infra 코드에 실제 나온 것만(nil의 세 얼굴 등) |
+| ★ **기술 학습 해설** | **`study-note` repo로 이관** — 개념(data-access·languages·security)은 `cs/`로, infra 코드 결착(infra-journey·go-syntax·gate1)은 `project/jun-bank/`로 (2026-09-16). 결정 정본은 이 repo `architecture/adr/`(ADR-026·028 등) |
 | `design-changes/` | **DC-001~006** — *왜 그렇게 됐는지*와 *무엇이 몇 번 깨졌는지* |
-| `study/` | 학습 노트 `01~11`(**설계 문서 아님**) + ★ `project-workflow/`(**양식·작성 순서의 정본**) |
+| ~~`study/`~~ | **제거됨(2026-09-16)** — 학습 노트 01~11·notes·tech는 `study-note` repo `cs/`로, 워크플로우·infra 기록은 `study-note` `project/jun-bank/`로 이관. 원본 백업 = `docs-backup-2026-09-15/study/` |
 | `reference/` | 리서치 원문 · 장애 사례 · 참고서적 목차 |
 | `tools/` | **검산 스크립트** — `check_docs.py`(검사 ①~㉖) · `mutation_test.py`(변이) · 정본 집합 추출 |
 | `plans/` | 로컬 작업 기록 — `.gitignore` 대상(공개 설계 문서 아님) |
@@ -85,7 +81,7 @@ Phase 1 ✅ ── 2 ✅ ── 3 ✅ ── 4 ✅ ── 5 ⏳ ── 6 ⬜
 
 ```
 ① HANDOFF.md 에서 현재 Phase 확인
-② study/project-workflow/ 에서 그 Phase의 양식(*-format.md) 확인
+② study-note repo project/jun-bank/workflow/ 에서 그 Phase의 양식(*-format.md) 확인
 ③ §3 양식을 복사해 정규 위치(product/, domain/, architecture/, usecases/)에 채운다
 ④ 양식의 §6 완료 기준으로 검증
 ⑤ python3 tools/check_docs.py · tools/mutation_test.py 로 검산
@@ -132,9 +128,9 @@ Phase 1 ✅ ── 2 ✅ ── 3 ✅ ── 4 ✅ ── 5 ⏳ ── 6 ⬜
 
 ## 자주 하는 질문
 
-**Q. `study/`는 설계 문서인가?**
-아니다. `study/01~11`은 개인 학습 노트이며 **결정의 근거가 될 수 없다.** 결정은 ADR에만 남긴다.
-단 `study/project-workflow/`는 예외로, **문서 작성 순서와 양식의 정본**이다.
+**Q. `study/`는 어디 갔나?**
+2026-09-16에 **`study-note` repo로 이관**됐다. 개인 학습 노트(CS·개념)는 `study-note/cs/`로, 워크플로우 양식·infra 개발 기록은 `study-note/project/jun-bank/`로 옮겼다.\
+학습 노트는 **결정의 근거가 될 수 없다**(결정은 이 repo의 ADR에만). 워크플로우는 study-note에서 **문서 작성 순서·양식의 정본**으로 유지된다.
 
 **Q. 왜 양식과 내용을 분리하는가?**
 특정 프로젝트에 맞춰 미리 써둔 문서는 대부분 읽히지 않고 낡는다. 재사용되는 것은 **양식과 작성법**이다.
@@ -151,6 +147,7 @@ Phase 1 ✅ ── 2 ✅ ── 3 ✅ ── 4 ✅ ── 5 ⏳ ── 6 ⬜
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v0.5 | 2026-09-16 | **study/ 이관 반영 + 카운트 정합** — `study/`를 `study-note` repo로 이관(CS·개념 → `cs/`, 워크플로우·infra 기록 → `project/jun-bank/`)하고 문서 지도·읽는 순서·FAQ의 죽은 링크를 study-note 포인터로 갱신 · 낡은 카운트 정정(ADR 30→**32**·애그리게이트 15→**16**·관계 R1~R19→**R1~R20**). READING-ORDER.md 신설 반영. (전체 docs 가독성 재작성도 이 시점 완료 — 문서당 커밋) |
 | v0.4 | 2026-08-12 | **현황 갱신** — Phase 3 **ADR 18건 → 30건**(ADR-019~030 추가: 채널·라우팅·이벤트 전송·DB 토폴로지·관측·릴리스·공통 라이브러리·데이터 접근·배포 오케스트레이션·언어 선택·내부 아키텍처·배포물 전달) · **Phase 5 ⬜ → ⏳ 진행 중**(현재 위치 화살표 이동) — **인프라 배포 파이프라인**(infra Go: deploy-agent 게이트1 HMAC·게이트2 OIDC/JWKS 실 페치·dispatch·배포 창 락·모드·이력, S0·S2) + **워킹 스켈레톤**(Kotlin/Spring 3 + Spring Cloud Gateway → compose 라우팅 → 첫 배포 예정) · 다음 한 걸음을 Phase 5 실작업으로 갱신 · 문서 지도에 **설계=docs / 구현=각 repo** 관계 추가 |
 | v0.3 | 2026-08-06 | **C7 리뷰 루프 1 반영 — L1-15**: C7 행을 ★ **모델 ✅ / 관리 API ⬜** 로 정정(UC·계약 명시 이월 — BR-58 전수 시험 입력의 공백 명시) · Phase 4 행에 같은 단서 · **다음 한 걸음 2건 → 3건**(C7 관리 API 추가 · Phase 5 입력에 IV 대장) |
 | v0.2 | 2026-08-06 | ★ **현황·체계 재작성** — 구 10단계(Phase 0~9) 표기를 **6단계 체계로 통일**(HANDOFF §2 정본 반영: Phase 1~4 ✅ · 멀티테넌시·C7 명세 ✅ · Phase 5~6 ⬜) · 문서 지도를 실재 트리로 교체(usecases·architecture·design-changes·tools·HANDOFF 추가) · 정본 우선순위와 읽는 순서에 HANDOFF 편입 · 다음 한 걸음 = **남은 공백 2건**(외부 인터페이스 규격서 · API 레퍼런스 생성 도구) 후 Phase 5 |
